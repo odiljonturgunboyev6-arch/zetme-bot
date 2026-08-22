@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zetme AI — Admin</title>
+<style>
+  :root {
+    --noir: #0B211B; --vert: #0F2E24; --ivoire: #F1ECDF; --ivoireDim: #B9C4B6;
+    --laiton: #C6A05B; --laitonHi: #E7D3A0; --line: #2A4438;
+    --paper: #F5F6F3; --ink: #16211B; --inkDim: #69756D; --mline: #E4E7E1; --accent: #2F6B4F;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: 'Jost', system-ui, -apple-system, sans-serif; background: var(--paper); color: var(--ink); }
+  .topbar { background: linear-gradient(120deg, var(--vert), var(--noir)); color: var(--ivoire); padding: 18px 20px; display:flex; align-items:center; justify-content:space-between; }
+  .topbar b { font-family: Georgia, serif; font-size: 20px; }
+  .topbar span { color: var(--laiton); }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 18px 60px; }
+
+  /* login gate */
+  #gate { max-width: 340px; margin: 80px auto; text-align:center; }
+  #gate input { width:100%; padding:12px 14px; border:1px solid var(--mline); border-radius:10px; font-size:15px; margin-top:14px; }
+  #gate button { width:100%; margin-top:14px; padding:12px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; font-size:14px; cursor:pointer; }
+  #gate .err { color:#C6472E; font-size:12.5px; margin-top:10px; min-height:16px; }
+
+  /* form */
+  .card { background:#fff; border:1px solid var(--mline); border-radius:16px; padding:20px; margin-bottom:18px; }
+  .card h3 { margin:0 0 14px; font-family: Georgia, serif; font-size:18px; }
+  label { display:block; font-size:12.5px; color:var(--inkDim); margin:12px 0 5px; }
+  label:first-of-type { margin-top:0; }
+  input[type=text], input[type=number], select { width:100%; padding:10px 12px; border:1px solid var(--mline); border-radius:9px; font-size:14px; font-family:inherit; }
+  .tabs { display:flex; gap:8px; margin-bottom:4px; }
+  .tab { flex:1; padding:10px; border:1px solid var(--mline); border-radius:9px; text-align:center; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--inkDim); }
+  .tab.active { background: var(--accent); color:#fff; border-color:var(--accent); }
+  .imgs { display:flex; gap:10px; margin-top:8px; flex-wrap:wrap; }
+  .imgslot { width:84px; height:84px; border:1.5px dashed var(--mline); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; position:relative; background:var(--paper); font-size:11px; color:var(--inkDim); text-align:center; }
+  .imgslot img { width:100%; height:100%; object-fit:cover; }
+  .submitbtn { width:100%; margin-top:18px; padding:13px; border:none; border-radius:11px; background:var(--accent); color:#fff; font-weight:700; font-size:14.5px; cursor:pointer; }
+  .submitbtn:disabled { opacity:.5; cursor:not-allowed; }
+  .msg { font-size:13px; margin-top:10px; padding:10px 12px; border-radius:9px; }
+  .msg.ok { background:#EAF3EC; color:var(--accent); }
+  .msg.err { background:#FBEFEA; color:#C6472E; }
+
+  /* list */
+  .plist { display:flex; flex-direction:column; gap:10px; }
+  .prow { display:flex; gap:12px; align-items:center; background:#fff; border:1px solid var(--mline); border-radius:12px; padding:10px; }
+  .prow img { width:52px; height:52px; border-radius:8px; object-fit:cover; background:var(--paper); }
+  .prow .info { flex:1; }
+  .prow .name { font-weight:600; font-size:13.5px; }
+  .prow .meta { font-size:11.5px; color:var(--inkDim); }
+  .prow .price { font-weight:700; font-size:13.5px; }
+  .prow button { background:transparent; border:1px solid var(--mline); border-radius:8px; padding:6px 10px; font-size:11.5px; cursor:pointer; color:#C6472E; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="topbar" style="border-radius:14px; justify-content:center;"><b>ZETME <span>AI</span></b></div>
+  <p style="color:var(--inkDim); font-size:13.5px; margin-top:18px;">Admin panelga kirish uchun parolni kiriting</p>
+  <input type="password" id="pwInput" placeholder="Parol" />
+  <button onclick="tryLogin()">Kirish</button>
+  <div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="topbar">
+    <b>ZETME <span>AI</span> — Admin</b>
+    <button onclick="logout()" style="background:transparent;border:1px solid var(--line);color:var(--ivoire);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;">Chiqish</button>
+  </div>
+  <div class="wrap">
+
+    <div class="card">
+      <h3>Yangi mahsulot qo'shish</h3>
+
+      <label>Kategoriya</label>
+      <div class="tabs">
+        <div class="tab active" data-cat="tuvak" onclick="setCat('tuvak')">Tuvak</div>
+        <div class="tab" data-cat="gul" onclick="setCat('gul')">Gul</div>
+      </div>
+
+      <label>Nomi</label>
+      <input type="text" id="fName" placeholder="Masalan: Branch Tuvak - 4" />
+
+      <label>Sig'imi / o'lcham (masalan 5 L yoki 40 sm)</label>
+      <input type="text" id="fCapacity" placeholder="5 L" />
+
+      <label>O'lchamlar (Ø va balandlik, sm)</label>
+      <input type="text" id="fSize" placeholder="Ø22.5 × 21 sm" />
+
+      <label>Rang</label>
+      <input type="text" id="fColor" placeholder="Oq" />
+
+      <label>Narx (so'm)</label>
+      <input type="number" id="fPrice" placeholder="78000" />
+
+      <label>Rasmlar (1-3 ta)</label>
+      <div class="imgs" id="imgSlots">
+        <div class="imgslot" onclick="pickImage(0)">+ Rasm</div>
+        <div class="imgslot" onclick="pickImage(1)">+ Rasm</div>
+        <div class="imgslot" onclick="pickImage(2)">+ Rasm</div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="onFile(event)" />
+
+      <button class="submitbtn" id="submitBtn" onclick="submitProduct()">Saqlash</button>
+      <div id="formMsg"></div>
+    </div>
+
+    <div class="card">
+      <h3>Mavjud mahsulotlar</h3>
+      <div class="plist" id="plist"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let PASSWORD = "";
+  let category = "tuvak";
+  let images = [null, null, null];
+  let activeSlot = 0;
+
+  function setCat(c) {
+    category = c;
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.cat === c));
+  }
+
+  function tryLogin() {
+    const pw = document.getElementById("pwInput").value;
+    if (!pw) return;
+    fetch("/api/verify-admin", { headers: { "x-admin-password": pw } })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) {
+          document.getElementById("loginErr").textContent = "Noto'g'ri parol";
+          return;
+        }
+        PASSWORD = pw;
+        document.getElementById("gate").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
+        sessionStorage.setItem("zetme_admin_pw", pw);
+        loadProducts();
+      });
+  }
+  function logout() {
+    sessionStorage.removeItem("zetme_admin_pw");
+    location.reload();
+  }
+  window.addEventListener("DOMContentLoaded", () => {
+    const saved = sessionStorage.getItem("zetme_admin_pw");
+    if (saved) {
+      fetch("/api/verify-admin", { headers: { "x-admin-password": saved } })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok) {
+            PASSWORD = saved;
+            document.getElementById("gate").classList.add("hidden");
+            document.getElementById("app").classList.remove("hidden");
+            loadProducts();
+          } else {
+            sessionStorage.removeItem("zetme_admin_pw");
+          }
+        });
+    }
+  });
+
+  function pickImage(slot) {
+    activeSlot = slot;
+    document.getElementById("fileInput").click();
+  }
+  function onFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      images[activeSlot] = { file, dataUrl: reader.result };
+      const slotEl = document.querySelectorAll(".imgslot")[activeSlot];
+      slotEl.innerHTML = `<img src="${reader.result}" />`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function uploadImage(imgObj) {
+    const base64 = imgObj.dataUrl.split(",")[1];
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": PASSWORD },
+      body: JSON.stringify({ filename: imgObj.file.name, contentType: imgObj.file.type, dataBase64: base64 }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Yuklashda xatolik");
+    return data.url;
+  }
+
+  async function submitProduct() {
+    const name = document.getElementById("fName").value.trim();
+    const capacity = document.getElementById("fCapacity").value.trim();
+    const size = document.getElementById("fSize").value.trim();
+    const color = document.getElementById("fColor").value.trim();
+    const price = document.getElementById("fPrice").value.trim();
+    const msgEl = document.getElementById("formMsg");
+    const btn = document.getElementById("submitBtn");
+
+    if (!name || !price) {
+      msgEl.innerHTML = '<div class="msg err">Nomi va narxni kiriting</div>';
+      return;
+    }
+
+    btn.disabled = true;
+    msgEl.innerHTML = '<div class="msg ok">Saqlanmoqda…</div>';
+
+    try {
+      const urls = [];
+      for (const img of images) {
+        if (img) urls.push(await uploadImage(img));
+      }
+      const res = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-password": PASSWORD },
+        body: JSON.stringify({ name, category, capacity, size, color, price, images: urls }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Xatolik");
+
+      msgEl.innerHTML = '<div class="msg ok">✅ Mahsulot qo\'shildi!</div>';
+      document.getElementById("fName").value = "";
+      document.getElementById("fCapacity").value = "";
+      document.getElementById("fSize").value = "";
+      document.getElementById("fColor").value = "";
+      document.getElementById("fPrice").value = "";
+      images = [null, null, null];
+      document.querySelectorAll(".imgslot").forEach(el => el.innerHTML = "+ Rasm");
+      loadProducts();
+    } catch (err) {
+      msgEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function loadProducts() {
+    const res = await fetch("/api/products");
+    const data = await res.json();
+    const list = document.getElementById("plist");
+    if (!data.ok || data.products.length === 0) {
+      list.innerHTML = '<p style="color:var(--inkDim); font-size:13px;">Hali mahsulot yo\'q.</p>';
+      return;
+    }
+    list.innerHTML = data.products.map(p => `
+      <div class="prow">
+        <img src="${(p.images && p.images[0]) || ''}" />
+        <div class="info">
+          <div class="name">${p.name}</div>
+          <div class="meta">${p.category === 'gul' ? 'Gul' : 'Tuvak'} · ${p.capacity || ''} ${p.color ? '· ' + p.color : ''}</div>
+        </div>
+        <div class="price">${Number(p.price).toLocaleString('uz-UZ').replace(/,/g,' ')} so'm</div>
+        <button onclick="deleteProduct('${p.id}')">O'chirish</button>
+      </div>
+    `).join("");
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm("Bu mahsulotni o'chirasizmi?")) return;
+    await fetch("/api/products?id=" + encodeURIComponent(id), {
+      method: "DELETE",
+      headers: { "x-admin-password": PASSWORD },
+    });
+    loadProducts();
+  }
+</script>
+</body>
+</html>
