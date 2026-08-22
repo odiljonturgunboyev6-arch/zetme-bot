@@ -38,6 +38,11 @@ const REGIONS = [
 function fmt(n) {
   return Math.round(n).toLocaleString("uz-UZ").replace(/,/g, " ") + " so'm";
 }
+// Legacy Telegram Markdown treats _ * ` [ as special — escape them in any
+// user-supplied text (names, usernames, regions) so messages never fail to send.
+function escapeMd(s) {
+  return String(s ?? "").replace(/([_*`[\]])/g, "\\$1");
+}
 
 async function tg(method, payload) {
   const res = await fetch(`${API}/${method}`, {
@@ -45,7 +50,9 @@ async function tg(method, payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return res.json();
+  const data = await res.json();
+  if (!data.ok) console.error(`Telegram ${method} failed:`, data.description, JSON.stringify(payload));
+  return data;
 }
 const sendMessage = (chatId, text, extra = {}) =>
   tg("sendMessage", { chat_id: chatId, text, parse_mode: "Markdown", ...extra });
@@ -67,7 +74,7 @@ function parseOrderCode(payload) {
 }
 
 function orderSummaryText(items, total) {
-  const lines = items.map((i) => `• ${i.name} — ${i.qty} dona × ${fmt(i.price)}`).join("\n");
+  const lines = items.map((i) => `• ${escapeMd(i.name)} — ${i.qty} dona × ${fmt(i.price)}`).join("\n");
   return `${lines}\n\n*Jami:* ${fmt(total)}`;
 }
 
@@ -117,7 +124,7 @@ export default async function handler(req, res) {
           // returning customer — skip straight to confirmation
           await sendMessage(
             chatId,
-            `Buyurtmangiz:\n\n${orderSummaryText(items, total)}\n\n👤 ${profile.name}\n📞 ${profile.phone}\n📍 ${profile.region}`,
+            `Buyurtmangiz:\n\n${orderSummaryText(items, total)}\n\n👤 ${escapeMd(profile.name)}\n📞 ${escapeMd(profile.phone)}\n📍 ${escapeMd(profile.region)}`,
             { reply_markup: { inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "confirm" }]] } }
           );
         } else {
@@ -158,7 +165,7 @@ export default async function handler(req, res) {
         const draft = await kv.get(`draft:${chatId}`);
         await sendMessage(
           chatId,
-          `Buyurtmangizni tekshiring:\n\n${orderSummaryText(draft.items, draft.total)}\n\n👤 ${name}\n📞 ${phone}\n📍 ${region}`,
+          `Buyurtmangizni tekshiring:\n\n${orderSummaryText(draft.items, draft.total)}\n\n👤 ${escapeMd(name)}\n📞 ${escapeMd(phone)}\n📍 ${escapeMd(region)}`,
           {
             reply_markup: {
               remove_keyboard: true,
@@ -195,11 +202,11 @@ export default async function handler(req, res) {
           "✅ Buyurtmangiz qabul qilindi!\n\n5 daqiqa ichida operatorimiz siz bilan bog'lanadi. Rahmat!"
         );
 
-        const uname = from.username ? `@${from.username}` : "(username yo'q)";
+        const uname = from.username ? `@${escapeMd(from.username)}` : "(username yo'q)";
         await sendMessage(
           OWNER_CHAT_ID,
           `🛒 *Yangi buyurtma — Zetme AI*\n\n${orderSummaryText(draft.items, draft.total)}\n\n` +
-            `👤 *Ism:* ${profile.name}\n📞 *Telefon:* ${profile.phone}\n📍 *Viloyat:* ${profile.region}\n💬 *Telegram:* ${uname}`
+            `👤 *Ism:* ${escapeMd(profile.name)}\n📞 *Telefon:* ${escapeMd(profile.phone)}\n📍 *Viloyat:* ${escapeMd(profile.region)}\n💬 *Telegram:* ${uname}`
         );
 
         await kv.del(`draft:${chatId}`);
