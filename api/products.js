@@ -1,13 +1,11 @@
-// Zetme AI — Mahsulotlar API (LITR VARIANTLI versiya)
+// Zetme AI — Mahsulotlar API (1-10 VARIANT, HAR VARIANTDA 3 TAGACHA RASM)
 // GET    /api/products            -> barcha mahsulotlar ro'yxati (sayt shundan o'qiydi)
-// POST   /api/products            -> yangi mahsulot (oila) qo'shish, 2-10 ta litr varianti bilan (admin paroli talab qilinadi)
+// POST   /api/products            -> yangi mahsulot (oila) qo'shish, 1-10 ta litr varianti bilan (admin paroli talab qilinadi)
 // PUT    /api/products            -> mavjud mahsulotni (nomi/rasm/narx/variantlarini) tahrirlash (admin paroli talab qilinadi)
 // DELETE /api/products?id=xxx     -> mahsulotni butunlay o'chirish (admin paroli talab qilinadi)
 //
-// Har bir mahsulot endi "oila" — bitta umumiy nom (masalan "Gul tuvak rombik") va
-// unga tegishli 2 dan 10 tagacha "variant" (litr hajmi, narxi, o'lchami, o'z rasmi).
-// Bu Uzum'dagi kabi: bitta mahsulot sahifasida hajm tugmalari (0,5L / 1L / 2L / 4L / 8L)
-// bosilganda rasm va narx almashadi.
+// Har bir mahsulot "oila" — bitta umumiy nom (masalan "Gul tuvak rombik") va
+// unga tegishli 1 dan 10 tagacha "variant" (litr hajmi, narxi, o'lchami, 1-3 ta rasm).
 
 import { kv } from "@vercel/kv";
 
@@ -19,9 +17,15 @@ function checkAuth(req) {
   return auth && ADMIN_PASSWORD && auth === ADMIN_PASSWORD;
 }
 
+function extractImages(v) {
+  if (Array.isArray(v.images)) return v.images.filter(Boolean).map(String).slice(0, 3);
+  if (v.image) return [String(v.image)];
+  return [];
+}
+
 function validateVariants(variants) {
-  if (!Array.isArray(variants) || variants.length < 2 || variants.length > 10) {
-    return "Kamida 2 ta, ko'pi bilan 10 ta hajm (litr) varianti kerak";
+  if (!Array.isArray(variants) || variants.length < 1 || variants.length > 10) {
+    return "Kamida 1 ta, ko'pi bilan 10 ta hajm (litr) varianti kerak";
   }
   for (const v of variants) {
     if (!v.litr || String(v.litr).trim() === "") {
@@ -30,8 +34,8 @@ function validateVariants(variants) {
     if (!v.price || Number(v.price) <= 0) {
       return "Har bir variant uchun narx ko'rsatilishi shart";
     }
-    if (!v.image) {
-      return "Har bir variant uchun rasm yuklanishi shart";
+    if (extractImages(v).length === 0) {
+      return "Har bir variant uchun kamida 1 ta rasm yuklanishi shart";
     }
   }
   return null;
@@ -43,7 +47,7 @@ function normalizeVariants(variants) {
     litr: String(v.litr).trim(),
     price: Number(v.price),
     size: v.size ? String(v.size).trim() : "",
-    image: String(v.image),
+    images: extractImages(v),
   }));
 }
 
