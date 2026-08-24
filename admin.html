@@ -47,11 +47,13 @@
   .variantRow .vhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
   .variantRow .vtitle { font-size:12px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.03em; }
   .variantRow .removeBtn { background:transparent; border:none; color:#C6472E; font-size:13px; cursor:pointer; font-weight:600; padding:2px 6px; }
-  .vgrid { display:flex; gap:10px; }
-  .vgrid .vfields { flex:1; display:flex; flex-direction:column; gap:8px; }
-  .vgrid .vfields .vf-row { display:flex; gap:8px; }
-  .vgrid .vfields .vf-row > div { flex:1; }
-  .vimgslot { width:74px; height:74px; flex-shrink:0; border:1.5px dashed var(--mline); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; background:#fff; font-size:10px; color:var(--inkDim); text-align:center; }
+  .vfields { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+  .vfields .vf-row { display:flex; gap:8px; }
+  .vfields .vf-row > div { flex:1; }
+  .vimageslabel { font-size:11px; color:var(--inkDim); margin-bottom:6px; }
+  .vimages { display:flex; gap:8px; }
+  .vimgslot { width:64px; height:64px; flex-shrink:0; border:1.5px dashed var(--mline); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; background:#fff; font-size:10px; color:var(--inkDim); text-align:center; }
+  .vimgslot.filled { border-style:solid; }
   .vimgslot img { width:100%; height:100%; object-fit:cover; }
   .addVariantBtn { width:100%; padding:11px; border:1.5px dashed var(--accent); border-radius:11px; background:transparent; color:var(--accent); font-weight:700; font-size:13.5px; cursor:pointer; margin-top:4px; }
   .addVariantBtn:disabled { opacity:.4; cursor:not-allowed; border-color:var(--inkDim); color:var(--inkDim); }
@@ -104,10 +106,10 @@
       <label>Rang (ixtiyoriy)</label>
       <input type="text" id="fColor" placeholder="Oq" />
 
-      <label style="margin-top:16px;">Hajm (litr) variantlari — har birida o'z rasmi va narxi bo'ladi (2 tadan 10 tagacha)</label>
+      <label style="margin-top:16px;">Hajm (litr) variantlari — har birida narxi va 3 tagacha rasmi bo'lishi mumkin (1 tadan 10 tagacha)</label>
       <div class="variantsWrap" id="variantsWrap"></div>
       <button type="button" class="addVariantBtn" id="addVariantBtn" onclick="addVariant()">+ Yana hajm (litr) qo'shish</button>
-      <div class="hint" id="variantHint">2 ta variant bilan boshlang, kerak bo'lsa 10 tagacha qo'shishingiz mumkin.</div>
+      <div class="hint" id="variantHint">Kamida 1 ta variant kifoya, kerak bo'lsa 10 tagacha qo'shishingiz mumkin. Har bir variantga 3 tagacha rasm qo'yish mumkin.</div>
 
       <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="onFile(event)" />
 
@@ -117,7 +119,7 @@
     </div>
 
     <div class="card">
-      <h3>Mavjud mahsulotlar</h3>
+      <h3>Hozirda sotuvda — hamma tuvaklar</h3>
       <div class="plist" id="plist"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
     </div>
 
@@ -130,15 +132,20 @@
   let productsCache = [];
   let editingId = null; // null = yangi mahsulot, aks holda tahrirlanayotgan mahsulot ID si
 
-  // Har bir variant: { id, litr, price, size, imageUrl (mavjud, saqlangan URL), newImage: {file, dataUrl}|null }
+  // Har bir variant: { id, litr, price, size, images: [ {url, newImage}, {url, newImage}, {url, newImage} ] } — 3 ta doimiy slot
+  const MAX_IMAGES = 3;
   let variants = [];
   let activeVariantIndex = null;
+  let activeImageIndex = null;
 
   function uid() { return Math.random().toString(36).slice(2, 9); }
   function escAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
 
+  function blankImageSlots() {
+    return Array.from({ length: MAX_IMAGES }, () => ({ url: "", newImage: null }));
+  }
   function blankVariant() {
-    return { id: uid(), litr: "", price: "", size: "", imageUrl: "", newImage: null };
+    return { id: uid(), litr: "", price: "", size: "", images: blankImageSlots() };
   }
 
   function resetForm() {
@@ -152,7 +159,7 @@
     document.getElementById("fName").value = "";
     document.getElementById("fColor").value = "";
     setCat("tuvak");
-    variants = [blankVariant(), blankVariant()];
+    variants = [blankVariant()];
     renderVariants();
     document.getElementById("formMsg").innerHTML = "";
   }
@@ -168,41 +175,43 @@
     renderVariants();
   }
   function removeVariant(idx) {
-    if (variants.length <= 2) return;
+    if (variants.length <= 1) return;
     variants.splice(idx, 1);
     renderVariants();
   }
 
   function renderVariants() {
     const wrap = document.getElementById("variantsWrap");
-    wrap.innerHTML = variants.map((v, idx) => {
-      const imgSrc = v.newImage ? v.newImage.dataUrl : v.imageUrl;
-      const imgInner = imgSrc ? `<img src="${imgSrc}" />` : "+ Rasm";
+    wrap.innerHTML = variants.map((v, vidx) => {
+      const imagesHtml = v.images.map((img, iidx) => {
+        const src = img.newImage ? img.newImage.dataUrl : img.url;
+        const inner = src ? `<img src="${src}" />` : "+ Rasm";
+        return `<div class="vimgslot ${src ? "filled" : ""}" onclick="pickVariantImage(${vidx}, ${iidx})">${inner}</div>`;
+      }).join("");
       return `
         <div class="variantRow">
           <div class="vhead">
-            <span class="vtitle">Variant ${idx + 1}</span>
-            <button type="button" class="removeBtn" onclick="removeVariant(${idx})" ${variants.length <= 2 ? "style='visibility:hidden'" : ""}>✕ o'chirish</button>
+            <span class="vtitle">Variant ${vidx + 1}</span>
+            <button type="button" class="removeBtn" onclick="removeVariant(${vidx})" ${variants.length <= 1 ? "style='visibility:hidden'" : ""}>✕ o'chirish</button>
           </div>
-          <div class="vgrid">
-            <div class="vimgslot" onclick="pickVariantImage(${idx})">${imgInner}</div>
-            <div class="vfields">
-              <div class="vf-row">
-                <div>
-                  <label style="margin:0 0 4px;">Litr</label>
-                  <input type="text" placeholder="0,5" value="${escAttr(v.litr)}" oninput="updateVariant(${idx}, 'litr', this.value)" />
-                </div>
-                <div>
-                  <label style="margin:0 0 4px;">Narx (so'm)</label>
-                  <input type="number" placeholder="12850" value="${escAttr(v.price)}" oninput="updateVariant(${idx}, 'price', this.value)" />
-                </div>
+          <div class="vfields">
+            <div class="vf-row">
+              <div>
+                <label style="margin:0 0 4px;">Litr</label>
+                <input type="text" placeholder="0,5" value="${escAttr(v.litr)}" oninput="updateVariant(${vidx}, 'litr', this.value)" />
               </div>
               <div>
-                <label style="margin:0 0 4px;">O'lcham, sm (ixtiyoriy)</label>
-                <input type="text" placeholder="Ø22.5 × 21" value="${escAttr(v.size)}" oninput="updateVariant(${idx}, 'size', this.value)" />
+                <label style="margin:0 0 4px;">Narx (so'm)</label>
+                <input type="number" placeholder="12850" value="${escAttr(v.price)}" oninput="updateVariant(${vidx}, 'price', this.value)" />
               </div>
             </div>
+            <div>
+              <label style="margin:0 0 4px;">O'lcham, sm (ixtiyoriy)</label>
+              <input type="text" placeholder="Ø22.5 × 21" value="${escAttr(v.size)}" oninput="updateVariant(${vidx}, 'size', this.value)" />
+            </div>
           </div>
+          <div class="vimageslabel">Rasmlar (kamida 1 ta, 3 tagacha)</div>
+          <div class="vimages">${imagesHtml}</div>
         </div>
       `;
     }).join("");
@@ -214,16 +223,17 @@
     variants[idx][field] = val;
   }
 
-  function pickVariantImage(idx) {
-    activeVariantIndex = idx;
+  function pickVariantImage(vidx, iidx) {
+    activeVariantIndex = vidx;
+    activeImageIndex = iidx;
     document.getElementById("fileInput").click();
   }
   function onFile(e) {
     const file = e.target.files[0];
-    if (!file || activeVariantIndex === null) return;
+    if (!file || activeVariantIndex === null || activeImageIndex === null) return;
     const reader = new FileReader();
     reader.onload = () => {
-      variants[activeVariantIndex].newImage = { file, dataUrl: reader.result };
+      variants[activeVariantIndex].images[activeImageIndex] = { url: "", newImage: { file, dataUrl: reader.result } };
       renderVariants();
     };
     reader.readAsDataURL(file);
@@ -293,8 +303,8 @@
       msgEl.innerHTML = '<div class="msg err">Umumiy nomni kiriting</div>';
       return;
     }
-    if (variants.length < 2) {
-      msgEl.innerHTML = '<div class="msg err">Kamida 2 ta hajm (litr) varianti kerak</div>';
+    if (variants.length < 1) {
+      msgEl.innerHTML = '<div class="msg err">Kamida 1 ta hajm (litr) varianti kerak</div>';
       return;
     }
     for (const v of variants) {
@@ -306,8 +316,9 @@
         msgEl.innerHTML = '<div class="msg err">Har bir variant uchun narx kiriting</div>';
         return;
       }
-      if (!v.newImage && !v.imageUrl) {
-        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun rasm yuklang</div>';
+      const hasImage = v.images.some(img => img.newImage || img.url);
+      if (!hasImage) {
+        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun kamida 1 ta rasm yuklang</div>';
         return;
       }
     }
@@ -318,9 +329,12 @@
     try {
       const outVariants = [];
       for (const v of variants) {
-        let imageUrl = v.imageUrl;
-        if (v.newImage) imageUrl = await uploadImage(v.newImage);
-        outVariants.push({ id: v.id, litr: v.litr.trim(), price: Number(v.price), size: v.size.trim(), image: imageUrl });
+        const outImages = [];
+        for (const img of v.images) {
+          if (img.newImage) outImages.push(await uploadImage(img.newImage));
+          else if (img.url) outImages.push(img.url);
+        }
+        outVariants.push({ id: v.id, litr: v.litr.trim(), price: Number(v.price), size: v.size.trim(), images: outImages });
       }
 
       const payload = { name, category, color, variants: outVariants };
@@ -371,22 +385,23 @@
     setCat(p.category === "gul" ? "gul" : "tuvak");
 
     if (Array.isArray(p.variants) && p.variants.length > 0) {
-      variants = p.variants.map(v => ({
-        id: v.id || uid(),
-        litr: v.litr || "",
-        price: v.price || "",
-        size: v.size || "",
-        imageUrl: v.image || "",
-        newImage: null,
-      }));
-      if (variants.length < 2) variants.push(blankVariant());
+      variants = p.variants.map(v => {
+        const existingImages = Array.isArray(v.images) ? v.images.filter(Boolean) : (v.image ? [v.image] : []);
+        const slots = blankImageSlots();
+        existingImages.slice(0, MAX_IMAGES).forEach((url, i) => { slots[i] = { url, newImage: null }; });
+        return {
+          id: v.id || uid(),
+          litr: v.litr || "",
+          price: v.price || "",
+          size: v.size || "",
+          images: slots,
+        };
+      });
     } else {
-      // Eski (litr-variantsiz) mahsulot — bitta variant sifatida ko'rsatamiz,
-      // saqlash uchun yana kamida bitta hajm qo'shish kerak bo'ladi.
-      variants = [
-        { id: uid(), litr: p.capacity || "", price: p.price || "", size: p.size || "", imageUrl: (p.images && p.images[0]) || "", newImage: null },
-        blankVariant(),
-      ];
+      // Eski (litr-variantsiz) mahsulot — bitta variant sifatida ko'rsatamiz.
+      const slots = blankImageSlots();
+      if (p.images && p.images[0]) slots[0] = { url: p.images[0], newImage: null };
+      variants = [{ id: uid(), litr: p.capacity || "", price: p.price || "", size: p.size || "", images: slots }];
     }
     renderVariants();
     document.getElementById("formMsg").innerHTML = "";
@@ -409,7 +424,11 @@
     return `${litrs.join(", ")} L (${p.variants.length} variant)`;
   }
   function thumbUrl(p) {
-    if (Array.isArray(p.variants) && p.variants[0] && p.variants[0].image) return p.variants[0].image;
+    if (Array.isArray(p.variants) && p.variants[0]) {
+      const v0 = p.variants[0];
+      if (Array.isArray(v0.images) && v0.images[0]) return v0.images[0];
+      if (v0.image) return v0.image;
+    }
     return (p.images && p.images[0]) || "";
   }
 
