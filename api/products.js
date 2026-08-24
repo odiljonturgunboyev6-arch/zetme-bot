@@ -1,7 +1,13 @@
-// Zetme AI — Mahsulotlar API
-// GET  /api/products            -> barcha mahsulotlar ro'yxati (sayt shundan o'qiydi)
-// POST /api/products            -> yangi mahsulot qo'shish (admin paroli talab qilinadi)
-// DELETE /api/products?id=xxx   -> mahsulotni o'chirish (admin paroli talab qilinadi)
+// Zetme AI — Mahsulotlar API (LITR VARIANTLI versiya)
+// GET    /api/products            -> barcha mahsulotlar ro'yxati (sayt shundan o'qiydi)
+// POST   /api/products            -> yangi mahsulot (oila) qo'shish, 2-10 ta litr varianti bilan (admin paroli talab qilinadi)
+// PUT    /api/products            -> mavjud mahsulotni (nomi/rasm/narx/variantlarini) tahrirlash (admin paroli talab qilinadi)
+// DELETE /api/products?id=xxx     -> mahsulotni butunlay o'chirish (admin paroli talab qilinadi)
+//
+// Har bir mahsulot endi "oila" — bitta umumiy nom (masalan "Gul tuvak rombik") va
+// unga tegishli 2 dan 10 tagacha "variant" (litr hajmi, narxi, o'lchami, o'z rasmi).
+// Bu Uzum'dagi kabi: bitta mahsulot sahifasida hajm tugmalari (0,5L / 1L / 2L / 4L / 8L)
+// bosilganda rasm va narx almashadi.
 
 import { kv } from "@vercel/kv";
 
@@ -13,9 +19,37 @@ function checkAuth(req) {
   return auth && ADMIN_PASSWORD && auth === ADMIN_PASSWORD;
 }
 
+function validateVariants(variants) {
+  if (!Array.isArray(variants) || variants.length < 2 || variants.length > 10) {
+    return "Kamida 2 ta, ko'pi bilan 10 ta hajm (litr) varianti kerak";
+  }
+  for (const v of variants) {
+    if (!v.litr || String(v.litr).trim() === "") {
+      return "Har bir variant uchun litr (hajm) ko'rsatilishi shart";
+    }
+    if (!v.price || Number(v.price) <= 0) {
+      return "Har bir variant uchun narx ko'rsatilishi shart";
+    }
+    if (!v.image) {
+      return "Har bir variant uchun rasm yuklanishi shart";
+    }
+  }
+  return null;
+}
+
+function normalizeVariants(variants) {
+  return variants.map((v, i) => ({
+    id: v.id || `v${Date.now()}${i}${Math.random().toString(36).slice(2, 5)}`,
+    litr: String(v.litr).trim(),
+    price: Number(v.price),
+    size: v.size ? String(v.size).trim() : "",
+    image: String(v.image),
+  }));
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password");
   if (req.method === "OPTIONS") return res.status(200).end();
 
@@ -29,26 +63,55 @@ export default async function handler(req, res) {
       if (!checkAuth(req)) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
 
       const body = req.body || {};
-      const { name, category, capacity, size, color, price, images } = body;
-      if (!name || !category || !price) {
-        return res.status(400).json({ ok: false, error: "Nomi, kategoriya va narx shart" });
+      const { name, category, color, variants } = body;
+      if (!name || !category) {
+        return res.status(400).json({ ok: false, error: "Nomi va kategoriya shart" });
       }
+      const vErr = validateVariants(variants);
+      if (vErr) return res.status(400).json({ ok: false, error: vErr });
 
       const list = (await kv.get(KEY)) || [];
       const product = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         name: String(name),
         category: category === "gul" ? "gul" : "tuvak",
-        capacity: capacity ? String(capacity) : "",
-        size: size ? String(size) : "",
         color: color ? String(color) : "",
-        price: Number(price),
-        images: Array.isArray(images) ? images.slice(0, 3) : [],
+        variants: normalizeVariants(variants),
         createdAt: Date.now(),
+        updatedAt: Date.now(),
       };
       list.unshift(product);
       await kv.set(KEY, list);
       return res.status(200).json({ ok: true, product });
+    }
+
+    if (req.method === "PUT") {
+      if (!checkAuth(req)) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+
+      const body = req.body || {};
+      const { id, name, category, color, variants } = body;
+      if (!id) return res.status(400).json({ ok: false, error: "Mahsulot ID si yo'q" });
+      if (!name || !category) {
+        return res.status(400).json({ ok: false, error: "Nomi va kategoriya shart" });
+      }
+      const vErr = validateVariants(variants);
+      if (vErr) return res.status(400).json({ ok: false, error: vErr });
+
+      const list = (await kv.get(KEY)) || [];
+      const idx = list.findIndex((p) => p.id === id);
+      if (idx === -1) return res.status(404).json({ ok: false, error: "Mahsulot topilmadi" });
+
+      const updated = {
+        ...list[idx],
+        name: String(name),
+        category: category === "gul" ? "gul" : "tuvak",
+        color: color ? String(color) : "",
+        variants: normalizeVariants(variants),
+        updatedAt: Date.now(),
+      };
+      list[idx] = updated;
+      await kv.set(KEY, list);
+      return res.status(200).json({ ok: true, product: updated });
     }
 
     if (req.method === "DELETE") {
