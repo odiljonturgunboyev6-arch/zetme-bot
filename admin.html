@@ -1,131 +1,453 @@
-// Zetme AI — Mahsulotlar API (LITR VARIANTLI versiya)
-// GET    /api/products            -> barcha mahsulotlar ro'yxati (sayt shundan o'qiydi)
-// POST   /api/products            -> yangi mahsulot (oila) qo'shish, 2-10 ta litr varianti bilan (admin paroli talab qilinadi)
-// PUT    /api/products            -> mavjud mahsulotni (nomi/rasm/narx/variantlarini) tahrirlash (admin paroli talab qilinadi)
-// DELETE /api/products?id=xxx     -> mahsulotni butunlay o'chirish (admin paroli talab qilinadi)
-//
-// Har bir mahsulot endi "oila" — bitta umumiy nom (masalan "Gul tuvak rombik") va
-// unga tegishli 2 dan 10 tagacha "variant" (litr hajmi, narxi, o'lchami, o'z rasmi).
-// Bu Uzum'dagi kabi: bitta mahsulot sahifasida hajm tugmalari (0,5L / 1L / 2L / 4L / 8L)
-// bosilganda rasm va narx almashadi.
-
-import { kv } from "@vercel/kv";
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const KEY = "products";
-
-function checkAuth(req) {
-  const auth = req.headers["x-admin-password"];
-  return auth && ADMIN_PASSWORD && auth === ADMIN_PASSWORD;
-}
-
-function validateVariants(variants) {
-  if (!Array.isArray(variants) || variants.length < 2 || variants.length > 10) {
-    return "Kamida 2 ta, ko'pi bilan 10 ta hajm (litr) varianti kerak";
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zetme AI — Admin</title>
+<style>
+  :root {
+    --noir: #0B211B; --vert: #0F2E24; --ivoire: #F1ECDF; --ivoireDim: #B9C4B6;
+    --laiton: #C6A05B; --laitonHi: #E7D3A0; --line: #2A4438;
+    --paper: #F5F6F3; --ink: #16211B; --inkDim: #69756D; --mline: #E4E7E1; --accent: #2F6B4F;
   }
-  for (const v of variants) {
-    if (!v.litr || String(v.litr).trim() === "") {
-      return "Har bir variant uchun litr (hajm) ko'rsatilishi shart";
-    }
-    if (!v.price || Number(v.price) <= 0) {
-      return "Har bir variant uchun narx ko'rsatilishi shart";
-    }
-    if (!v.image) {
-      return "Har bir variant uchun rasm yuklanishi shart";
-    }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: 'Jost', system-ui, -apple-system, sans-serif; background: var(--paper); color: var(--ink); }
+  .topbar { background: linear-gradient(120deg, var(--vert), var(--noir)); color: var(--ivoire); padding: 18px 20px; display:flex; align-items:center; justify-content:space-between; }
+  .topbar b { font-family: Georgia, serif; font-size: 20px; }
+  .topbar span { color: var(--laiton); }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 18px 60px; }
+
+  /* login gate */
+  #gate { max-width: 340px; margin: 80px auto; text-align:center; }
+  #gate input { width:100%; padding:12px 14px; border:1px solid var(--mline); border-radius:10px; font-size:15px; margin-top:14px; }
+  #gate button { width:100%; margin-top:14px; padding:12px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; font-size:14px; cursor:pointer; }
+  #gate .err { color:#C6472E; font-size:12.5px; margin-top:10px; min-height:16px; }
+
+  /* form */
+  .card { background:#fff; border:1px solid var(--mline); border-radius:16px; padding:20px; margin-bottom:18px; }
+  .card h3 { margin:0 0 14px; font-family: Georgia, serif; font-size:18px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .card h3 .badge { font-size:11px; font-weight:600; padding:4px 9px; border-radius:99px; background:#EAF3EC; color:var(--accent); }
+  .card h3 .badge.editing { background:#FCEFE2; color:#B5711A; }
+  label { display:block; font-size:12.5px; color:var(--inkDim); margin:12px 0 5px; }
+  label:first-of-type { margin-top:0; }
+  input[type=text], input[type=number], select { width:100%; padding:10px 12px; border:1px solid var(--mline); border-radius:9px; font-size:14px; font-family:inherit; }
+  .tabs { display:flex; gap:8px; margin-bottom:4px; }
+  .tab { flex:1; padding:10px; border:1px solid var(--mline); border-radius:9px; text-align:center; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--inkDim); }
+  .tab.active { background: var(--accent); color:#fff; border-color:var(--accent); }
+  .submitbtn { width:100%; margin-top:18px; padding:13px; border:none; border-radius:11px; background:var(--accent); color:#fff; font-weight:700; font-size:14.5px; cursor:pointer; }
+  .submitbtn:disabled { opacity:.5; cursor:not-allowed; }
+  .cancelbtn { width:100%; margin-top:9px; padding:11px; border:1px solid var(--mline); border-radius:11px; background:transparent; color:var(--inkDim); font-weight:600; font-size:13.5px; cursor:pointer; }
+  .msg { font-size:13px; margin-top:10px; padding:10px 12px; border-radius:9px; }
+  .msg.ok { background:#EAF3EC; color:var(--accent); }
+  .msg.err { background:#FBEFEA; color:#C6472E; }
+
+  /* variants (litr) */
+  .variantsWrap { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
+  .variantRow { border:1.5px solid var(--mline); border-radius:12px; padding:12px; position:relative; background:var(--paper); }
+  .variantRow .vhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .variantRow .vtitle { font-size:12px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.03em; }
+  .variantRow .removeBtn { background:transparent; border:none; color:#C6472E; font-size:13px; cursor:pointer; font-weight:600; padding:2px 6px; }
+  .vgrid { display:flex; gap:10px; }
+  .vgrid .vfields { flex:1; display:flex; flex-direction:column; gap:8px; }
+  .vgrid .vfields .vf-row { display:flex; gap:8px; }
+  .vgrid .vfields .vf-row > div { flex:1; }
+  .vimgslot { width:74px; height:74px; flex-shrink:0; border:1.5px dashed var(--mline); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; background:#fff; font-size:10px; color:var(--inkDim); text-align:center; }
+  .vimgslot img { width:100%; height:100%; object-fit:cover; }
+  .addVariantBtn { width:100%; padding:11px; border:1.5px dashed var(--accent); border-radius:11px; background:transparent; color:var(--accent); font-weight:700; font-size:13.5px; cursor:pointer; margin-top:4px; }
+  .addVariantBtn:disabled { opacity:.4; cursor:not-allowed; border-color:var(--inkDim); color:var(--inkDim); }
+  .hint { font-size:11.5px; color:var(--inkDim); margin-top:6px; }
+
+  /* list */
+  .plist { display:flex; flex-direction:column; gap:10px; }
+  .prow { display:flex; gap:12px; align-items:center; background:#fff; border:1px solid var(--mline); border-radius:12px; padding:10px; }
+  .prow img { width:52px; height:52px; border-radius:8px; object-fit:cover; background:var(--paper); }
+  .prow .info { flex:1; min-width:0; }
+  .prow .name { font-weight:600; font-size:13.5px; }
+  .prow .meta { font-size:11.5px; color:var(--inkDim); }
+  .prow .price { font-weight:700; font-size:12.5px; white-space:nowrap; }
+  .prow .btns { display:flex; flex-direction:column; gap:6px; }
+  .prow button { background:transparent; border:1px solid var(--mline); border-radius:8px; padding:6px 10px; font-size:11.5px; cursor:pointer; white-space:nowrap; }
+  .prow .editBtn { color:var(--accent); border-color:var(--accent); }
+  .prow .delBtn { color:#C6472E; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="topbar" style="border-radius:14px; justify-content:center;"><b>ZETME <span>AI</span></b></div>
+  <p style="color:var(--inkDim); font-size:13.5px; margin-top:18px;">Admin panelga kirish uchun parolni kiriting</p>
+  <input type="password" id="pwInput" placeholder="Parol" />
+  <button onclick="tryLogin()">Kirish</button>
+  <div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="topbar">
+    <b>ZETME <span>AI</span> — Admin</b>
+    <button onclick="logout()" style="background:transparent;border:1px solid var(--line);color:var(--ivoire);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;">Chiqish</button>
+  </div>
+  <div class="wrap">
+
+    <div class="card">
+      <h3><span id="formTitle">Yangi mahsulot qo'shish</span> <span class="badge" id="modeBadge">yangi</span></h3>
+
+      <label>Kategoriya</label>
+      <div class="tabs">
+        <div class="tab active" data-cat="tuvak" onclick="setCat('tuvak')">Tuvak</div>
+        <div class="tab" data-cat="gul" onclick="setCat('gul')">Gul</div>
+      </div>
+
+      <label>Umumiy nomi (masalan: Gul tuvak rombik)</label>
+      <input type="text" id="fName" placeholder="Gul tuvak rombik" />
+
+      <label>Rang (ixtiyoriy)</label>
+      <input type="text" id="fColor" placeholder="Oq" />
+
+      <label style="margin-top:16px;">Hajm (litr) variantlari — har birida o'z rasmi va narxi bo'ladi (2 tadan 10 tagacha)</label>
+      <div class="variantsWrap" id="variantsWrap"></div>
+      <button type="button" class="addVariantBtn" id="addVariantBtn" onclick="addVariant()">+ Yana hajm (litr) qo'shish</button>
+      <div class="hint" id="variantHint">2 ta variant bilan boshlang, kerak bo'lsa 10 tagacha qo'shishingiz mumkin.</div>
+
+      <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="onFile(event)" />
+
+      <button class="submitbtn" id="submitBtn" onclick="submitProduct()">Saqlash</button>
+      <button class="cancelbtn hidden" id="cancelBtn" onclick="cancelEdit()">Bekor qilish (yangi mahsulotga qaytish)</button>
+      <div id="formMsg"></div>
+    </div>
+
+    <div class="card">
+      <h3>Mavjud mahsulotlar</h3>
+      <div class="plist" id="plist"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let PASSWORD = "";
+  let category = "tuvak";
+  let productsCache = [];
+  let editingId = null; // null = yangi mahsulot, aks holda tahrirlanayotgan mahsulot ID si
+
+  // Har bir variant: { id, litr, price, size, imageUrl (mavjud, saqlangan URL), newImage: {file, dataUrl}|null }
+  let variants = [];
+  let activeVariantIndex = null;
+
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function escAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+
+  function blankVariant() {
+    return { id: uid(), litr: "", price: "", size: "", imageUrl: "", newImage: null };
   }
-  return null;
-}
 
-function normalizeVariants(variants) {
-  return variants.map((v, i) => ({
-    id: v.id || `v${Date.now()}${i}${Math.random().toString(36).slice(2, 5)}`,
-    litr: String(v.litr).trim(),
-    price: Number(v.price),
-    size: v.size ? String(v.size).trim() : "",
-    image: String(v.image),
-  }));
-}
+  function resetForm() {
+    editingId = null;
+    document.getElementById("formTitle").textContent = "Yangi mahsulot qo'shish";
+    const badge = document.getElementById("modeBadge");
+    badge.textContent = "yangi";
+    badge.classList.remove("editing");
+    document.getElementById("cancelBtn").classList.add("hidden");
+    document.getElementById("submitBtn").textContent = "Saqlash";
+    document.getElementById("fName").value = "";
+    document.getElementById("fColor").value = "";
+    setCat("tuvak");
+    variants = [blankVariant(), blankVariant()];
+    renderVariants();
+    document.getElementById("formMsg").innerHTML = "";
+  }
 
-export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password");
-  if (req.method === "OPTIONS") return res.status(200).end();
+  function setCat(c) {
+    category = c;
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.cat === c));
+  }
 
-  try {
-    if (req.method === "GET") {
-      const list = (await kv.get(KEY)) || [];
-      return res.status(200).json({ ok: true, products: list });
+  function addVariant() {
+    if (variants.length >= 10) return;
+    variants.push(blankVariant());
+    renderVariants();
+  }
+  function removeVariant(idx) {
+    if (variants.length <= 2) return;
+    variants.splice(idx, 1);
+    renderVariants();
+  }
+
+  function renderVariants() {
+    const wrap = document.getElementById("variantsWrap");
+    wrap.innerHTML = variants.map((v, idx) => {
+      const imgSrc = v.newImage ? v.newImage.dataUrl : v.imageUrl;
+      const imgInner = imgSrc ? `<img src="${imgSrc}" />` : "+ Rasm";
+      return `
+        <div class="variantRow">
+          <div class="vhead">
+            <span class="vtitle">Variant ${idx + 1}</span>
+            <button type="button" class="removeBtn" onclick="removeVariant(${idx})" ${variants.length <= 2 ? "style='visibility:hidden'" : ""}>✕ o'chirish</button>
+          </div>
+          <div class="vgrid">
+            <div class="vimgslot" onclick="pickVariantImage(${idx})">${imgInner}</div>
+            <div class="vfields">
+              <div class="vf-row">
+                <div>
+                  <label style="margin:0 0 4px;">Litr</label>
+                  <input type="text" placeholder="0,5" value="${escAttr(v.litr)}" oninput="updateVariant(${idx}, 'litr', this.value)" />
+                </div>
+                <div>
+                  <label style="margin:0 0 4px;">Narx (so'm)</label>
+                  <input type="number" placeholder="12850" value="${escAttr(v.price)}" oninput="updateVariant(${idx}, 'price', this.value)" />
+                </div>
+              </div>
+              <div>
+                <label style="margin:0 0 4px;">O'lcham, sm (ixtiyoriy)</label>
+                <input type="text" placeholder="Ø22.5 × 21" value="${escAttr(v.size)}" oninput="updateVariant(${idx}, 'size', this.value)" />
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    document.getElementById("addVariantBtn").disabled = variants.length >= 10;
+  }
+
+  function updateVariant(idx, field, val) {
+    variants[idx][field] = val;
+  }
+
+  function pickVariantImage(idx) {
+    activeVariantIndex = idx;
+    document.getElementById("fileInput").click();
+  }
+  function onFile(e) {
+    const file = e.target.files[0];
+    if (!file || activeVariantIndex === null) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      variants[activeVariantIndex].newImage = { file, dataUrl: reader.result };
+      renderVariants();
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  function tryLogin() {
+    const pw = document.getElementById("pwInput").value;
+    if (!pw) return;
+    fetch("/api/verify-admin", { headers: { "x-admin-password": pw } })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) {
+          document.getElementById("loginErr").textContent = "Noto'g'ri parol";
+          return;
+        }
+        PASSWORD = pw;
+        document.getElementById("gate").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
+        sessionStorage.setItem("zetme_admin_pw", pw);
+        resetForm();
+        loadProducts();
+      });
+  }
+  function logout() {
+    sessionStorage.removeItem("zetme_admin_pw");
+    location.reload();
+  }
+  window.addEventListener("DOMContentLoaded", () => {
+    const saved = sessionStorage.getItem("zetme_admin_pw");
+    if (saved) {
+      fetch("/api/verify-admin", { headers: { "x-admin-password": saved } })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok) {
+            PASSWORD = saved;
+            document.getElementById("gate").classList.add("hidden");
+            document.getElementById("app").classList.remove("hidden");
+            resetForm();
+            loadProducts();
+          } else {
+            sessionStorage.removeItem("zetme_admin_pw");
+          }
+        });
     }
+  });
 
-    if (req.method === "POST") {
-      if (!checkAuth(req)) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+  async function uploadImage(imgObj) {
+    const base64 = imgObj.dataUrl.split(",")[1];
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": PASSWORD },
+      body: JSON.stringify({ filename: imgObj.file.name, contentType: imgObj.file.type, dataBase64: base64 }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Yuklashda xatolik");
+    return data.url;
+  }
 
-      const body = req.body || {};
-      const { name, category, color, variants } = body;
-      if (!name || !category) {
-        return res.status(400).json({ ok: false, error: "Nomi va kategoriya shart" });
+  async function submitProduct() {
+    const name = document.getElementById("fName").value.trim();
+    const color = document.getElementById("fColor").value.trim();
+    const msgEl = document.getElementById("formMsg");
+    const btn = document.getElementById("submitBtn");
+
+    if (!name) {
+      msgEl.innerHTML = '<div class="msg err">Umumiy nomni kiriting</div>';
+      return;
+    }
+    if (variants.length < 2) {
+      msgEl.innerHTML = '<div class="msg err">Kamida 2 ta hajm (litr) varianti kerak</div>';
+      return;
+    }
+    for (const v of variants) {
+      if (!String(v.litr).trim()) {
+        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun litr (hajm) kiriting</div>';
+        return;
       }
-      const vErr = validateVariants(variants);
-      if (vErr) return res.status(400).json({ ok: false, error: vErr });
-
-      const list = (await kv.get(KEY)) || [];
-      const product = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: String(name),
-        category: category === "gul" ? "gul" : "tuvak",
-        color: color ? String(color) : "",
-        variants: normalizeVariants(variants),
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      list.unshift(product);
-      await kv.set(KEY, list);
-      return res.status(200).json({ ok: true, product });
-    }
-
-    if (req.method === "PUT") {
-      if (!checkAuth(req)) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
-
-      const body = req.body || {};
-      const { id, name, category, color, variants } = body;
-      if (!id) return res.status(400).json({ ok: false, error: "Mahsulot ID si yo'q" });
-      if (!name || !category) {
-        return res.status(400).json({ ok: false, error: "Nomi va kategoriya shart" });
+      if (!v.price || Number(v.price) <= 0) {
+        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun narx kiriting</div>';
+        return;
       }
-      const vErr = validateVariants(variants);
-      if (vErr) return res.status(400).json({ ok: false, error: vErr });
-
-      const list = (await kv.get(KEY)) || [];
-      const idx = list.findIndex((p) => p.id === id);
-      if (idx === -1) return res.status(404).json({ ok: false, error: "Mahsulot topilmadi" });
-
-      const updated = {
-        ...list[idx],
-        name: String(name),
-        category: category === "gul" ? "gul" : "tuvak",
-        color: color ? String(color) : "",
-        variants: normalizeVariants(variants),
-        updatedAt: Date.now(),
-      };
-      list[idx] = updated;
-      await kv.set(KEY, list);
-      return res.status(200).json({ ok: true, product: updated });
+      if (!v.newImage && !v.imageUrl) {
+        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun rasm yuklang</div>';
+        return;
+      }
     }
 
-    if (req.method === "DELETE") {
-      if (!checkAuth(req)) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
-      const id = req.query.id;
-      const list = (await kv.get(KEY)) || [];
-      const next = list.filter((p) => p.id !== id);
-      await kv.set(KEY, next);
-      return res.status(200).json({ ok: true });
-    }
+    btn.disabled = true;
+    msgEl.innerHTML = '<div class="msg ok">Saqlanmoqda…</div>';
 
-    res.status(405).json({ ok: false, error: "Method not allowed" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ ok: false, error: "Server xatosi" });
+    try {
+      const outVariants = [];
+      for (const v of variants) {
+        let imageUrl = v.imageUrl;
+        if (v.newImage) imageUrl = await uploadImage(v.newImage);
+        outVariants.push({ id: v.id, litr: v.litr.trim(), price: Number(v.price), size: v.size.trim(), image: imageUrl });
+      }
+
+      const payload = { name, category, color, variants: outVariants };
+      let res;
+      if (editingId) {
+        res = await fetch("/api/products", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "x-admin-password": PASSWORD },
+          body: JSON.stringify({ id: editingId, ...payload }),
+        });
+      } else {
+        res = await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-admin-password": PASSWORD },
+          body: JSON.stringify(payload),
+        });
+      }
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Xatolik");
+
+      msgEl.innerHTML = `<div class="msg ok">✅ ${editingId ? "Mahsulot yangilandi!" : "Mahsulot qo'shildi!"}</div>`;
+      resetForm();
+      loadProducts();
+    } catch (err) {
+      msgEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+    } finally {
+      btn.disabled = false;
+    }
   }
-}
+
+  function cancelEdit() {
+    resetForm();
+  }
+
+  function editProduct(id) {
+    const p = productsCache.find(x => x.id === id);
+    if (!p) return;
+    editingId = id;
+    document.getElementById("formTitle").textContent = "Mahsulotni tahrirlash";
+    const badge = document.getElementById("modeBadge");
+    badge.textContent = "tahrirlash";
+    badge.classList.add("editing");
+    document.getElementById("cancelBtn").classList.remove("hidden");
+    document.getElementById("submitBtn").textContent = "Yangilash";
+
+    document.getElementById("fName").value = p.name || "";
+    document.getElementById("fColor").value = p.color || "";
+    setCat(p.category === "gul" ? "gul" : "tuvak");
+
+    if (Array.isArray(p.variants) && p.variants.length > 0) {
+      variants = p.variants.map(v => ({
+        id: v.id || uid(),
+        litr: v.litr || "",
+        price: v.price || "",
+        size: v.size || "",
+        imageUrl: v.image || "",
+        newImage: null,
+      }));
+      if (variants.length < 2) variants.push(blankVariant());
+    } else {
+      // Eski (litr-variantsiz) mahsulot — bitta variant sifatida ko'rsatamiz,
+      // saqlash uchun yana kamida bitta hajm qo'shish kerak bo'ladi.
+      variants = [
+        { id: uid(), litr: p.capacity || "", price: p.price || "", size: p.size || "", imageUrl: (p.images && p.images[0]) || "", newImage: null },
+        blankVariant(),
+      ];
+    }
+    renderVariants();
+    document.getElementById("formMsg").innerHTML = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function priceRangeText(p) {
+    if (!Array.isArray(p.variants) || p.variants.length === 0) {
+      return p.price ? Number(p.price).toLocaleString("uz-UZ").replace(/,/g, " ") + " so'm" : "";
+    }
+    const prices = p.variants.map(v => Number(v.price)).filter(n => !isNaN(n));
+    if (prices.length === 0) return "";
+    const min = Math.min(...prices), max = Math.max(...prices);
+    const f = n => n.toLocaleString("uz-UZ").replace(/,/g, " ");
+    return min === max ? `${f(min)} so'm` : `${f(min)} – ${f(max)} so'm`;
+  }
+  function litrRangeText(p) {
+    if (!Array.isArray(p.variants) || p.variants.length === 0) return p.capacity || "";
+    const litrs = p.variants.map(v => v.litr).filter(Boolean);
+    return `${litrs.join(", ")} L (${p.variants.length} variant)`;
+  }
+  function thumbUrl(p) {
+    if (Array.isArray(p.variants) && p.variants[0] && p.variants[0].image) return p.variants[0].image;
+    return (p.images && p.images[0]) || "";
+  }
+
+  async function loadProducts() {
+    const res = await fetch("/api/products");
+    const data = await res.json();
+    const list = document.getElementById("plist");
+    if (!data.ok || data.products.length === 0) {
+      productsCache = [];
+      list.innerHTML = '<p style="color:var(--inkDim); font-size:13px;">Hali mahsulot yo\'q.</p>';
+      return;
+    }
+    productsCache = data.products;
+    list.innerHTML = data.products.map(p => `
+      <div class="prow">
+        <img src="${thumbUrl(p)}" />
+        <div class="info">
+          <div class="name">${p.name}</div>
+          <div class="meta">${p.category === 'gul' ? 'Gul' : 'Tuvak'}${p.color ? ' · ' + p.color : ''} · ${litrRangeText(p)}</div>
+          <div class="price">${priceRangeText(p)}</div>
+        </div>
+        <div class="btns">
+          <button class="editBtn" onclick="editProduct('${p.id}')">Tahrirlash</button>
+          <button class="delBtn" onclick="deleteProduct('${p.id}')">O'chirish</button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm("Bu mahsulotni butunlay o'chirasizmi?")) return;
+    await fetch("/api/products?id=" + encodeURIComponent(id), {
+      method: "DELETE",
+      headers: { "x-admin-password": PASSWORD },
+    });
+    if (editingId === id) resetForm();
+    loadProducts();
+  }
+</script>
+</body>
+</html>
