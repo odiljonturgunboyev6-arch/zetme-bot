@@ -47,14 +47,16 @@
   .variantRow .vhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
   .variantRow .vtitle { font-size:12px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.03em; }
   .variantRow .removeBtn { background:transparent; border:none; color:#C6472E; font-size:13px; cursor:pointer; font-weight:600; padding:2px 6px; }
-  .vfields { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
-  .vfields .vf-row { display:flex; gap:8px; }
-  .vfields .vf-row > div { flex:1; }
-  .vimageslabel { font-size:11px; color:var(--inkDim); margin-bottom:6px; }
-  .vimages { display:flex; gap:8px; }
-  .vimgslot { width:64px; height:64px; flex-shrink:0; border:1.5px dashed var(--mline); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; background:#fff; font-size:10px; color:var(--inkDim); text-align:center; }
-  .vimgslot.filled { border-style:solid; }
+  .vgrid { display:flex; gap:10px; }
+  .vgrid .vfields { flex:1; display:flex; flex-direction:column; gap:8px; }
+  .vgrid .vfields .vf-row { display:flex; gap:8px; }
+  .vgrid .vfields .vf-row > div { flex:1; }
+  .vimgslot { width:74px; height:74px; flex-shrink:0; border:1.5px dashed var(--mline); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; background:#fff; font-size:10px; color:var(--inkDim); text-align:center; }
   .vimgslot img { width:100%; height:100%; object-fit:cover; }
+  .vOverrideToggle { background:transparent; border:none; color:var(--accent); font-size:11.5px; font-weight:600; cursor:pointer; padding:6px 0 0; text-align:left; }
+  .vOverrideWrap { display:none; gap:8px; margin-top:8px; }
+  .vOverrideWrap.open { display:flex; }
+  .vOverrideWrap > div { flex:1; }
   .addVariantBtn { width:100%; padding:11px; border:1.5px dashed var(--accent); border-radius:11px; background:transparent; color:var(--accent); font-weight:700; font-size:13.5px; cursor:pointer; margin-top:4px; }
   .addVariantBtn:disabled { opacity:.4; cursor:not-allowed; border-color:var(--inkDim); color:var(--inkDim); }
   .hint { font-size:11.5px; color:var(--inkDim); margin-top:6px; }
@@ -66,6 +68,7 @@
   .prow .info { flex:1; min-width:0; }
   .prow .name { font-weight:600; font-size:13.5px; }
   .prow .meta { font-size:11.5px; color:var(--inkDim); }
+  .prow .meta.opt { color:var(--laitonLo, #9C7C3E); }
   .prow .price { font-weight:700; font-size:12.5px; white-space:nowrap; }
   .prow .btns { display:flex; flex-direction:column; gap:6px; }
   .prow button { background:transparent; border:1px solid var(--mline); border-radius:8px; padding:6px 10px; font-size:11.5px; cursor:pointer; white-space:nowrap; }
@@ -103,13 +106,13 @@
       <label>Umumiy nomi (masalan: Gul tuvak rombik)</label>
       <input type="text" id="fName" placeholder="Gul tuvak rombik" />
 
-      <label>Rang (ixtiyoriy)</label>
+      <label>Rang (ixtiyoriy, umumiy)</label>
       <input type="text" id="fColor" placeholder="Oq" />
 
-      <label style="margin-top:16px;">Hajm (litr) variantlari — har birida narxi va 3 tagacha rasmi bo'lishi mumkin (1 tadan 10 tagacha)</label>
+      <label style="margin-top:16px;">Hajm (litr) variantlari — har birida o'z rasmi, chakana va optom narxi bo'ladi (1 tadan 10 tagacha)</label>
       <div class="variantsWrap" id="variantsWrap"></div>
       <button type="button" class="addVariantBtn" id="addVariantBtn" onclick="addVariant()">+ Yana hajm (litr) qo'shish</button>
-      <div class="hint" id="variantHint">Kamida 1 ta variant kifoya, kerak bo'lsa 10 tagacha qo'shishingiz mumkin. Har bir variantga 3 tagacha rasm qo'yish mumkin.</div>
+      <div class="hint" id="variantHint">Kamida 1 ta variant bilan boshlang, kerak bo'lsa 10 tagacha qo'shishingiz mumkin. Optom narx — mijoz 5 000 000 so'mdan yuqori xarid qilganda ko'radigan narx.</div>
 
       <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="onFile(event)" />
 
@@ -119,7 +122,7 @@
     </div>
 
     <div class="card">
-      <h3>Hozirda sotuvda — hamma tuvaklar</h3>
+      <h3>Mavjud mahsulotlar</h3>
       <div class="plist" id="plist"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
     </div>
 
@@ -132,20 +135,18 @@
   let productsCache = [];
   let editingId = null; // null = yangi mahsulot, aks holda tahrirlanayotgan mahsulot ID si
 
-  // Har bir variant: { id, litr, price, size, images: [ {url, newImage}, {url, newImage}, {url, newImage} ] } — 3 ta doimiy slot
-  const MAX_IMAGES = 3;
+  // Har bir variant: { id, litr, price (chakana), optPrice (optom), size, image,
+  //                     name (ixtiyoriy override), color (ixtiyoriy override),
+  //                     imageUrl (mavjud, saqlangan URL), newImage: {file, dataUrl}|null,
+  //                     overrideOpen: bool (forma UI holati) }
   let variants = [];
   let activeVariantIndex = null;
-  let activeImageIndex = null;
 
   function uid() { return Math.random().toString(36).slice(2, 9); }
   function escAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
 
-  function blankImageSlots() {
-    return Array.from({ length: MAX_IMAGES }, () => ({ url: "", newImage: null }));
-  }
   function blankVariant() {
-    return { id: uid(), litr: "", price: "", size: "", images: blankImageSlots() };
+    return { id: uid(), litr: "", price: "", optPrice: "", size: "", image: "", imageUrl: "", newImage: null, name: "", color: "", overrideOpen: false };
   }
 
   function resetForm() {
@@ -179,39 +180,60 @@
     variants.splice(idx, 1);
     renderVariants();
   }
+  function toggleOverride(idx) {
+    variants[idx].overrideOpen = !variants[idx].overrideOpen;
+    renderVariants();
+  }
 
   function renderVariants() {
     const wrap = document.getElementById("variantsWrap");
-    wrap.innerHTML = variants.map((v, vidx) => {
-      const imagesHtml = v.images.map((img, iidx) => {
-        const src = img.newImage ? img.newImage.dataUrl : img.url;
-        const inner = src ? `<img src="${src}" />` : "+ Rasm";
-        return `<div class="vimgslot ${src ? "filled" : ""}" onclick="pickVariantImage(${vidx}, ${iidx})">${inner}</div>`;
-      }).join("");
+    wrap.innerHTML = variants.map((v, idx) => {
+      const imgSrc = v.newImage ? v.newImage.dataUrl : v.imageUrl;
+      const imgInner = imgSrc ? `<img src="${imgSrc}" />` : "+ Rasm";
+      const hasOverride = v.name || v.color;
+      const openClass = (v.overrideOpen || hasOverride) ? " open" : "";
       return `
         <div class="variantRow">
           <div class="vhead">
-            <span class="vtitle">Variant ${vidx + 1}</span>
-            <button type="button" class="removeBtn" onclick="removeVariant(${vidx})" ${variants.length <= 1 ? "style='visibility:hidden'" : ""}>✕ o'chirish</button>
+            <span class="vtitle">Variant ${idx + 1}</span>
+            <button type="button" class="removeBtn" onclick="removeVariant(${idx})" ${variants.length <= 1 ? "style='visibility:hidden'" : ""}>✕ o'chirish</button>
           </div>
-          <div class="vfields">
-            <div class="vf-row">
-              <div>
-                <label style="margin:0 0 4px;">Litr</label>
-                <input type="text" placeholder="0,5" value="${escAttr(v.litr)}" oninput="updateVariant(${vidx}, 'litr', this.value)" />
+          <div class="vgrid">
+            <div class="vimgslot" onclick="pickVariantImage(${idx})">${imgInner}</div>
+            <div class="vfields">
+              <div class="vf-row">
+                <div>
+                  <label style="margin:0 0 4px;">Litr</label>
+                  <input type="text" placeholder="0,5" value="${escAttr(v.litr)}" oninput="updateVariant(${idx}, 'litr', this.value)" />
+                </div>
+              </div>
+              <div class="vf-row">
+                <div>
+                  <label style="margin:0 0 4px;">Chakana narx (so'm)</label>
+                  <input type="number" placeholder="12850" value="${escAttr(v.price)}" oninput="updateVariant(${idx}, 'price', this.value)" />
+                </div>
+                <div>
+                  <label style="margin:0 0 4px;">Optom narx (so'm)</label>
+                  <input type="number" placeholder="10500" value="${escAttr(v.optPrice)}" oninput="updateVariant(${idx}, 'optPrice', this.value)" />
+                </div>
               </div>
               <div>
-                <label style="margin:0 0 4px;">Narx (so'm)</label>
-                <input type="number" placeholder="12850" value="${escAttr(v.price)}" oninput="updateVariant(${vidx}, 'price', this.value)" />
+                <label style="margin:0 0 4px;">O'lcham, sm (ixtiyoriy)</label>
+                <input type="text" placeholder="Ø22.5 × 21" value="${escAttr(v.size)}" oninput="updateVariant(${idx}, 'size', this.value)" />
               </div>
+            </div>
+          </div>
+          <button type="button" class="vOverrideToggle" onclick="toggleOverride(${idx})">${(v.overrideOpen || hasOverride) ? "▾" : "▸"} Bu variant uchun boshqa nom/rang (ixtiyoriy)</button>
+          <div class="vOverrideWrap${openClass}">
+            <div>
+              <label style="margin:0 0 4px;">Nomi (bo'sh — umumiy nomdan)</label>
+              <input type="text" placeholder="${escAttr(document.getElementById('fName') ? document.getElementById('fName').value : '')}" value="${escAttr(v.name)}" oninput="updateVariant(${idx}, 'name', this.value)" />
             </div>
             <div>
-              <label style="margin:0 0 4px;">O'lcham, sm (ixtiyoriy)</label>
-              <input type="text" placeholder="Ø22.5 × 21" value="${escAttr(v.size)}" oninput="updateVariant(${vidx}, 'size', this.value)" />
+              <label style="margin:0 0 4px;">Rangi (bo'sh — umumiy rangdan)</label>
+              <input type="text" placeholder="${escAttr(document.getElementById('fColor') ? document.getElementById('fColor').value : '')}" value="${escAttr(v.color)}" oninput="updateVariant(${idx}, 'color', this.value)" />
             </div>
           </div>
-          <div class="vimageslabel">Rasmlar (kamida 1 ta, 3 tagacha)</div>
-          <div class="vimages">${imagesHtml}</div>
         </div>
       `;
     }).join("");
@@ -223,55 +245,20 @@
     variants[idx][field] = val;
   }
 
-  function pickVariantImage(vidx, iidx) {
-    activeVariantIndex = vidx;
-    activeImageIndex = iidx;
+  function pickVariantImage(idx) {
+    activeVariantIndex = idx;
     document.getElementById("fileInput").click();
   }
-
-  // Rasmni serverga yuborishdan oldin brauzerning o'zida kichraytiradi (max 1400px, JPEG 82%),
-  // shunda telefon kamerasidan olingan katta rasmlar ham Vercel'ning so'rov hajmi limitiga urilmaydi.
-  function compressImage(file, maxDim, quality) {
-    maxDim = maxDim || 1400;
-    quality = quality || 0.82;
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          let { width, height } = img;
-          if (width > maxDim || height > maxDim) {
-            if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
-            else { width = Math.round(width * maxDim / height); height = maxDim; }
-          }
-          const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/jpeg", quality));
-        };
-        img.onerror = () => reject(new Error("Rasmni o'qib bo'lmadi"));
-        img.src = reader.result;
-      };
-      reader.onerror = () => reject(new Error("Faylni o'qib bo'lmadi"));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function onFile(e) {
+  function onFile(e) {
     const file = e.target.files[0];
-    const vidx = activeVariantIndex, iidx = activeImageIndex;
-    e.target.value = "";
-    if (!file || vidx === null || iidx === null) return;
-    try {
-      const dataUrl = await compressImage(file);
-      const baseName = file.name.replace(/\.[^.]+$/, "") || "rasm";
-      variants[vidx].images[iidx] = { url: "", newImage: { dataUrl, name: baseName + ".jpg", type: "image/jpeg" } };
+    if (!file || activeVariantIndex === null) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      variants[activeVariantIndex].newImage = { file, dataUrl: reader.result };
       renderVariants();
-    } catch (err) {
-      alert("Rasmni tayyorlashda xatolik: " + err.message);
-    }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   }
 
   function tryLogin() {
@@ -320,14 +307,9 @@
     const res = await fetch("/api/upload", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-admin-password": PASSWORD },
-      body: JSON.stringify({ filename: imgObj.name, contentType: imgObj.type, dataBase64: base64 }),
+      body: JSON.stringify({ filename: imgObj.file.name, contentType: imgObj.file.type, dataBase64: base64 }),
     });
-    let data;
-    try {
-      data = await res.json();
-    } catch (e) {
-      throw new Error(res.status === 413 ? "Rasm hali ham juda katta — boshqa rasm sinab ko'ring" : "Server javobi noto'g'ri (status " + res.status + ")");
-    }
+    const data = await res.json();
     if (!data.ok) throw new Error(data.error || "Yuklashda xatolik");
     return data.url;
   }
@@ -352,12 +334,15 @@
         return;
       }
       if (!v.price || Number(v.price) <= 0) {
-        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun narx kiriting</div>';
+        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun chakana narx kiriting</div>';
         return;
       }
-      const hasImage = v.images.some(img => img.newImage || img.url);
-      if (!hasImage) {
-        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun kamida 1 ta rasm yuklang</div>';
+      if (!v.optPrice || Number(v.optPrice) <= 0) {
+        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun optom narx kiriting</div>';
+        return;
+      }
+      if (!v.newImage && !v.imageUrl) {
+        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun rasm yuklang</div>';
         return;
       }
     }
@@ -368,12 +353,13 @@
     try {
       const outVariants = [];
       for (const v of variants) {
-        const outImages = [];
-        for (const img of v.images) {
-          if (img.newImage) outImages.push(await uploadImage(img.newImage));
-          else if (img.url) outImages.push(img.url);
-        }
-        outVariants.push({ id: v.id, litr: v.litr.trim(), price: Number(v.price), size: v.size.trim(), images: outImages });
+        let imageUrl = v.imageUrl;
+        if (v.newImage) imageUrl = await uploadImage(v.newImage);
+        outVariants.push({
+          id: v.id, litr: v.litr.trim(), price: Number(v.price), optPrice: Number(v.optPrice),
+          size: v.size.trim(), image: imageUrl,
+          name: (v.name || "").trim(), color: (v.color || "").trim(),
+        });
       }
 
       const payload = { name, category, color, variants: outVariants };
@@ -424,23 +410,23 @@
     setCat(p.category === "gul" ? "gul" : "tuvak");
 
     if (Array.isArray(p.variants) && p.variants.length > 0) {
-      variants = p.variants.map(v => {
-        const existingImages = Array.isArray(v.images) ? v.images.filter(Boolean) : (v.image ? [v.image] : []);
-        const slots = blankImageSlots();
-        existingImages.slice(0, MAX_IMAGES).forEach((url, i) => { slots[i] = { url, newImage: null }; });
-        return {
-          id: v.id || uid(),
-          litr: v.litr || "",
-          price: v.price || "",
-          size: v.size || "",
-          images: slots,
-        };
-      });
+      variants = p.variants.map(v => ({
+        id: v.id || uid(),
+        litr: v.litr || "",
+        price: v.price || "",
+        optPrice: v.optPrice || "",
+        size: v.size || "",
+        imageUrl: v.image || "",
+        newImage: null,
+        name: v.name || "",
+        color: v.color || "",
+        overrideOpen: !!(v.name || v.color),
+      }));
     } else {
       // Eski (litr-variantsiz) mahsulot — bitta variant sifatida ko'rsatamiz.
-      const slots = blankImageSlots();
-      if (p.images && p.images[0]) slots[0] = { url: p.images[0], newImage: null };
-      variants = [{ id: uid(), litr: p.capacity || "", price: p.price || "", size: p.size || "", images: slots }];
+      variants = [
+        { id: uid(), litr: p.capacity || "", price: p.price || "", optPrice: "", size: p.size || "", imageUrl: (p.images && p.images[0]) || "", newImage: null, name: "", color: "", overrideOpen: false },
+      ];
     }
     renderVariants();
     document.getElementById("formMsg").innerHTML = "";
@@ -457,17 +443,21 @@
     const f = n => n.toLocaleString("uz-UZ").replace(/,/g, " ");
     return min === max ? `${f(min)} so'm` : `${f(min)} – ${f(max)} so'm`;
   }
+  function optPriceRangeText(p) {
+    if (!Array.isArray(p.variants) || p.variants.length === 0) return "";
+    const prices = p.variants.map(v => Number(v.optPrice)).filter(n => !isNaN(n) && n > 0);
+    if (prices.length === 0) return "";
+    const min = Math.min(...prices), max = Math.max(...prices);
+    const f = n => n.toLocaleString("uz-UZ").replace(/,/g, " ");
+    return min === max ? `${f(min)} so'm` : `${f(min)} – ${f(max)} so'm`;
+  }
   function litrRangeText(p) {
     if (!Array.isArray(p.variants) || p.variants.length === 0) return p.capacity || "";
     const litrs = p.variants.map(v => v.litr).filter(Boolean);
     return `${litrs.join(", ")} L (${p.variants.length} variant)`;
   }
   function thumbUrl(p) {
-    if (Array.isArray(p.variants) && p.variants[0]) {
-      const v0 = p.variants[0];
-      if (Array.isArray(v0.images) && v0.images[0]) return v0.images[0];
-      if (v0.image) return v0.image;
-    }
+    if (Array.isArray(p.variants) && p.variants[0] && p.variants[0].image) return p.variants[0].image;
     return (p.images && p.images[0]) || "";
   }
 
@@ -487,7 +477,8 @@
         <div class="info">
           <div class="name">${p.name}</div>
           <div class="meta">${p.category === 'gul' ? 'Gul' : 'Tuvak'}${p.color ? ' · ' + p.color : ''} · ${litrRangeText(p)}</div>
-          <div class="price">${priceRangeText(p)}</div>
+          <div class="price">Chakana: ${priceRangeText(p)}</div>
+          ${optPriceRangeText(p) ? `<div class="meta opt">Optom: ${optPriceRangeText(p)}</div>` : ''}
         </div>
         <div class="btns">
           <button class="editBtn" onclick="editProduct('${p.id}')">Tahrirlash</button>
