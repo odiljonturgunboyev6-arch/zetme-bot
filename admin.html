@@ -135,10 +135,11 @@
   let productsCache = [];
   let editingId = null; // null = yangi mahsulot, aks holda tahrirlanayotgan mahsulot ID si
 
-  // Har bir variant: { id, litr, price (chakana), optPrice (optom), size, image,
-  //                     name (ixtiyoriy override), color (ixtiyoriy override),
-  //                     imageUrl (mavjud, saqlangan URL), newImage: {file, dataUrl}|null,
-  //                     overrideOpen: bool (forma UI holati) }
+  // Har bir variant: { id, litr, price (chakana), optPrice (optom), size,
+  //                     name/color (ixtiyoriy override),
+  //                     imageUrl (ko'rsatiladigan mavjud rasm URL),
+  //                     existingImages (eski `images` massivi — saqlanadi),
+  //                     newImage: {file, dataUrl}|null, overrideOpen: bool }
   let variants = [];
   let activeVariantIndex = null;
 
@@ -146,7 +147,7 @@
   function escAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
 
   function blankVariant() {
-    return { id: uid(), litr: "", price: "", optPrice: "", size: "", image: "", imageUrl: "", newImage: null, name: "", color: "", overrideOpen: false };
+    return { id: uid(), litr: "", price: "", optPrice: "", size: "", image: "", imageUrl: "", existingImages: [], newImage: null, name: "", color: "", overrideOpen: false };
   }
 
   function resetForm() {
@@ -354,10 +355,16 @@
       const outVariants = [];
       for (const v of variants) {
         let imageUrl = v.imageUrl;
-        if (v.newImage) imageUrl = await uploadImage(v.newImage);
+        let images = Array.isArray(v.existingImages) ? v.existingImages.slice() : [];
+        if (v.newImage) {
+          imageUrl = await uploadImage(v.newImage);
+          images = [imageUrl]; // yangi rasm yuklansa, eski to'plam o'rniga shu qo'yiladi
+        } else if (images.length === 0 && imageUrl) {
+          images = [imageUrl];
+        }
         outVariants.push({
           id: v.id, litr: v.litr.trim(), price: Number(v.price), optPrice: Number(v.optPrice),
-          size: v.size.trim(), image: imageUrl,
+          size: v.size.trim(), image: imageUrl || images[0] || "", images,
           name: (v.name || "").trim(), color: (v.color || "").trim(),
         });
       }
@@ -416,7 +423,9 @@
         price: v.price || "",
         optPrice: v.optPrice || "",
         size: v.size || "",
-        imageUrl: v.image || "",
+        // eski mahsulotlarda rasm `images` massivida, yangilarida `image`da bo'ladi
+        imageUrl: v.image || (Array.isArray(v.images) && v.images[0]) || "",
+        existingImages: Array.isArray(v.images) ? v.images.slice() : (v.image ? [v.image] : []),
         newImage: null,
         name: v.name || "",
         color: v.color || "",
@@ -425,7 +434,7 @@
     } else {
       // Eski (litr-variantsiz) mahsulot — bitta variant sifatida ko'rsatamiz.
       variants = [
-        { id: uid(), litr: p.capacity || "", price: p.price || "", optPrice: "", size: p.size || "", imageUrl: (p.images && p.images[0]) || "", newImage: null, name: "", color: "", overrideOpen: false },
+        { id: uid(), litr: p.capacity || "", price: p.price || "", optPrice: "", size: p.size || "", imageUrl: (p.images && p.images[0]) || "", existingImages: Array.isArray(p.images) ? p.images.slice() : [], newImage: null, name: "", color: "", overrideOpen: false },
       ];
     }
     renderVariants();
@@ -457,7 +466,11 @@
     return `${litrs.join(", ")} L (${p.variants.length} variant)`;
   }
   function thumbUrl(p) {
-    if (Array.isArray(p.variants) && p.variants[0] && p.variants[0].image) return p.variants[0].image;
+    const v0 = Array.isArray(p.variants) && p.variants[0];
+    if (v0) {
+      if (v0.image) return v0.image;
+      if (Array.isArray(v0.images) && v0.images[0]) return v0.images[0];
+    }
     return (p.images && p.images[0]) || "";
   }
 
