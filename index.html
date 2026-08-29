@@ -1,421 +1,984 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0B211B">
-<meta name="description" content="Zetme AI — gulingizni tuvakda ko'ring. AI botanik studiya va gul tuvaklar katalogi.">
-<title>Zetme AI Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500;600;700&display=swap">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zetme AI — Gul va tuvak studiyasi</title>
+<meta name="description" content="Zetme AI — gulingizni tuvakda AI bilan ko'ring, tuvaklar katalogidan xarid qiling." />
 
-<style>
-:root{
-  --noir:#0B211B; --vert:#0F2E24; --vertLo:#153A2E;
-  --ivoire:#F1ECDF; --ivoireDim:#B9C4B6;
-  --laiton:#C6A05B; --laitonLo:#9C7C3E; --laitonHi:#E7D3A0;
-  --bloom:#D98BA6; --line:#2A4438;
-  --paper:#F5F6F3; --card:#FFFFFF; --ink:#16211B; --inkDim:#69756D;
-  --mline:#E4E7E1; --accent:#2F6B4F; --sale:#C6472E;
-  --display:'Cormorant Garamond',Georgia,serif;
-  --body:'Jost',system-ui,-apple-system,'Segoe UI',sans-serif;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);
-  padding-bottom:78px;-webkit-font-smoothing:antialiased}
-button{font-family:var(--body)}
-:focus-visible{outline:2px solid var(--laiton);outline-offset:2px}
-
-/* ---------- HERO ---------- */
-.hero{position:relative;background:radial-gradient(120% 100% at 50% 0%,var(--vert),var(--noir));
-  color:var(--ivoire);padding:16px 18px 28px;overflow:hidden}
-.hero::after{content:"";position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(120% 70% at 50% 0%,#ffffff0d,transparent 60%)}
-.topbar{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-.brand{display:flex;align-items:center;gap:9px}
-.brand-z{width:28px;height:28px;border-radius:9px;flex-shrink:0;
-  background:linear-gradient(140deg,var(--laitonHi),var(--laitonLo));
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--display);font-size:19px;font-weight:600;color:var(--noir);line-height:1}
-.brand-name{font-size:12.5px;letter-spacing:2.4px;font-weight:500;color:var(--ivoire)}
-.topbar-right{display:flex;align-items:center;gap:8px}
-.chip{display:flex;align-items:center;gap:6px;background:#ffffff12;border:1px solid var(--line);
-  color:var(--ivoire);border-radius:20px;padding:5px 11px;font-size:11.5px;cursor:pointer}
-.chip:hover{background:#ffffff1c}
-.dot{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--laiton);background:#0c261e;
-  display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--laiton)}
-
-.eyebrow{position:relative;z-index:2;font-size:10.5px;letter-spacing:3.2px;text-transform:uppercase;
-  color:var(--laiton);text-align:center;margin:6px 0 2px}
-h1.htitle{position:relative;z-index:2;font-family:var(--display);font-weight:500;text-align:center;
-  font-size:clamp(29px,7.5vw,40px);margin:0 0 20px;line-height:1.06;text-wrap:balance}
-h1.htitle em{font-style:italic;color:var(--laitonHi)}
-
-.genrow{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px}
-.plus-sep{width:26px;height:26px;border-radius:20px;background:#ffffff12;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;color:var(--laiton);font-size:15px}
-.slot{width:min(150px,38vw);height:min(150px,38vw);border:1.5px dashed var(--line);border-radius:16px;
-  background:#0c261e;position:relative;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:8px;color:var(--ivoireDim);font-size:12px;cursor:pointer;
-  overflow:hidden;padding:0 8px;text-align:center;transition:border-color .2s}
-.slot:hover{border-color:var(--laitonLo)}
-.slot.filled{border-style:solid}
-.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.slot-ic{font-size:22px;line-height:1}
-.slot-plus{position:absolute;bottom:8px;right:8px;width:29px;height:29px;border-radius:20px;border:none;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;
-  color:var(--noir);box-shadow:0 4px 12px #0006}
-
-.gen-cta{position:relative;z-index:2;display:flex;margin:0 auto;align-items:center;gap:9px;
-  background:linear-gradient(120deg,var(--laitonHi),var(--laiton));color:var(--noir);border:none;
-  border-radius:40px;padding:13px 28px;font-weight:600;font-size:14.5px;cursor:pointer}
-.gen-cta:disabled{opacity:.38;cursor:not-allowed}
-.gen-note{position:relative;z-index:2;text-align:center;margin-top:13px;font-size:12px;color:var(--ivoireDim)}
-
-/* ---------- MARKET ---------- */
-.market{padding:22px 16px 8px}
-.market-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
-.market-title{font-family:var(--display);font-size:25px;margin:0;font-weight:600}
-.market-sub{font-size:12px;color:var(--inkDim);font-variant-numeric:tabular-nums}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:11px}
-.pcard{background:var(--card);border:1px solid var(--mline);border-radius:14px;padding:10px;
-  text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:box-shadow .18s,transform .18s}
-.pcard:hover{box-shadow:0 6px 20px #16211b14;transform:translateY(-2px)}
-.pcard-img{background:var(--paper);border-radius:10px;aspect-ratio:1;overflow:hidden;
-  display:flex;align-items:center;justify-content:center;font-size:34px}
-.pcard-img img{width:100%;height:100%;object-fit:cover}
-.pcard-name{font-size:12.5px;font-weight:600;line-height:1.3}
-.pcard-meta{font-size:11px;color:var(--inkDim)}
-.pcard-price{font-size:13.5px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
-.state{grid-column:1/-1;text-align:center;padding:38px 14px;color:var(--inkDim);font-size:13.5px;
-  background:var(--card);border:1px dashed var(--mline);border-radius:14px}
-
-/* ---------- BOTTOM NAV ---------- */
-.bottomnav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--mline);
-  display:flex;z-index:15;padding:7px 0 9px}
-.bn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;border:none;
-  color:var(--inkDim);font-size:10.5px;cursor:pointer;position:relative}
-.bn.active{color:var(--accent);font-weight:600}
-.bn-ic{font-size:17px;line-height:1}
-.bn-badge{position:absolute;top:-3px;right:calc(50% - 19px);background:var(--sale);color:#fff;font-size:9px;
-  border-radius:20px;min-width:15px;height:15px;display:flex;align-items:center;justify-content:center;padding:0 3px}
-
-/* ---------- OVERLAYS ---------- */
-.ov{position:fixed;inset:0;background:#0b211b70;z-index:50;display:flex;align-items:flex-end;justify-content:center}
-.ov[hidden]{display:none}
-.sheet{position:relative;background:var(--card);width:100%;max-width:480px;border-radius:20px 20px 0 0;
-  max-height:88vh;overflow-y:auto;animation:up .28s ease both}
-@keyframes up{from{transform:translateY(28px);opacity:0}to{transform:none;opacity:1}}
-@media (prefers-reduced-motion:reduce){.sheet{animation:none}.pcard{transition:none}}
-.x{position:absolute;top:12px;right:12px;background:var(--paper);border:1px solid var(--mline);
-  border-radius:20px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;z-index:3;font-size:15px;color:var(--ink)}
-
-.pm-hero{aspect-ratio:1.4;background:var(--paper);display:flex;align-items:center;justify-content:center;font-size:64px;overflow:hidden}
-.pm-hero img{width:100%;height:100%;object-fit:cover}
-.pm-body{padding:18px 20px 24px}
-.pm-title{font-family:var(--display);font-size:23px;margin:0 0 8px}
-.pm-price{font-size:20px;font-weight:700;margin-bottom:14px;font-variant-numeric:tabular-nums}
-.pm-specs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.pm-specs div{background:var(--paper);border-radius:10px;padding:8px;text-align:center}
-.pm-specs span{display:block;font-size:10px;color:var(--inkDim)}
-.pm-specs b{font-size:12px}
-.tierchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
-.tierchip{font-size:10.5px;background:#EAF3EC;color:var(--accent);padding:4px 9px;border-radius:20px;font-weight:600}
-.qtyrow{display:flex;align-items:center;gap:14px;justify-content:center;margin-bottom:14px}
-.qtyrow button{width:34px;height:34px;border-radius:10px;border:1px solid var(--mline);background:var(--paper);
-  cursor:pointer;font-size:16px;color:var(--ink)}
-.qtyrow span{font-size:16px;font-weight:600;min-width:24px;text-align:center;font-variant-numeric:tabular-nums}
-.btn-primary{width:100%;background:var(--accent);color:#fff;border:none;border-radius:14px;padding:14px;
-  font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
-.btn-ghost{width:100%;background:transparent;border:1px solid var(--laitonLo);color:var(--laitonLo);
-  border-radius:14px;padding:12px;font-weight:600;font-size:13px;cursor:pointer;margin-top:8px}
-
-.cartpad{padding:18px 18px 22px}
-.cart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.cart-head h2{font-family:var(--display);font-size:21px;margin:0;font-weight:600}
-.cart-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
-.cart-thumb{width:46px;height:46px;background:var(--paper);border-radius:10px;flex-shrink:0;overflow:hidden;
-  display:flex;align-items:center;justify-content:center;font-size:20px}
-.cart-thumb img{width:100%;height:100%;object-fit:cover}
-.mini{display:flex;align-items:center;gap:8px}
-.mini button{width:24px;height:24px;border-radius:7px;border:1px solid var(--mline);background:var(--paper);
-  cursor:pointer;font-size:12px;color:var(--ink)}
-.mini span{font-size:13px;font-weight:600;min-width:16px;text-align:center;font-variant-numeric:tabular-nums}
-.cart-tier{background:#EAF3EC;color:var(--accent);font-size:12px;font-weight:600;border-radius:10px;
-  padding:9px 12px;margin-bottom:10px}
-.cart-totals{border-top:1px dashed var(--mline);padding-top:11px;margin-bottom:14px}
-.cart-sub{display:flex;justify-content:space-between;color:var(--inkDim);font-size:12.5px;margin-bottom:4px}
-.cart-total{display:flex;justify-content:space-between;font-size:17px;font-variant-numeric:tabular-nums}
-.cart-total b{font-weight:700}
-.minwarn{display:flex;gap:10px;align-items:flex-start;background:#FBEFEA;color:var(--sale);
-  border-radius:12px;padding:12px 14px;font-size:12.5px}
-.empty{text-align:center;color:var(--inkDim);font-size:13.5px;padding:34px 10px}
-
-</style>
+<!-- Build qadamisiz ishlaydi: React/ReactDOM CDN'dan, JSX esa Babel orqali BROWSER'DA
+     (sahifa ochilganda) o'giriladi. Shuning uchun bu bitta index.html faylini to'g'ridan
+     to'g'ri GitHub'ga joylash kifoya — npm install/build kerak emas. -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
+<div id="root"></div>
 
+<!-- App kodi: brauzer bu bloqni bevosita ISHLATMAYDI (type="text/plain"), pastdagi
+     kichik bootstrap skript uni Babel bilan "classic" JSX runtime'da o'giradi va
+     ishga tushiradi. Shu tufayli hech qanday build qadami kerak emas. -->
+<script type="text/plain" id="app-source">
+const { useState, useEffect, useMemo } = React;
 
-<section class="hero">
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-z">Z</div>
-      <div class="brand-name">ZETME AI</div>
-    </div>
-    <div class="topbar-right">
-      <button class="chip" type="button"><span class="dot">◆</span> 2</button>
-      <button class="chip" type="button">UZ</button>
-    </div>
-  </header>
-
-  <p class="eyebrow">AI botanik studiya</p>
-  <h1 class="htitle">Gulingizni <em>tuvakda</em> ko'ring</h1>
-
-  <div class="genrow">
-    <div class="slot" id="slotFlower">
-      <span class="slot-ic">✿</span><span>Gul rasmi</span>
-      <button class="slot-plus" style="background:var(--bloom)" type="button" aria-label="Gul qo'shish">+</button>
-    </div>
-    <div class="plus-sep">+</div>
-    <div class="slot" id="slotPot">
-      <span class="slot-ic">🪴</span><span>Tuvak rasmi</span>
-      <button class="slot-plus" style="background:var(--laiton)" type="button" aria-label="Tuvak qo'shish">+</button>
-    </div>
-  </div>
-
-  <button class="gen-cta" id="genBtn" disabled>✦ Generatsiya qilish</button>
-  <p class="gen-note" id="genNote">Ikkala rasmni tanlang — keyin generatsiya faollashadi</p>
-</section>
-
-<section class="market">
-  <div class="market-head">
-    <h2 class="market-title">Tuvaklar</h2>
-    <span class="market-sub" id="count">yuklanmoqda…</span>
-  </div>
-  <div class="grid" id="grid">
-    <div class="state">Katalog yuklanmoqda…</div>
-  </div>
-</section>
-
-<nav class="bottomnav">
-  <button class="bn active" type="button"><span class="bn-ic">✦</span><span>Studiya</span></button>
-  <button class="bn" type="button" id="navShop"><span class="bn-ic">🪴</span><span>Tuvaklar</span></button>
-  <button class="bn" type="button" id="navCart"><span class="bn-ic">🛍</span><span id="cartBadgeWrap"></span><span>Savat</span></button>
-  <button class="bn" type="button"><span class="bn-ic">☺</span><span>Profil</span></button>
-</nav>
-
-<div class="ov" id="pmOv" hidden>
-  <div class="sheet" id="pmSheet"></div>
-</div>
-
-<div class="ov" id="cartOv" hidden>
-  <div class="sheet"><div class="cartpad" id="cartBody"></div></div>
-</div>
-
-<script>
-const API = "/api/products";
-const BOT = "zetmeai_bot";
-const MIN_ORDER = 200000;
-const TIERS = [
-  {min:1, mult:1.00, label:"Dona narx"},
-  {min:3, mult:0.93, label:"3+ dona: −7%"},
-  {min:6, mult:0.86, label:"6+ dona: −14%"},
-  {min:10, mult:0.78, label:"10+ dona: −22%"},
-];
-const fmt = n => Math.round(n).toLocaleString("ru-RU").replace(/ /g," ") + " so'm";
-const tierFor = q => TIERS.reduce((a,t)=> q>=t.min ? t : a, TIERS[0]);
-const esc = s => String(s??"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-
-let PRODUCTS = [];
-let cart = [];
-
-/* ---- catalog ---- */
-function thumb(p, size){
-  return p.images && p.images[0]
-    ? `<img src="${esc(p.images[0])}" alt="${esc(p.name)}" loading="lazy">`
-    : "🪴";
-}
-async function load(){
-  const grid = document.getElementById("grid");
-  const count = document.getElementById("count");
-  try{
-    const r = await fetch(API, {cache:"no-store"});
-    const d = await r.json();
-    PRODUCTS = (d.products || []).filter(p => p.category !== "gul");
-    if(!PRODUCTS.length){
-      grid.innerHTML = `<div class="state">Hali mahsulot qo'shilmagan.<br>Admin paneldan qo'shing.</div>`;
-      count.textContent = "0 ta mahsulot";
-      return;
-    }
-    count.textContent = PRODUCTS.length + " ta mahsulot";
-    grid.innerHTML = PRODUCTS.map((p,i)=>`
-      <button class="pcard" data-i="${i}" type="button">
-        <div class="pcard-img">${thumb(p)}</div>
-        <div class="pcard-name">${esc(p.name)}</div>
-        <div class="pcard-meta">${esc([p.capacity,p.color].filter(Boolean).join(" · ")) || "&nbsp;"}</div>
-        <div class="pcard-price">${fmt(p.price)}</div>
-      </button>`).join("");
-    grid.querySelectorAll(".pcard").forEach(b =>
-      b.addEventListener("click", ()=> openProduct(PRODUCTS[+b.dataset.i])));
-  }catch(e){
-    grid.innerHTML = `<div class="state">Katalogni yuklab bo'lmadi.<br>Internetni tekshiring.</div>`;
-    count.textContent = "—";
+/* ============================== Icons (no npm package — hand-drawn, lucide-style) ============================== */
+function Ic({ children, size = 18, color = "currentColor", kind = "stroke" }) {
+  if (kind === "fill") {
+    return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none">{children}</svg>;
   }
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+  );
 }
+const Flower2 = (p) => <Ic {...p} kind="fill">
+  <circle cx="12" cy="12" r="2.3" /><circle cx="12" cy="5" r="2.3" /><circle cx="12" cy="19" r="2.3" />
+  <circle cx="5" cy="12" r="2.3" /><circle cx="19" cy="12" r="2.3" />
+</Ic>;
+const Sprout = (p) => <Ic {...p}>
+  <path d="M7 20h10" /><path d="M12 20v-8" />
+  <path d="M12 12c0-3 2-5 5-5 0 3-2 5-5 5z" /><path d="M12 12c0-2-1.5-3.5-4-3.5 0 2 1.5 3.5 4 3.5z" />
+</Ic>;
+const Sparkles = (p) => <Ic {...p} kind="fill"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" /></Ic>;
+const Upload = (p) => <Ic {...p}><path d="M12 15V4" /><path d="M7 9l5-5 5 5" /><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" /></Ic>;
+const ImageIcon = (p) => <Ic {...p}><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="1.6" /><path d="M21 17l-6-6-4 4-3-3-5 5" /></Ic>;
+const Camera = (p) => <Ic {...p}><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="3.5" /></Ic>;
+const X = (p) => <Ic {...p}><path d="M6 6l12 12" /><path d="M18 6L6 18" /></Ic>;
+const ChevronRight = (p) => <Ic {...p}><path d="M9 6l6 6-6 6" /></Ic>;
+const ShoppingBag = (p) => <Ic {...p}><path d="M5 8h14l-1 12H6L5 8z" /><path d="M8 8V6a4 4 0 0 1 8 0v2" /></Ic>;
+const Minus = (p) => <Ic {...p}><path d="M5 12h14" /></Ic>;
+const Plus = (p) => <Ic {...p}><path d="M12 5v14" /><path d="M5 12h14" /></Ic>;
+const ArrowLeft = (p) => <Ic {...p}><path d="M19 12H5" /><path d="M11 5l-6 7 6 7" /></Ic>;
+const Check = (p) => <Ic {...p}><path d="M4 12l5 5L20 6" /></Ic>;
+const Send = (p) => <Ic {...p}><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></Ic>;
+const Globe = (p) => <Ic {...p}><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a14 14 0 0 1 0 18" /><path d="M12 3a14 14 0 0 0 0 18" /></Ic>;
+const User = (p) => <Ic {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></Ic>;
+const BadgeCheck = (p) => <Ic {...p}><path d="M12 2l2.2 1.3 2.6-.4 1.1 2.4 2.4 1.1-.4 2.6L21 12l-1.3 2.2.4 2.6-2.4 1.1-1.1 2.4-2.6-.4L12 22l-2.2-1.3-2.6.4-1.1-2.4-2.4-1.1.4-2.6L3 12l1.3-2.2-.4-2.6 2.4-1.1L7.4 2.9l2.6.4L12 2z" /><path d="M9 12l2 2 4-4" /></Ic>;
+const Coins = (p) => <Ic {...p}><circle cx="9" cy="10" r="6" /><path d="M14.5 15.5A6 6 0 1 0 9 4" /></Ic>;
+const Clock = (p) => <Ic {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></Ic>;
+const Lock = (p) => <Ic {...p}><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></Ic>;
+const Store = (p) => <Ic {...p}><path d="M3 9l1.5-5h15L21 9" /><path d="M4 9v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" /><path d="M9 19v-5h6v5" /></Ic>;
+const Package = (p) => <Ic {...p}><path d="M21 8l-9-5-9 5 9 5 9-5z" /><path d="M3 8v9l9 5 9-5V8" /><path d="M12 13v9" /></Ic>;
 
-/* ---- product sheet ---- */
-let pmQty = 1, pmProduct = null;
-function openProduct(p){
-  pmProduct = p; pmQty = 1;
-  renderProduct();
-  document.getElementById("pmOv").hidden = false;
-}
-function renderProduct(){
-  const p = pmProduct;
-  document.getElementById("pmSheet").innerHTML = `
-    <button class="x" type="button" id="pmX" aria-label="Yopish">✕</button>
-    <div class="pm-hero">${thumb(p)}</div>
-    <div class="pm-body">
-      <h3 class="pm-title">${esc(p.name)}</h3>
-      <div class="pm-price">${fmt(p.price)}</div>
-      <div class="pm-specs">
-        <div><span>Sig'imi</span><b>${esc(p.capacity||"—")}</b></div>
-        <div><span>O'lcham</span><b>${esc(p.size||"—")}</b></div>
-        <div><span>Rang</span><b>${esc(p.color||"—")}</b></div>
-      </div>
-      <div class="tierchips">${TIERS.slice(1).map(t=>`<span class="tierchip">${t.label}</span>`).join("")}</div>
-      <div class="qtyrow">
-        <button type="button" id="qMinus" aria-label="Kamaytirish">−</button>
-        <span id="qVal">${pmQty}</span>
-        <button type="button" id="qPlus" aria-label="Ko'paytirish">+</button>
-      </div>
-      <button class="btn-primary" id="pmAdd" type="button">🛍 Savatga qo'shish — ${fmt(p.price*pmQty)}</button>
-      <button class="btn-ghost" type="button">✦ Shu tuvakka gulni AI bilan moslab ko'rish</button>
-    </div>`;
-  document.getElementById("pmX").onclick = closeProduct;
-  document.getElementById("qMinus").onclick = ()=>{ pmQty=Math.max(1,pmQty-1); renderProduct(); };
-  document.getElementById("qPlus").onclick  = ()=>{ pmQty++; renderProduct(); };
-  document.getElementById("pmAdd").onclick  = ()=>{ addToCart(p,pmQty); closeProduct(); };
-}
-function closeProduct(){ document.getElementById("pmOv").hidden = true; }
-
-/* ---- cart ---- */
-function addToCart(p,q){
-  const ex = cart.find(i=>i.id===p.id);
-  if(ex) ex.qty += q; else cart.push({...p, qty:q});
-  renderBadge();
-}
-function changeQty(id,d){
-  const it = cart.find(i=>i.id===id);
-  if(!it) return;
-  it.qty += d;
-  if(it.qty<=0) cart = cart.filter(i=>i.id!==id);
-  renderBadge(); renderCart();
-}
-function renderBadge(){
-  const n = cart.reduce((s,i)=>s+i.qty,0);
-  document.getElementById("cartBadgeWrap").innerHTML = n ? `<span class="bn-badge">${n}</span>` : "";
-}
-function renderCart(){
-  const body = document.getElementById("cartBody");
-  const head = `<div class="cart-head"><h2>Savat</h2>
-      <button class="x" type="button" id="cX" style="position:static" aria-label="Yopish">✕</button></div>`;
-  if(!cart.length){
-    body.innerHTML = head + `<div class="empty">Savat bo'sh.<br>Tuvaklar bo'limidan mahsulot qo'shing.</div>`;
-    document.getElementById("cX").onclick = closeCart;
-    return;
-  }
-  const totalQty = cart.reduce((s,i)=>s+i.qty,0);
-  const tier = tierFor(totalQty);
-  const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
-  const total = subtotal * tier.mult;
-  const ok = total >= MIN_ORDER;
-
-  body.innerHTML = head +
-    cart.map(i=>`
-      <div class="cart-row">
-        <div class="cart-thumb">${thumb(i)}</div>
-        <div style="flex:1">
-          <div style="font-weight:600;font-size:13.5px">${esc(i.name)}</div>
-          <div style="font-size:12px;color:var(--inkDim)">${fmt(i.price)}</div>
-        </div>
-        <div class="mini">
-          <button type="button" data-m="${esc(i.id)}">−</button>
-          <span>${i.qty}</span>
-          <button type="button" data-p="${esc(i.id)}">+</button>
-        </div>
-      </div>`).join("") +
-    (tier.mult<1 ? `<div class="cart-tier">🎉 ${tier.label} qo'llanildi — ${totalQty} dona uchun</div>` : "") +
-    `<div class="cart-totals">
-       ${tier.mult<1 ? `<div class="cart-sub"><span>Oddiy narxda</span><s>${fmt(subtotal)}</s></div>` : ""}
-       <div class="cart-total"><span>Jami</span><b>${fmt(total)}</b></div>
-     </div>` +
-    (ok
-      ? `<button class="btn-primary" id="cGo" type="button">➤ Buyurtma berish</button>`
-      : `<div class="minwarn"><span>🔒</span><div>
-           <div style="font-weight:600">Minimal buyurtma — ${fmt(MIN_ORDER)}</div>
-           <div style="font-size:11.5px;margin-top:2px">Yana ${fmt(MIN_ORDER-total)}lik mahsulot qo'shing.</div>
-         </div></div>`);
-
-  document.getElementById("cX").onclick = closeCart;
-  body.querySelectorAll("[data-m]").forEach(b=> b.onclick = ()=> changeQty(b.dataset.m,-1));
-  body.querySelectorAll("[data-p]").forEach(b=> b.onclick = ()=> changeQty(b.dataset.p, 1));
-  const go = document.getElementById("cGo");
-  if(go) go.onclick = ()=> window.open(`https://t.me/${BOT}`, "_blank", "noopener");
-}
-function openCart(){ renderCart(); document.getElementById("cartOv").hidden = false; }
-function closeCart(){ document.getElementById("cartOv").hidden = true; }
-
-/* ---- studio slots (demo) ---- */
-let picked = {flower:false, pot:false};
-function wireSlot(id, key){
-  const el = document.getElementById(id);
-  const input = document.createElement("input");
-  input.type = "file"; input.accept = "image/*"; input.hidden = true;
-  document.body.appendChild(input);
-  el.addEventListener("click", ()=> input.click());
-  input.addEventListener("change", e=>{
-    const f = e.target.files[0]; if(!f) return;
-    const img = document.createElement("img");
-    img.src = URL.createObjectURL(f); img.alt = "";
-    el.querySelectorAll("span:not(.slot-plus)").forEach(s=>s.remove());
-    el.querySelector("img")?.remove();
-    el.prepend(img);
-    el.classList.add("filled");
-    picked[key] = true;
-    refreshGen();
-  });
-}
-function refreshGen(){
-  const on = picked.flower && picked.pot;
-  document.getElementById("genBtn").disabled = !on;
-  document.getElementById("genNote").textContent = on
-    ? "Tayyor — bosing (hozircha demo, AI dvigateli hali ulanmagan)"
-    : "Ikkala rasmni tanlang — keyin generatsiya faollashadi";
-}
-wireSlot("slotFlower","flower");
-wireSlot("slotPot","pot");
-document.getElementById("genBtn").onclick = function(){
-  const note = document.getElementById("genNote");
-  this.disabled = true; this.textContent = "Yaratilmoqda…";
-  setTimeout(()=>{
-    this.textContent = "✦ Generatsiya qilish"; this.disabled = false;
-    note.textContent = "Demo: bu yerda AI natijasi chiqadi (Gemini API ulangandan keyin).";
-  }, 1400);
+/* ============================== Tokens ============================== */
+const C = {
+  noir: "#0B211B", vert: "#0F2E24", vertLo: "#153A2E",
+  ivoire: "#F1ECDF", ivoireDim: "#B9C4B6",
+  laiton: "#C6A05B", laitonLo: "#9C7C3E", laitonHi: "#E7D3A0",
+  bloom: "#D98BA6", line: "#2A4438",
+  paper: "#F5F6F3", card: "#FFFFFF", ink: "#16211B", inkDim: "#69756D",
+  mline: "#E4E7E1", accent: "#2F6B4F", price: "#16211B", sale: "#C6472E",
 };
+const FONT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
+const FONT_BODY = "'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif";
 
-/* ---- wiring ---- */
-document.getElementById("navCart").onclick = openCart;
-document.getElementById("navShop").onclick = ()=>
-  document.querySelector(".market").scrollIntoView({behavior:"smooth"});
-document.getElementById("pmOv").addEventListener("click", e=>{ if(e.target.id==="pmOv") closeProduct(); });
-document.getElementById("cartOv").addEventListener("click", e=>{ if(e.target.id==="cartOv") closeCart(); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeProduct(); closeCart(); } });
+const LOGO_STACK = "https://d8j0ntlcm91z4.cloudfront.net/user_370qfkcxfpKcDA0sH662HyZQBGj/hf_20260822_075921_266218b5-e18b-41f0-9412-33c7dfe35eed.png";
 
-load();
+// Same origin as this page (site + admin + api all live in one Vercel project).
+const API_BASE = "";
+const BOT_USERNAME = "zetmeai_bot";
+const MIN_ORDER = 200000;       // chakana (retail) uchun minimal buyurtma
+const OPT_MIN_ORDER = 5000000;  // optom (wholesale) narxda xarid qilish uchun minimal savat
+
+/* ============================== Helpers ============================== */
+function fmt(n) {
+  return Math.round(n).toLocaleString("uz-UZ").replace(/,/g, " ") + " so'm";
+}
+
+// chakana (retail) yoki optom (wholesale) narxni tanlaydi — ikkalasi ham
+// admin panelda har bir variant uchun alohida kiritiladi (api/products.js)
+function priceOf(v, mode) {
+  return mode === "optom" ? Number(v.optPrice || 0) : Number(v.price || 0);
+}
+
+// one-time-order loyalty bonus — matches loyiha-holati.md jadvali
+const BONUS_TIERS = [
+  { min: 50000000, money: 3000000, tokin: 100 },
+  { min: 30000000, money: 1600000, tokin: 50 },
+  { min: 20000000, money: 1100000, tokin: 30 },
+  { min: 15000000, money: 800000, tokin: 25 },
+  { min: 10000000, money: 600000, tokin: 20 },
+  { min: 5000000, money: 250000, tokin: 10 },
+  { min: 1000000, money: 0, tokin: 0, gift: true },
+];
+function bonusFor(total) {
+  for (const t of BONUS_TIERS) if (total >= t.min) return t;
+  return null;
+}
+const TEASER_MIN = 300000;
+const TEASER_MAX = 1000000;
+
+const LANGS = [
+  { code: "uz", label: "UZ", active: true },
+  { code: "ru", label: "RU", active: false },
+  { code: "en", label: "EN", active: false },
+];
+
+// membership tiers — badge color changes by token balance / purchased status
+const TIERS_BADGE = [
+  { id: "oddiy", label: "Oddiy", min: 0, color: C.inkDim, ring: C.mline },
+  { id: "kumush", label: "Kumush a'zo", min: 20, color: "#8A94A6", ring: "#C7CCD6" },
+  { id: "oltin", label: "Oltin a'zo", min: 60, color: C.laitonLo, ring: C.laiton },
+  { id: "olmos", label: "Olmos a'zo", min: 150, color: "#3E7FB8", ring: "#8FC1EE" },
+];
+function tierForTokens(tokens, badgeOwned) {
+  let t = TIERS_BADGE[0];
+  for (const tier of TIERS_BADGE) if (tokens >= tier.min) t = tier;
+  if (badgeOwned && t.id === "oddiy") return TIERS_BADGE[1];
+  return t;
+}
+
+// tiny localStorage wrapper — never throws, works on the real deployed site
+function storageGet(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : v;
+  } catch (e) { return fallback; }
+}
+function storageSet(key, val) {
+  try { localStorage.setItem(key, val); } catch (e) {}
+}
+
+/* ============================== Product helpers ============================== */
+function priceRangeText(p, mode) {
+  const prices = (p.variants || []).map((v) => priceOf(v, mode)).filter((n) => n > 0);
+  if (prices.length === 0) return "";
+  const min = Math.min(...prices), max = Math.max(...prices);
+  return min === max ? fmt(min) : `${fmt(min)} – ${fmt(max)}`;
+}
+function litrRangeText(p) {
+  const litrs = (p.variants || []).map((v) => v.litr).filter(Boolean);
+  return litrs.join(", ") + " L";
+}
+function thumbUrl(p) {
+  return (p.variants && p.variants[0] && p.variants[0].image) || "";
+}
+
+/* ============================== Small UI bits ============================== */
+function SourceMenu({ accent, onPick }) {
+  const opts = [
+    { id: "catalog", icon: ImageIcon, t: "Katalogdan tanlash", s: "Tuvaklar bo'limidan" },
+    { id: "gallery", icon: Upload, t: "Galereyadan yuklash", s: "Telefondagi rasm" },
+    { id: "camera", icon: Camera, t: "Rasmga olish", s: "Kamerani ochish" },
+  ];
+  return (
+    <div className="src-menu" onClick={(e) => e.stopPropagation()}>
+      {opts.map((o) => {
+        const Ic = o.icon;
+        return (
+          <button key={o.id} className="src-item" onClick={() => onPick(o.id)}>
+            <span className="src-ic" style={{ borderColor: accent, color: accent }}><Ic size={16} /></span>
+            <span>
+              <div style={{ fontWeight: 600, fontSize: 13.5 }}>{o.t}</div>
+              <div style={{ fontSize: 11.5, color: C.ivoireDim }}>{o.s}</div>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function GenSlot({ label, icon: Icon, accent, image, onSetImage }) {
+  const [open, setOpen] = useState(false);
+  const fileRef = React.useRef(null);
+  const camRef = React.useRef(null);
+
+  function handleFile(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    onSetImage(url);
+    setOpen(false);
+  }
+  function pickSource(id) {
+    if (id === "gallery") fileRef.current?.click();
+    else if (id === "camera") camRef.current?.click();
+    else { onSetImage("catalog"); setOpen(false); }
+  }
+
+  return (
+    <div className="genslot" style={{ position: "relative" }}>
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFile} />
+      <input ref={camRef} type="file" accept="image/*" capture="environment" hidden onChange={handleFile} />
+      <div className="genslot-box" style={{ borderColor: image ? accent : C.line }}>
+        {image ? (
+          image === "catalog"
+            ? <div className="genslot-fill" style={{ color: accent }}><ImageIcon size={26} /><span>Katalogdan tanlandi</span></div>
+            : <img src={image} alt={label} className="genslot-img" />
+        ) : (
+          <div className="genslot-empty">
+            <Icon size={22} color={accent} />
+            <span>{label}</span>
+          </div>
+        )}
+        <button className="genslot-plus" style={{ background: accent }} onClick={() => setOpen((v) => !v)} aria-label="Qo'shish">
+          {image ? <ChevronRight size={16} color={C.noir} /> : <Plus size={17} color={C.noir} />}
+        </button>
+        {open && <SourceMenu accent={accent} onPick={pickSource} />}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== Chakana / Optom toggle ============================== */
+function PriceModeToggle({ mode, onChange }) {
+  return (
+    <div className="pmtoggle">
+      <button className={"pmtoggle-btn" + (mode === "chakana" ? " active" : "")} onClick={() => onChange("chakana")}>
+        <Store size={13} /> Chakana
+      </button>
+      <button className={"pmtoggle-btn" + (mode === "optom" ? " active" : "")} onClick={() => onChange("optom")}>
+        <Package size={13} /> Optom
+      </button>
+    </div>
+  );
+}
+
+/* ============================== Product detail modal (litr variant picker) ============================== */
+function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
+  const variants = p.variants || [];
+  const [vi, setVi] = useState(0);
+  const [qty, setQty] = useState(1);
+  const v = variants[vi] || variants[0] || {};
+  const displayName = v.name || p.name;
+  const displayColor = v.color || p.color;
+  const unitPrice = priceOf(v, priceMode);
+
+  return (
+    <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="pmodal">
+        <button className="pm-close" onClick={onClose}><X size={18} /></button>
+        <div className="pm-hero">
+          {v.image ? <img src={v.image} alt={displayName} className="pm-hero-img" /> : <span style={{ fontSize: 54 }}>🪴</span>}
+        </div>
+        <div className="pm-body">
+          <div className="pm-modebadge">{priceMode === "optom" ? "Optom narx" : "Chakana narx"}</div>
+          <h3 className="pm-title">{displayName}</h3>
+          <div className="pm-price">{fmt(unitPrice)}</div>
+
+          {variants.length > 1 && (
+            <div className="pm-litrrow">
+              {variants.map((vv, i) => (
+                <button key={vv.id || i} className={"pm-litrchip" + (i === vi ? " active" : "")} onClick={() => setVi(i)}>
+                  {vv.litr} L
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="pm-specs">
+            <div><span>Hajmi</span><b>{v.litr ? `${v.litr} L` : "—"}</b></div>
+            <div><span>O'lcham</span><b>{v.size || "—"}</b></div>
+            <div><span>Rang</span><b>{displayColor || "—"}</b></div>
+          </div>
+          <div className="pm-qty">
+            <button onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus size={15} /></button>
+            <span>{qty}</span>
+            <button onClick={() => setQty((q) => q + 1)}><Plus size={15} /></button>
+          </div>
+          <button className="pm-add" onClick={() => { onAdd(p, v, qty); onClose(); }}>
+            <ShoppingBag size={16} /> Savatga qo'shish — {fmt(unitPrice * qty)}
+          </button>
+          <button className="pm-studio" onClick={() => { onSendToStudio(v); onClose(); }}>
+            <Sparkles size={15} /> Shu tuvakka gulni AI bilan moslab ko'rish
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== Cart drawer ============================== */
+function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, checkoutError }) {
+  const total = items.reduce((s, i) => s + priceOf(i, priceMode) * i.qty, 0);
+  const minRequired = priceMode === "optom" ? OPT_MIN_ORDER : MIN_ORDER;
+  const remaining = minRequired - total;
+  const meetsMin = total >= minRequired;
+  const bonus = bonusFor(total);
+  const payTotal = bonus && bonus.money ? total - bonus.money : total;
+  const showTeaser = total >= TEASER_MIN && total < TEASER_MAX;
+
+  return (
+    <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="cart">
+        <div className="cart-head">
+          <span style={{ fontFamily: FONT_DISPLAY, fontSize: 20 }}>Savat</span>
+          <button className="pm-close" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <div className="cart-modebadge">{priceMode === "optom" ? "🏭 Optom narxda hisoblanmoqda" : "🛍️ Chakana narxda hisoblanmoqda"}</div>
+
+        {items.length === 0 ? (
+          <div className="cart-empty">Savat bo'sh. Tuvaklar bo'limidan mahsulot qo'shing.</div>
+        ) : (
+          <>
+            <div className="cart-list">
+              {items.map((it) => (
+                <div key={it.key} className="cart-row">
+                  <div className="cart-emoji">{it.image ? <img src={it.image} alt="" /> : "🪴"}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13.5 }}>{it.name}</div>
+                    <div style={{ fontSize: 12, color: C.inkDim }}>{it.litr} L · {fmt(priceOf(it, priceMode))}</div>
+                  </div>
+                  <div className="qty-mini">
+                    <button onClick={() => onQty(it.key, -1)}><Minus size={13} /></button>
+                    <span>{it.qty}</span>
+                    <button onClick={() => onQty(it.key, 1)}><Plus size={13} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {showTeaser && (
+              <div className="cart-teaser">🎁 Savatingizni to'ldiring — {fmt(TEASER_MAX)}lik chegaradan o'tsangiz, sirli sovg'a kutmoqda!</div>
+            )}
+            {bonus && bonus.gift && (
+              <div className="cart-bonus">🎁 Bu buyurtmaga tuvak-sovg'a qo'shiladi (turi buyurtma bilan birga aniqlanadi)</div>
+            )}
+            {bonus && bonus.money > 0 && (
+              <div className="cart-bonus">
+                💰 Bonus: −{fmt(bonus.money)}{bonus.tokin ? ` + ${bonus.tokin} tokin` : ""} — avtomatik ayirildi
+              </div>
+            )}
+
+            <div className="cart-totals">
+              <div className="cart-total"><span>Jami</span><b>{fmt(total)}</b></div>
+              {payTotal !== total && (
+                <div className="cart-paytotal"><span>To'lov summasi</span><b>{fmt(payTotal)}</b></div>
+              )}
+            </div>
+
+            {!meetsMin ? (
+              <div className="cart-minwarn">
+                <Lock size={14} />
+                <div>
+                  <div style={{ fontWeight: 600 }}>
+                    {priceMode === "optom" ? "Optom narx uchun minimal buyurtma" : "Minimal buyurtma"} — {fmt(minRequired)}
+                  </div>
+                  <div style={{ fontSize: 11.5, marginTop: 2 }}>
+                    Yana {fmt(remaining)}lik mahsulot qo'shing, shunda buyurtma berish faollashadi.
+                    {priceMode === "optom" && " Yoki yuqoridagi \"Chakana\" tugmasiga o'ting."}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button className="pm-add" disabled={checking} onClick={onCheckout}>
+                  <Send size={15} /> {checking ? "Yuborilmoqda…" : "Buyurtma berish"}
+                </button>
+                {checkoutError && <div className="cart-err">{checkoutError}</div>}
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== Telegram redirect screen ============================== */
+function TelegramRedirect({ orderId, itemCount, payTotal, onBack }) {
+  const botUrl = `https://t.me/${BOT_USERNAME}?start=${encodeURIComponent(orderId)}`;
+  return (
+    <div className="ov">
+      <div className="checkout">
+        <button className="pm-close" onClick={onBack}><ArrowLeft size={18} /></button>
+        <div className="tg-badge">Telegram bot</div>
+        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, margin: "8px 0 4px" }}>Buyurtma botga o'tadi</h3>
+        <p style={{ color: C.inkDim, fontSize: 13.5, margin: "0 0 16px" }}>{itemCount} xil mahsulot — to'lov summasi {fmt(payTotal)}</p>
+        <div className="tg-steps">
+          <div className="tg-step"><span>1</span> Bot buyurtmangizni ko'rsatadi</div>
+          <div className="tg-step"><span>2</span> Ism, telefon va viloyat so'raydi (birinchi martada)</div>
+          <div className="tg-step"><span>3</span> Tasdiqlaysiz — 5 daqiqada operator bog'lanadi</div>
+        </div>
+        <a className="pm-add" href={botUrl} target="_blank" rel="noreferrer" style={{ marginTop: 16, textDecoration: "none" }}>
+          <Send size={15} /> @{BOT_USERNAME}'ga o'tish
+        </a>
+        <p className="co-hint">Ikkinchi martadan boshlab ism va viloyat qayta so'ralmaydi — bot sizni tanib oladi.</p>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== Profile screen ============================== */
+function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBuyTokens, onBuyBadge }) {
+  const tier = tierForTokens(tokens, badgeOwned);
+  const nextTier = TIERS_BADGE.find((t) => t.min > tokens);
+  return (
+    <div className="ov">
+      <div className="profile">
+        <button className="pm-close" onClick={onClose}><X size={18} /></button>
+
+        <div className="prof-head">
+          <div className="prof-avatar" style={{ borderColor: tier.ring }}>
+            <User size={26} color={tier.color} />
+            <span className="prof-badge" style={{ background: tier.color }}><BadgeCheck size={13} color="#fff" /></span>
+          </div>
+          <div>
+            <div className="prof-name">{profile.name || "Mehmon"} </div>
+            <div className="prof-tier" style={{ color: tier.color }}>{tier.label}</div>
+            <div className="prof-phone">{profile.phone || "Telefon kiritilmagan"}</div>
+          </div>
+        </div>
+
+        <div className="prof-tokencard">
+          <div className="prof-token-left">
+            <Coins size={18} color={C.laiton} />
+            <div>
+              <div className="prof-token-n">{tokens}</div>
+              <div className="prof-token-l">token qoldi</div>
+            </div>
+          </div>
+          <button className="prof-topup" onClick={onBuyTokens}>Token sotib olish</button>
+        </div>
+
+        {nextTier && (
+          <div className="prof-progress">
+            <div className="prof-progress-row">
+              <span>{tier.label}</span><span>{nextTier.label}</span>
+            </div>
+            <div className="prof-bar"><div className="prof-bar-fill" style={{ width: `${Math.min(100, (tokens / nextTier.min) * 100)}%`, background: nextTier.color }} /></div>
+            <div className="prof-progress-hint">Yana {Math.max(0, nextTier.min - tokens)} token — {nextTier.label} darajasi</div>
+          </div>
+        )}
+
+        <div className="prof-badgecard">
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span className="prof-badge-ic" style={{ background: badgeOwned ? tier.color : C.mline }}>
+              <BadgeCheck size={16} color="#fff" />
+            </span>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 13.5 }}>Nishon (belgi)</div>
+              <div style={{ fontSize: 11.5, color: C.inkDim }}>{badgeOwned ? "Faol — profilingizda ko'rinadi" : "Token to'plamasdan ham alohida sotib olinadi"}</div>
+            </div>
+          </div>
+          {!badgeOwned && <button className="prof-badgebuy" onClick={onBuyBadge}>Sotib olish</button>}
+          {badgeOwned && <Check size={18} color={C.accent} />}
+        </div>
+
+        <div className="prof-histhead">
+          <Clock size={14} color={C.inkDim} />
+          <span>Generatsiyalar tarixi</span>
+        </div>
+        {generations.length === 0 ? (
+          <div className="prof-empty">Hali generatsiya qilinmagan. Studiyadan boshlang.</div>
+        ) : (
+          <div className="prof-grid">
+            {generations.map((g, i) => (
+              <div key={i} className="prof-gitem">
+                {g.thumb ? <img src={g.thumb} alt="" /> : <Sparkles size={20} color={C.laitonLo} />}
+                <span>{g.date}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== App ============================== */
+function App() {
+  const [flower, setFlower] = useState(null);
+  const [pot, setPot] = useState(null);
+  const [lang, setLang] = useState("uz");
+  const [langOpen, setLangOpen] = useState(false);
+  const [genLoading, setGenLoading] = useState(false);
+  const [genDone, setGenDone] = useState(false);
+
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState(null);
+  const [priceMode, setPriceMode] = useState("chakana"); // "chakana" | "optom"
+
+  const [activeProduct, setActiveProduct] = useState(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [cart, setCart] = useState([]);
+  const [checking, setChecking] = useState(false);
+  const [checkoutError, setCheckoutError] = useState(null);
+  const [order, setOrder] = useState(null); // { orderId, itemCount, payTotal }
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profile, setProfile] = useState({ name: "", phone: "" });
+  const [tokens, setTokens] = useState(2);
+  const [badgeOwned, setBadgeOwned] = useState(false);
+  const [generations, setGenerations] = useState([]);
+
+  // load persisted account state once (real localStorage — works on the live site)
+  useEffect(() => {
+    const c = storageGet("zetme_customer", null);
+    if (c) { try { setProfile(JSON.parse(c)); } catch (e) {} }
+    const t = storageGet("zetme_tokens", null);
+    if (t != null) setTokens(Number(t));
+    const b = storageGet("zetme_badge", null);
+    if (b === "1") setBadgeOwned(true);
+    const g = storageGet("zetme_generations", null);
+    if (g) { try { setGenerations(JSON.parse(g)); } catch (e) {} }
+  }, []);
+
+  // load real product catalog
+  useEffect(() => {
+    fetch(`${API_BASE}/api/products`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.ok) throw new Error(data.error || "Mahsulotlarni yuklab bo'lmadi");
+        const list = (data.products || []).filter((p) => p.category === "tuvak" && Array.isArray(p.variants) && p.variants.length > 0);
+        setProducts(list);
+      })
+      .catch((err) => setProductsError(err.message))
+      .finally(() => setProductsLoading(false));
+  }, []);
+
+  // Optom rejimida faqat optom narxi admin panelda kiritilgan variantlar ko'rsatiladi
+  // (eski, "opt narx" maydoni qo'shilishidan oldin kiritilgan mahsulotlarda bu 0/bo'sh
+  // bo'lishi mumkin — ular "0 so'm" ko'rinib qolmasligi uchun shu yerda filtrlanadi).
+  const visibleProducts = useMemo(() => {
+    return products
+      .map((p) => ({ ...p, variants: (p.variants || []).filter((v) => priceOf(v, priceMode) > 0) }))
+      .filter((p) => p.variants.length > 0);
+  }, [products, priceMode]);
+
+  function changePriceMode(mode) {
+    setPriceMode(mode);
+    setActiveProduct(null); // ochiq modal eski narx rejimi bilan chalkashib qolmasin
+  }
+
+  const canGenerate = flower && pot && tokens > 0;
+  function generate() {
+    if (tokens <= 0) { setProfileOpen(true); return; }
+    setGenLoading(true);
+    setTimeout(() => {
+      setGenLoading(false);
+      setGenDone(true);
+      const newTokens = tokens - 1;
+      setTokens(newTokens);
+      const rec = { thumb: flower && flower !== "catalog" ? flower : null, date: new Date().toLocaleDateString("uz-UZ") };
+      const newGens = [rec, ...generations].slice(0, 24);
+      setGenerations(newGens);
+      storageSet("zetme_tokens", String(newTokens));
+      storageSet("zetme_generations", JSON.stringify(newGens));
+    }, 1400);
+  }
+  function buyTokens() {
+    // demo top-up — real Payme/Click payment wires here later (xarajat-va-tolov-rejasi.md)
+    const newTokens = tokens + 10;
+    setTokens(newTokens);
+    storageSet("zetme_tokens", String(newTokens));
+  }
+  function buyBadge() {
+    setBadgeOwned(true);
+    storageSet("zetme_badge", "1");
+  }
+
+  function addToCart(fam, variant, qty) {
+    const key = `${fam.id}_${variant.id}`;
+    setCart((c) => {
+      const ex = c.find((i) => i.key === key);
+      if (ex) return c.map((i) => (i.key === key ? { ...i, qty: i.qty + qty } : i));
+      return [...c, {
+        key, id: fam.id, variantId: variant.id,
+        name: variant.name || fam.name, litr: variant.litr,
+        price: Number(variant.price), optPrice: Number(variant.optPrice),
+        image: variant.image, qty,
+      }];
+    });
+  }
+  function changeQty(key, d) {
+    setCart((c) => c.map((i) => (i.key === key ? { ...i, qty: Math.max(1, i.qty + d) } : i)).filter((i) => i.qty > 0));
+  }
+  function sendPotToStudio(variant) {
+    setPot(variant.image || "catalog");
+  }
+
+  async function checkout() {
+    setChecking(true);
+    setCheckoutError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          priceMode,
+          items: cart.map((i) => ({ id: i.id, variantId: i.variantId, qty: i.qty })),
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Buyurtmani yuborib bo'lmadi");
+      setOrder({ orderId: data.orderId, itemCount: cart.length, payTotal: data.payTotal });
+      setCart([]);
+      setCartOpen(false);
+    } catch (err) {
+      setCheckoutError(err.message);
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+  const tier = tierForTokens(tokens, badgeOwned);
+
+  return (
+    <div className="root">
+      <style>{CSS}</style>
+
+      {/* ===================== TOP: premium AI hero + studio ===================== */}
+      <section className="hero">
+        <div className="hero-grain" />
+        <header className="topbar">
+          <img src={LOGO_STACK} alt="Zetme AI" className="logo" />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button className="prof-entry" onClick={() => setProfileOpen(true)}>
+              <span className="prof-entry-ring" style={{ borderColor: tier.ring }}>
+                <User size={14} color={tier.color} />
+              </span>
+              <span className="prof-entry-tok"><Coins size={11} color={C.laiton} /> {tokens}</span>
+            </button>
+            <div className="lang-wrap">
+              <button className="lang-btn" onClick={() => setLangOpen((v) => !v)}>
+                <Globe size={14} /> {LANGS.find((l) => l.code === lang).label}
+              </button>
+              {langOpen && (
+                <div className="lang-menu">
+                  {LANGS.map((l) => (
+                    <button key={l.code} disabled={!l.active} className="lang-item"
+                      onClick={() => { if (l.active) { setLang(l.code); setLangOpen(false); } }}>
+                      {l.label} {!l.active && <span className="soon">tez orada</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <p className="eyebrow">AI botanik studiya</p>
+        <h1 className="htitle">Gulingizni <em>tuvakda</em> ko'ring</h1>
+
+        <div className="genrow">
+          <GenSlot label="Gul rasmi" icon={Flower2} accent={C.bloom} image={flower} onSetImage={setFlower} />
+          <div className="plus-sep"><Plus size={16} color={C.laiton} /></div>
+          <GenSlot label="Tuvak rasmi" icon={Sprout} accent={C.laiton} image={pot} onSetImage={setPot} />
+        </div>
+
+        <button className="gen-cta" disabled={!canGenerate || genLoading} onClick={generate}>
+          <Sparkles size={17} /> {genLoading ? "Yaratilmoqda…" : "Generatsiya qilish"}
+        </button>
+
+        {genDone && !genLoading && (
+          <div className="gen-result">
+            <Sparkles size={15} color={C.laiton} />
+            <span>Tayyor! Natija va moslik tahlili shu yerda ko'rinadi.</span>
+          </div>
+        )}
+      </section>
+
+      {/* ===================== BOTTOM: marketplace-style Tuvaklar ===================== */}
+      <section className="market">
+        <div className="market-head">
+          <h2 className="market-title">Tuvaklar</h2>
+          <span className="market-sub">{visibleProducts.length} ta mahsulot</span>
+        </div>
+
+        <div className="market-toolbar">
+          <PriceModeToggle mode={priceMode} onChange={changePriceMode} />
+          {priceMode === "optom" && (
+            <span className="market-optnote">Optom narx — {fmt(OPT_MIN_ORDER)}+ savatda</span>
+          )}
+        </div>
+
+        {productsLoading && <div className="market-state">Yuklanmoqda…</div>}
+        {!productsLoading && productsError && <div className="market-state err">Mahsulotlarni yuklab bo'lmadi: {productsError}</div>}
+        {!productsLoading && !productsError && products.length > 0 && visibleProducts.length === 0 && (
+          <div className="market-state">
+            {priceMode === "optom"
+              ? "Bu mahsulotlarga hali optom narx kiritilmagan. Admin panelda \"Tahrirlash\" orqali optom narxni qo'shing."
+              : "Hali mahsulot yo'q. Tez orada to'ldiriladi."}
+          </div>
+        )}
+        {!productsLoading && !productsError && products.length === 0 && (
+          <div className="market-state">Hali mahsulot yo'q. Tez orada to'ldiriladi.</div>
+        )}
+
+        {!productsLoading && !productsError && visibleProducts.length > 0 && (
+          <div className="grid">
+            {visibleProducts.map((p) => (
+              <button key={p.id} className="pcard" onClick={() => setActiveProduct(p)}>
+                <div className="pcard-img">
+                  {thumbUrl(p) ? <img src={thumbUrl(p)} alt={p.name} /> : <span style={{ fontSize: 34 }}>🪴</span>}
+                </div>
+                <div className="pcard-body">
+                  <div className="pcard-name">{p.name}</div>
+                  <div className="pcard-meta">{litrRangeText(p)}{p.color ? ` · ${p.color}` : ""}</div>
+                  <div className="pcard-price">{priceRangeText(p, priceMode)}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* bottom nav (mobile) */}
+      <nav className="bottomnav">
+        <button className="bn-item active"><Sparkles size={18} /><span>Studiya</span></button>
+        <button className="bn-item"><ShoppingBag size={18} /><span>Tuvaklar</span></button>
+        <button className="bn-item" onClick={() => setCartOpen(true)} style={{ position: "relative" }}>
+          <ShoppingBag size={18} />
+          {cartCount > 0 && <span className="bn-badge">{cartCount}</span>}
+          <span>Savat</span>
+        </button>
+        <button className="bn-item" onClick={() => setProfileOpen(true)}>
+          <User size={18} /><span>Profil</span>
+        </button>
+      </nav>
+
+      {activeProduct && (
+        <ProductModal p={activeProduct} priceMode={priceMode} onClose={() => setActiveProduct(null)} onAdd={addToCart} onSendToStudio={sendPotToStudio} />
+      )}
+      {cartOpen && (
+        <CartDrawer
+          items={cart}
+          priceMode={priceMode}
+          onClose={() => setCartOpen(false)}
+          onQty={changeQty}
+          onCheckout={checkout}
+          checking={checking}
+          checkoutError={checkoutError}
+        />
+      )}
+      {order && (
+        <TelegramRedirect
+          orderId={order.orderId}
+          itemCount={order.itemCount}
+          payTotal={order.payTotal}
+          onBack={() => setOrder(null)}
+        />
+      )}
+      {profileOpen && (
+        <ProfileScreen onClose={() => setProfileOpen(false)} profile={profile} tokens={tokens}
+          badgeOwned={badgeOwned} generations={generations} onBuyTokens={buyTokens} onBuyBadge={buyBadge} />
+      )}
+    </div>
+  );
+}
+
+/* ============================== CSS ============================== */
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500;600&display=swap');
+*{box-sizing:border-box}
+.root{font-family:${FONT_BODY};background:${C.paper};min-height:100vh;padding-bottom:74px}
+
+/* ---------- HERO / STUDIO ---------- */
+.hero{position:relative;background:radial-gradient(120% 100% at 50% 0%, ${C.vert}, ${C.noir});color:${C.ivoire};
+  padding:16px 18px 26px;overflow:hidden}
+.hero-grain{position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%, #ffffff08, transparent 60%)}
+.topbar{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.logo{height:26px;width:auto}
+.lang-wrap{position:relative}
+.prof-entry{display:flex;align-items:center;gap:6px;background:#ffffff12;border:1px solid ${C.line};border-radius:20px;
+  padding:4px 10px 4px 4px;cursor:pointer}
+.prof-entry-ring{width:22px;height:22px;border-radius:50%;border:1.5px solid;display:flex;align-items:center;justify-content:center;background:#0c261e}
+.prof-entry-tok{display:flex;align-items:center;gap:3px;font-size:11px;color:${C.ivoire};font-family:${FONT_BODY}}
+
+.lang-btn{display:flex;align-items:center;gap:6px;background:#ffffff12;border:1px solid ${C.line};color:${C.ivoire};
+  border-radius:20px;padding:6px 12px;font-size:12px;font-family:${FONT_BODY};cursor:pointer}
+.lang-menu{position:absolute;top:36px;right:0;background:${C.vert};border:1px solid ${C.line};border-radius:12px;
+  padding:6px;min-width:140px;z-index:20;box-shadow:0 10px 30px #0008}
+.lang-item{display:flex;justify-content:space-between;width:100%;background:transparent;border:none;color:${C.ivoire};
+  padding:8px 10px;border-radius:8px;font-size:13px;cursor:pointer;font-family:${FONT_BODY}}
+.lang-item:disabled{color:${C.ivoireDim};cursor:not-allowed}
+.lang-item:not(:disabled):hover{background:#ffffff10}
+.soon{font-size:10px;color:${C.laiton}}
+
+.eyebrow{position:relative;z-index:2;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:${C.laiton};text-align:center;margin:4px 0}
+.htitle{position:relative;z-index:2;font-family:${FONT_DISPLAY};font-weight:500;text-align:center;font-size:clamp(28px,7vw,38px);
+  margin:0 0 18px;line-height:1.08}
+.htitle em{font-style:italic;color:${C.laitonHi}}
+
+.genrow{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px}
+.plus-sep{width:26px;height:26px;border-radius:20px;background:#ffffff10;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.genslot{width:150px}
+.genslot-box{position:relative;height:150px;border:1.5px dashed ${C.line};border-radius:16px;background:#0c261e;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.genslot-empty{display:flex;flex-direction:column;align-items:center;gap:8px;color:${C.ivoireDim};font-size:12px;text-align:center;padding:0 8px}
+.genslot-fill{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;text-align:center;padding:0 8px;font-weight:600}
+.genslot-img{width:100%;height:100%;object-fit:cover}
+.genslot-plus{position:absolute;bottom:8px;right:8px;width:30px;height:30px;border-radius:20px;border:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px #0006}
+.src-menu{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:210px;background:${C.vert};
+  border:1px solid ${C.line};border-radius:14px;padding:8px;z-index:30;box-shadow:0 14px 40px #000a}
+.src-item{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:none;padding:8px;border-radius:10px;cursor:pointer;text-align:left}
+.src-item:hover{background:#ffffff0d}
+.src-ic{width:32px;height:32px;border-radius:10px;border:1px solid;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+.gen-cta{position:relative;z-index:2;display:flex;margin:0 auto;align-items:center;gap:9px;
+  background:linear-gradient(120deg,${C.laitonHi},${C.laiton});color:${C.noir};border:none;border-radius:40px;
+  padding:13px 26px;font-weight:600;font-size:14.5px;font-family:${FONT_BODY};cursor:pointer}
+.gen-cta:disabled{opacity:.4;cursor:not-allowed}
+.gen-result{position:relative;z-index:2;display:flex;align-items:center;gap:8px;justify-content:center;margin-top:14px;
+  font-size:12.5px;color:${C.ivoireDim}}
+
+/* ---------- MARKETPLACE ---------- */
+.market{padding:20px 16px 10px}
+.market-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.market-title{font-family:${FONT_DISPLAY};font-size:24px;color:${C.ink};margin:0;font-weight:600}
+.market-sub{font-size:12px;color:${C.inkDim}}
+.market-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.market-optnote{font-size:11px;color:${C.laitonLo};font-weight:600}
+.market-state{font-size:13px;color:${C.inkDim};background:${C.card};border:1px solid ${C.mline};border-radius:12px;padding:18px;text-align:center}
+.market-state.err{color:${C.sale}}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.pcard{background:${C.card};border:1px solid ${C.mline};border-radius:14px;padding:10px;text-align:left;cursor:pointer;
+  display:flex;flex-direction:column;gap:6px}
+.pcard-img{background:${C.paper};border-radius:10px;height:90px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pcard-img img{width:100%;height:100%;object-fit:cover}
+.pcard-name{font-size:12.5px;font-weight:600;color:${C.ink};line-height:1.3}
+.pcard-meta{font-size:11px;color:${C.inkDim}}
+.pcard-price{font-size:13.5px;font-weight:700;color:${C.price};margin-top:2px}
+
+/* ---------- chakana/optom toggle ---------- */
+.pmtoggle{display:inline-flex;background:${C.card};border:1px solid ${C.mline};border-radius:20px;padding:3px}
+.pmtoggle-btn{display:flex;align-items:center;gap:5px;background:transparent;border:none;border-radius:16px;
+  padding:6px 12px;font-size:12px;font-weight:600;color:${C.inkDim};cursor:pointer;font-family:${FONT_BODY}}
+.pmtoggle-btn.active{background:${C.accent};color:#fff}
+
+/* ---------- BOTTOM NAV ---------- */
+.bottomnav{position:fixed;left:0;right:0;bottom:0;background:${C.card};border-top:1px solid ${C.mline};
+  display:flex;z-index:15;padding:6px 0 8px}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;border:none;
+  color:${C.inkDim};font-size:10.5px;font-family:${FONT_BODY};cursor:pointer;position:relative}
+.bn-item.active{color:${C.accent};font-weight:600}
+.bn-badge{position:absolute;top:-4px;right:calc(50% - 18px);background:${C.sale};color:#fff;font-size:9px;
+  border-radius:20px;min-width:15px;height:15px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+
+/* ---------- overlay shared ---------- */
+.ov{position:fixed;inset:0;background:#0006;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.pm-close{position:absolute;top:12px;right:12px;background:${C.paper};border:1px solid ${C.mline};border-radius:20px;
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
+
+/* product modal */
+.pmodal{position:relative;background:${C.card};width:100%;max-width:480px;border-radius:20px 20px 0 0;
+  max-height:88vh;overflow-y:auto;animation:slideup .3s ease both}
+@keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+.pm-hero{height:170px;background:${C.paper};display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pm-hero-img{width:100%;height:100%;object-fit:cover}
+.pm-body{padding:18px 20px 24px}
+.pm-modebadge{font-size:10.5px;font-weight:700;color:${C.accent};text-transform:uppercase;letter-spacing:.04em;margin-top:8px}
+.pm-title{font-family:${FONT_DISPLAY};font-size:22px;margin:2px 0 8px;color:${C.ink}}
+.pm-price{font-size:20px;font-weight:700;color:${C.ink};margin-bottom:14px}
+.pm-litrrow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.pm-litrchip{border:1.5px solid ${C.mline};background:${C.paper};color:${C.ink};border-radius:20px;padding:7px 14px;
+  font-size:12.5px;font-weight:600;cursor:pointer;font-family:${FONT_BODY}}
+.pm-litrchip.active{border-color:${C.accent};background:${C.accent};color:#fff}
+.pm-specs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.pm-specs div{background:${C.paper};border-radius:10px;padding:8px;text-align:center}
+.pm-specs span{display:block;font-size:10px;color:${C.inkDim}}
+.pm-specs b{font-size:12px;color:${C.ink}}
+.pm-qty{display:flex;align-items:center;gap:14px;justify-content:center;margin-bottom:14px}
+.pm-qty button{width:34px;height:34px;border-radius:10px;border:1px solid ${C.mline};background:${C.paper};cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.pm-qty span{font-size:16px;font-weight:600;min-width:22px;text-align:center}
+.pm-add{width:100%;background:${C.accent};color:#fff;border:none;border-radius:14px;padding:14px;font-weight:600;
+  font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:${FONT_BODY}}
+.pm-add:disabled{opacity:.5;cursor:not-allowed}
+.pm-studio{width:100%;background:transparent;border:1px solid ${C.laitonLo};color:${C.laitonLo};border-radius:14px;
+  padding:12px;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px;
+  cursor:pointer;margin-top:8px;font-family:${FONT_BODY}}
+
+/* cart */
+.cart{position:relative;background:${C.card};width:100%;max-width:480px;border-radius:20px 20px 0 0;
+  max-height:85vh;overflow-y:auto;padding:18px 18px 22px;animation:slideup .3s ease both}
+.cart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cart-modebadge{font-size:11.5px;font-weight:600;color:${C.accent};background:#EAF3EC;border-radius:10px;
+  padding:7px 10px;margin-bottom:14px;display:inline-block}
+.cart-empty{text-align:center;color:${C.inkDim};font-size:13.5px;padding:30px 10px}
+.cart-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.cart-row{display:flex;align-items:center;gap:10px}
+.cart-emoji{width:44px;height:44px;background:${C.paper};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden}
+.cart-emoji img{width:100%;height:100%;object-fit:cover}
+.qty-mini{display:flex;align-items:center;gap:8px}
+.qty-mini button{width:24px;height:24px;border-radius:7px;border:1px solid ${C.mline};background:${C.paper};cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.qty-mini span{font-size:13px;font-weight:600;min-width:16px;text-align:center}
+.cart-teaser{background:#FBEFEA;color:${C.sale};font-size:12px;font-weight:600;border-radius:10px;padding:9px 12px;margin-bottom:10px}
+.cart-bonus{background:#FCF3E2;color:${C.laitonLo};font-size:12px;font-weight:600;border-radius:10px;padding:9px 12px;margin-bottom:10px}
+.cart-totals{border-top:1px dashed ${C.mline};padding-top:10px;margin-bottom:14px}
+.cart-total{display:flex;justify-content:space-between;font-size:17px}
+.cart-total b{color:${C.ink}}
+.cart-paytotal{display:flex;justify-content:space-between;font-size:13.5px;color:${C.accent};margin-top:4px}
+.cart-err{color:${C.sale};font-size:12.5px;margin-top:8px;text-align:center}
+.cart-minwarn{display:flex;gap:10px;align-items:flex-start;background:#FBEFEA;color:${C.sale};border-radius:12px;
+  padding:12px 14px;font-size:12.5px}
+.tg-steps{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+.tg-step{display:flex;align-items:center;gap:10px;font-size:13px;color:${C.ink}}
+.tg-step span{width:22px;height:22px;border-radius:50%;background:${C.paper};border:1px solid ${C.mline};
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${C.accent};flex-shrink:0}
+
+/* checkout */
+.checkout{position:relative;background:${C.card};width:100%;max-width:480px;border-radius:20px 20px 0 0;
+  padding:22px 20px 26px;animation:slideup .3s ease both;text-align:left}
+.tg-badge{display:inline-block;background:#E7F3FE;color:#2B7FD6;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px}
+.co-hint{font-size:11px;color:${C.inkDim};margin-top:12px;line-height:1.5}
+
+/* profile screen */
+.profile{position:relative;background:${C.card};width:100%;max-width:480px;border-radius:20px 20px 0 0;
+  max-height:90vh;overflow-y:auto;padding:20px 20px 26px;animation:slideup .3s ease both;text-align:left}
+.prof-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.prof-avatar{position:relative;width:56px;height:56px;border-radius:50%;border:2px solid;background:${C.paper};
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.prof-badge{position:absolute;bottom:-2px;right:-2px;width:19px;height:19px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;border:2px solid ${C.card}}
+.prof-name{font-family:${FONT_DISPLAY};font-size:18px;font-weight:600;color:${C.ink}}
+.prof-tier{font-size:12px;font-weight:700;margin:1px 0}
+.prof-phone{font-size:12px;color:${C.inkDim}}
+
+.prof-tokencard{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(120deg,#16281f,${C.noir});
+  color:${C.ivoire};border-radius:16px;padding:14px 16px;margin-bottom:14px}
+.prof-token-left{display:flex;align-items:center;gap:10px}
+.prof-token-n{font-family:${FONT_DISPLAY};font-size:22px;line-height:1}
+.prof-token-l{font-size:10.5px;color:${C.ivoireDim}}
+.prof-topup{background:${C.laiton};color:${C.noir};border:none;border-radius:20px;padding:8px 14px;font-size:12px;
+  font-weight:700;cursor:pointer;font-family:${FONT_BODY}}
+
+.prof-progress{margin-bottom:14px}
+.prof-progress-row{display:flex;justify-content:space-between;font-size:11px;color:${C.inkDim};margin-bottom:5px}
+.prof-bar{height:6px;background:${C.mline};border-radius:10px;overflow:hidden}
+.prof-bar-fill{height:100%;border-radius:10px;transition:width .4s ease}
+.prof-progress-hint{font-size:10.5px;color:${C.inkDim};margin-top:5px}
+
+.prof-badgecard{display:flex;align-items:center;justify-content:space-between;background:${C.paper};
+  border:1px solid ${C.mline};border-radius:14px;padding:12px 14px;margin-bottom:20px}
+.prof-badge-ic{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.prof-badgebuy{background:${C.ink};color:#fff;border:none;border-radius:20px;padding:7px 14px;font-size:11.5px;
+  font-weight:700;cursor:pointer;font-family:${FONT_BODY}}
+
+.prof-histhead{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:${C.ink};margin-bottom:10px}
+.prof-empty{font-size:12.5px;color:${C.inkDim};background:${C.paper};border-radius:12px;padding:16px;text-align:center}
+.prof-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.prof-gitem{aspect-ratio:1;background:${C.paper};border-radius:10px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:4px;overflow:hidden;position:relative}
+.prof-gitem img{width:100%;height:100%;object-fit:cover}
+.prof-gitem span{position:absolute;bottom:2px;left:0;right:0;font-size:8px;color:#fff;background:#00000090;
+  text-align:center;padding:1px 0}
+
+@media (min-width:640px){
+  .genslot{width:190px}
+}
+`;
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
 </script>
 
+<script>
+  (function () {
+    var src = document.getElementById("app-source").textContent;
+    var out = Babel.transform(src, {
+      presets: [["react", { runtime: "classic" }]],
+    }).code;
+    (0, eval)(out);
+  })();
+</script>
 </body>
 </html>
