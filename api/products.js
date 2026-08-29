@@ -1,14 +1,45 @@
-// Zetme AI — Mahsulotlar API
-// GET/POST/PUT/DELETE /api/products — sayt va admin panel shu yerdan ishlaydi
+// Zetme AI — Mahsulotlar API — MARKETPLACE versiya (sellerId bilan)
+// GET    /api/products        -> faol do'konlarning mahsulotlari (har birida sellerId + shopName)
+// POST   /api/products        -> yangi mahsulot qo'shish
+// PUT    /api/products        -> mahsulotni tahrirlash
+// DELETE /api/products?id=xxx -> mahsulotni o'chirish
+//
+// KIRISH HUQUQI (POST/PUT/DELETE):
+//   - Super-admin: "x-admin-password" header (ADMIN_PASSWORD) -> istalgan mahsulot
+//   - Sotuvchi:    "x-seller-login" + "x-seller-password" headerlar -> FAQAT o'z mahsulotlari
+// Eski (sellerId'siz) mahsulotlar avtomatik "zetme" (asosiy do'kon)ga tegishli hisoblanadi.
 
 import { kv } from "@vercel/kv";
+import { createHash } from "crypto";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const KEY = "products";
+const MAIN_SELLER_ID = "zetme";
 
-function checkAuth(req) {
+function isAdmin(req) {
   const auth = req.headers["x-admin-password"];
   return auth && ADMIN_PASSWORD && auth === ADMIN_PASSWORD;
+}
+
+function hashPassword(password, salt) {
+  return createHash("sha256").update(salt + ":" + String(password)).digest("hex");
+}
+
+// Sotuvchini headerlar orqali aniqlaydi. Muvaffaqiyatda seller obyektini,
+// aks holda null qaytaradi. Super-admin bo'lsa {id:"*"} qaytadi.
+async function resolveActor(req) {
+  if (isAdmin(req)) return { id: "*", super: true };
+  const login = String(req.headers["x-seller-login"] || "").trim().toLowerCase();
+  const password = String(req.headers["x-seller-password"] || "");
+  if (!login || !password) return null;
+  const sellers = (await kv.get("sellers")) || [];
+  const seller = sellers.find((s) => s.login === login);
+  if (!seller || seller.status !== "active") return null;
+  if (seller.builtin) {
+    return ADMIN_PASSWORD && password === ADMIN_PASSWORD ? seller : null;
+  }
+  if (!seller.salt || !seller.passwordHash) return null;
+  return hashPassword(password, seller.salt) === seller.passwordHash ? seller : null;
 }
 
 function validateVariants(variants) {
@@ -35,8 +66,6 @@ function validateVariants(variants) {
 
 function normalizeVariants(variants) {
   return variants.map((v, i) => {
-    // rasm ikki formatda kelishi mumkin: `image` (bitta URL, yangi admin) yoki
-    // `images` (massiv, eski ma'lumotlar) — ikkalasini ham saqlab qo'yamiz
     const images = Array.isArray(v.images) && v.images.length > 0
       ? v.images.map((u) => String(u))
       : (v.image ? [String(v.image)] : []);
@@ -57,17 +86,33 @@ function normalizeVariants(variants) {
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-password");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
     if (req.method === "GET") {
       const list = (await kv.get(KEY)) || [];
-      return res.status(200).json({ ok: true, products: list });
+      const sellers = (await kv.get("sellers")) || [];
+      const byId = Object.fromEntries(sellers.map((s) => [s.id, s]));
+      const out = list
+        .map((p) => ({ ...p, sellerId: p.sellerId || MAIN_SELLER_ID }))
+        .filter((p) => {
+          const s = byId[p.sellerId];
+          // sellers ro'yxati hali yaratilmagan bo'lsa (birinchi ishga tushirish) — asosiy do'kon mahsulotlari ko'rinadi
+          if (!s) return p.sellerId === MAIN_SELLER_ID;
+          return s.status === "active";
+        })
+        .map((p) => ({
+          ...p,
+          shopName: (byId[p.sellerId] && byId[p.sellerId].shopName) || "Tuvaklar",
+          bonusEnabled: byId[p.sellerId] ? !!byId[p.sellerId].bonusEnabled : true,
+        }));
+      return res.status(200).json({ ok: true, products: out });
     }
 
     if (req.method === "POST") {
-      if (!checkAuth(req)) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+      const actor = await resolveActor(req);
+      if (!actor) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
 
       const body = req.body || {};
       const { name, category, color, variants } = body;
@@ -77,9 +122,15 @@ export default async function handler(req, res) {
       const vErr = validateVariants(variants);
       if (vErr) return res.status(400).json({ ok: false, error: vErr });
 
+      // sotuvchi faqat o'z nomidan qo'shadi; super-admin xohlagan sellerId bilan
+      const sellerId = actor.super
+        ? (String(body.sellerId || MAIN_SELLER_ID))
+        : actor.id;
+
       const list = (await kv.get(KEY)) || [];
       const product = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        sellerId,
         name: String(name),
         category: category === "gul" ? "gul" : "tuvak",
         color: color ? String(color) : "",
@@ -93,7 +144,8 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "PUT") {
-      if (!checkAuth(req)) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+      const actor = await resolveActor(req);
+      if (!actor) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
 
       const body = req.body || {};
       const { id, name, category, color, variants } = body;
@@ -108,8 +160,14 @@ export default async function handler(req, res) {
       const idx = list.findIndex((p) => p.id === id);
       if (idx === -1) return res.status(404).json({ ok: false, error: "Mahsulot topilmadi" });
 
+      const ownerId = list[idx].sellerId || MAIN_SELLER_ID;
+      if (!actor.super && ownerId !== actor.id) {
+        return res.status(403).json({ ok: false, error: "Bu mahsulot sizning do'koningizga tegishli emas" });
+      }
+
       const updated = {
         ...list[idx],
+        sellerId: ownerId,
         name: String(name),
         category: category === "gul" ? "gul" : "tuvak",
         color: color ? String(color) : "",
@@ -122,11 +180,18 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "DELETE") {
-      if (!checkAuth(req)) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+      const actor = await resolveActor(req);
+      if (!actor) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
       const id = req.query.id;
       const list = (await kv.get(KEY)) || [];
-      const next = list.filter((p) => p.id !== id);
-      await kv.set(KEY, next);
+      const target = list.find((p) => p.id === id);
+      if (target) {
+        const ownerId = target.sellerId || MAIN_SELLER_ID;
+        if (!actor.super && ownerId !== actor.id) {
+          return res.status(403).json({ ok: false, error: "Bu mahsulot sizning do'koningizga tegishli emas" });
+        }
+      }
+      await kv.set(KEY, list.filter((p) => p.id !== id));
       return res.status(200).json({ ok: true });
     }
 
