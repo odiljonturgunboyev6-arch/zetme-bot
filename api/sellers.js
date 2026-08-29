@@ -12,6 +12,7 @@
 //   { action:"adminList" }               -> barcha sotuvchilar (pending ham)
 //   { action:"approve", id }             -> arizani tasdiqlash (status -> active)
 //   { action:"block", id }               -> bloklash / { action:"unblock", id }
+//   { action:"resetPassword", id, newPassword } -> sotuvchiga yangi parol berish
 //   { action:"remove", id }              -> butunlay o'chirish (mahsulotlari ham o'chadi)
 //
 // Parollar KV'da xesh (sha256 + tuz) ko'rinishida saqlanadi — ochiq matnda emas.
@@ -172,11 +173,19 @@ export default async function handler(req, res) {
     const id = String(body.id || "");
     const idx = list.findIndex((s) => s.id === id);
     if (idx === -1) return res.status(404).json({ ok: false, error: "Sotuvchi topilmadi" });
-    if (list[idx].builtin && (action === "block" || action === "remove")) {
-      return res.status(400).json({ ok: false, error: "Asosiy do'konni bloklab/o'chirib bo'lmaydi" });
+    if (list[idx].builtin && (action === "block" || action === "remove" || action === "resetPassword")) {
+      return res.status(400).json({ ok: false, error: "Asosiy do'kon paroli Vercel'dagi ADMIN_PASSWORD orqali boshqariladi" });
     }
 
-    if (action === "approve") {
+    if (action === "resetPassword") {
+      // super-admin sotuvchiga yangi parol o'rnatadi (parolni unutgan holatlar uchun)
+      const newPassword = String(body.newPassword || "");
+      if (newPassword.length < 6) {
+        return res.status(400).json({ ok: false, error: "Yangi parol kamida 6 ta belgi bo'lsin" });
+      }
+      list[idx].salt = randomBytes(8).toString("hex");
+      list[idx].passwordHash = hashPassword(newPassword, list[idx].salt);
+    } else if (action === "approve") {
       list[idx].status = "active";
     } else if (action === "block") {
       list[idx].status = "blocked";
