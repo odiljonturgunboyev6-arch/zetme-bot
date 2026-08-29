@@ -281,7 +281,10 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
           </div>
         )}
         <div className="pm-body">
-          <div className="pm-modebadge">{priceMode === "optom" ? "Optom narx" : "Chakana narx"}</div>
+          <div className="pm-toprow">
+            <span className="pm-modebadge">{priceMode === "optom" ? "Optom narx" : "Chakana narx"}</span>
+            <span className="pm-shop"><Store size={11} /> {p.shopName || "Tuvaklar"}</span>
+          </div>
           <h3 className="pm-title">{displayName}</h3>
           <div className="pm-price">{fmt(unitPrice)}</div>
 
@@ -308,8 +311,8 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
           <button className="pm-add" onClick={() => { onAdd(p, v, qty); onClose(); }}>
             <ShoppingBag size={16} /> Savatga qo'shish — {fmt(unitPrice * qty)}
           </button>
-          <button className="pm-studio" onClick={() => { onSendToStudio(v); onClose(); }}>
-            <Sparkles size={15} /> Shu tuvakka gulni AI bilan moslab ko'rish
+          <button className="pm-studio" onClick={() => { onSendToStudio(p, v); onClose(); }}>
+            <Sparkles size={15} /> {p.category === "gul" ? "Bu gulni tuvakka AI bilan moslab ko'rish" : "Shu tuvakka gulni AI bilan moslab ko'rish"}
           </button>
         </div>
       </div>
@@ -323,9 +326,13 @@ function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, ch
   const minRequired = priceMode === "optom" ? OPT_MIN_ORDER : MIN_ORDER;
   const remaining = minRequired - total;
   const meetsMin = total >= minRequired;
-  const bonus = bonusFor(total);
+  // MARKETPLACE: bonus/sovg'a faqat shu do'kon bonusni yoqqan bo'lsa ko'rsatiladi
+  // (server ham xuddi shunday hisoblaydi — api/checkout.js)
+  const cartShop = items[0] || null;
+  const bonusOn = cartShop ? cartShop.bonusEnabled !== false : true;
+  const bonus = bonusOn ? bonusFor(total) : null;
   const payTotal = bonus && bonus.money ? total - bonus.money : total;
-  const showTeaser = total >= TEASER_MIN && total < TEASER_MAX;
+  const showTeaser = bonusOn && total >= TEASER_MIN && total < TEASER_MAX;
 
   return (
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -336,6 +343,9 @@ function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, ch
         </div>
 
         <div className="cart-modebadge">{priceMode === "optom" ? "🏭 Optom narxda hisoblanmoqda" : "🛍️ Chakana narxda hisoblanmoqda"}</div>
+        {cartShop && (
+          <div className="cart-shopline"><Store size={13} /> Buyurtma <b>{cartShop.shopName}</b> do'konidan · bitta buyurtma = bitta do'kon</div>
+        )}
 
         {items.length === 0 ? (
           <div className="cart-empty">Savat bo'sh. Tuvaklar bo'limidan mahsulot qo'shing.</div>
@@ -406,7 +416,7 @@ function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, ch
 }
 
 /* ============================== Telegram redirect screen ============================== */
-function TelegramRedirect({ orderId, itemCount, payTotal, onBack }) {
+function TelegramRedirect({ orderId, itemCount, payTotal, shopName, onBack }) {
   const botUrl = `https://t.me/${BOT_USERNAME}?start=${encodeURIComponent(orderId)}`;
   return (
     <div className="ov">
@@ -414,7 +424,9 @@ function TelegramRedirect({ orderId, itemCount, payTotal, onBack }) {
         <button className="pm-close" onClick={onBack}><ArrowLeft size={18} /></button>
         <div className="tg-badge">Telegram bot</div>
         <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, margin: "8px 0 4px" }}>Buyurtma botga o'tadi</h3>
-        <p style={{ color: C.inkDim, fontSize: 13.5, margin: "0 0 16px" }}>{itemCount} xil mahsulot — to'lov summasi {fmt(payTotal)}</p>
+        <p style={{ color: C.inkDim, fontSize: 13.5, margin: "0 0 16px" }}>
+          {shopName ? `${shopName} do'konidan ` : ""}{itemCount} xil mahsulot — to'lov summasi {fmt(payTotal)}
+        </p>
         <div className="tg-steps">
           <div className="tg-step"><span>1</span> Bot buyurtmangizni ko'rsatadi</div>
           <div className="tg-step"><span>2</span> Ism, telefon va viloyat so'raydi (birinchi martada)</div>
@@ -519,10 +531,15 @@ function App() {
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(null);
   const [priceMode, setPriceMode] = useState("chakana"); // "chakana" | "optom"
+  const [catFilter, setCatFilter] = useState("all");     // "all" | "tuvak" | "gul"
+  const [shopFilter, setShopFilter] = useState(null);    // null | { id, name } — do'kon sahifasi
 
   const [activeProduct, setActiveProduct] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState([]);
+  // boshqa do'kondan mahsulot qo'shilmoqchi bo'lganda chiqadigan ogohlantirish:
+  // { fam, variant, qty, currentShop, newShop } | null
+  const [shopConflict, setShopConflict] = useState(null);
   const [checking, setChecking] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
   const [order, setOrder] = useState(null); // { orderId, itemCount, payTotal }
@@ -545,27 +562,29 @@ function App() {
     if (g) { try { setGenerations(JSON.parse(g)); } catch (e) {} }
   }, []);
 
-  // load real product catalog
+  // load real product catalog — MARKETPLACE: endi barcha kategoriya (tuvak + gul),
+  // har mahsulotda sellerId + shopName + bonusEnabled keladi (api/products.js GET)
   useEffect(() => {
     fetch(`${API_BASE}/api/products`)
       .then((r) => r.json())
       .then((data) => {
         if (!data.ok) throw new Error(data.error || "Mahsulotlarni yuklab bo'lmadi");
-        const list = (data.products || []).filter((p) => p.category === "tuvak" && Array.isArray(p.variants) && p.variants.length > 0);
+        const list = (data.products || []).filter((p) => Array.isArray(p.variants) && p.variants.length > 0);
         setProducts(list);
       })
       .catch((err) => setProductsError(err.message))
       .finally(() => setProductsLoading(false));
   }, []);
 
-  // Optom rejimida faqat optom narxi admin panelda kiritilgan variantlar ko'rsatiladi
-  // (eski, "opt narx" maydoni qo'shilishidan oldin kiritilgan mahsulotlarda bu 0/bo'sh
-  // bo'lishi mumkin — ular "0 so'm" ko'rinib qolmasligi uchun shu yerda filtrlanadi).
+  // Filtrlash: narx rejimi (optom narxi yo'q variantlar yashirinadi) +
+  // kategoriya (Barchasi/Tuvaklar/Gullar) + do'kon sahifasi (shopFilter)
   const visibleProducts = useMemo(() => {
     return products
       .map((p) => ({ ...p, variants: (p.variants || []).filter((v) => priceOf(v, priceMode) > 0) }))
-      .filter((p) => p.variants.length > 0);
-  }, [products, priceMode]);
+      .filter((p) => p.variants.length > 0)
+      .filter((p) => (catFilter === "all" ? true : (p.category || "tuvak") === catFilter))
+      .filter((p) => (shopFilter ? (p.sellerId || "zetme") === shopFilter.id : true));
+  }, [products, priceMode, catFilter, shopFilter]);
 
   function changePriceMode(mode) {
     setPriceMode(mode);
@@ -599,7 +618,9 @@ function App() {
     storageSet("zetme_badge", "1");
   }
 
-  function addToCart(fam, variant, qty) {
+  // MARKETPLACE: savatda faqat BITTA do'kon mahsulotlari bo'la oladi.
+  // Boshqa do'kondan qo'shilsa — ogohlantirish chiqadi (server ham buni majburlaydi).
+  function doAddToCart(fam, variant, qty) {
     const key = `${fam.id}_${variant.id}`;
     setCart((c) => {
       const ex = c.find((i) => i.key === key);
@@ -609,14 +630,53 @@ function App() {
         name: variant.name || fam.name, litr: variant.litr,
         price: Number(variant.price), optPrice: Number(variant.optPrice),
         image: variantImg(variant), qty,
+        sellerId: fam.sellerId || "zetme",
+        shopName: fam.shopName || "Tuvaklar",
+        bonusEnabled: fam.bonusEnabled !== false,
       }];
     });
+  }
+  function addToCart(fam, variant, qty) {
+    const newSellerId = fam.sellerId || "zetme";
+    if (cart.length > 0 && cart[0].sellerId !== newSellerId) {
+      setShopConflict({
+        fam, variant, qty,
+        currentShop: cart[0].shopName,
+        newShop: fam.shopName || "Tuvaklar",
+      });
+      return;
+    }
+    doAddToCart(fam, variant, qty);
+  }
+  function resolveShopConflict(clearAndAdd) {
+    if (clearAndAdd && shopConflict) {
+      setCart([]);
+      // savat tozalangach yangi mahsulotni qo'shamiz
+      const { fam, variant, qty } = shopConflict;
+      setCart([{
+        key: `${fam.id}_${variant.id}`, id: fam.id, variantId: variant.id,
+        name: variant.name || fam.name, litr: variant.litr,
+        price: Number(variant.price), optPrice: Number(variant.optPrice),
+        image: variantImg(variant), qty,
+        sellerId: fam.sellerId || "zetme",
+        shopName: fam.shopName || "Tuvaklar",
+        bonusEnabled: fam.bonusEnabled !== false,
+      }]);
+    }
+    setShopConflict(null);
+  }
+  function openShop(p) {
+    setShopFilter({ id: p.sellerId || "zetme", name: p.shopName || "Tuvaklar" });
+    setActiveProduct(null);
   }
   function changeQty(key, d) {
     setCart((c) => c.map((i) => (i.key === key ? { ...i, qty: Math.max(1, i.qty + d) } : i)).filter((i) => i.qty > 0));
   }
-  function sendPotToStudio(variant) {
-    setPot(variantImg(variant) || "catalog");
+  function sendPotToStudio(p, variant) {
+    const img = variantImg(variant) || "catalog";
+    if ((p.category || "tuvak") === "gul") setFlower(img);
+    else setPot(img);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function checkout() {
@@ -633,7 +693,7 @@ function App() {
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Buyurtmani yuborib bo'lmadi");
-      setOrder({ orderId: data.orderId, itemCount: cart.length, payTotal: data.payTotal });
+      setOrder({ orderId: data.orderId, itemCount: cart.length, payTotal: data.payTotal, shopName: data.shopName });
       setCart([]);
       setCartOpen(false);
     } catch (err) {
@@ -701,19 +761,33 @@ function App() {
         )}
       </section>
 
-      {/* ===================== BOTTOM: marketplace-style Tuvaklar ===================== */}
-      <section className="market">
+      {/* ===================== BOTTOM: marketplace — Mahsulotlar ===================== */}
+      <section className="market" id="market">
         <div className="market-head">
-          <h2 className="market-title">Tuvaklar</h2>
+          <h2 className="market-title">Mahsulotlar</h2>
           <span className="market-sub">{visibleProducts.length} ta mahsulot</span>
         </div>
 
         <div className="market-toolbar">
           <PriceModeToggle mode={priceMode} onChange={changePriceMode} />
+          <div className="catchips">
+            {[["all","Barchasi"],["tuvak","Tuvaklar"],["gul","Gullar"]].map(([id, label]) => (
+              <button key={id} className={"catchip" + (catFilter === id ? " active" : "")} onClick={() => setCatFilter(id)}>
+                {label}
+              </button>
+            ))}
+          </div>
           {priceMode === "optom" && (
             <span className="market-optnote">Optom narx — {fmt(OPT_MIN_ORDER)}+ savatda</span>
           )}
         </div>
+
+        {shopFilter && (
+          <div className="shopbanner">
+            <span><Store size={14} /> <b>{shopFilter.name}</b> do'koni mahsulotlari</span>
+            <button onClick={() => setShopFilter(null)}><X size={13} /> Barchasi</button>
+          </div>
+        )}
 
         {productsLoading && <div className="market-state">Yuklanmoqda…</div>}
         {!productsLoading && productsError && <div className="market-state err">Mahsulotlarni yuklab bo'lmadi: {productsError}</div>}
@@ -731,16 +805,19 @@ function App() {
         {!productsLoading && !productsError && visibleProducts.length > 0 && (
           <div className="grid">
             {visibleProducts.map((p) => (
-              <button key={p.id} className="pcard" onClick={() => setActiveProduct(p)}>
+              <div key={p.id} className="pcard" onClick={() => setActiveProduct(p)}>
                 <div className="pcard-img">
                   {thumbUrl(p) ? <img src={thumbUrl(p)} alt={p.name} /> : <span style={{ fontSize: 34 }}>🪴</span>}
                 </div>
                 <div className="pcard-body">
+                  <button className="pcard-shop" onClick={(e) => { e.stopPropagation(); openShop(p); }}>
+                    <Store size={10} /> {p.shopName || "Tuvaklar"}
+                  </button>
                   <div className="pcard-name">{p.name}</div>
                   <div className="pcard-meta">{litrRangeText(p)}{p.color ? ` · ${p.color}` : ""}</div>
                   <div className="pcard-price">{priceRangeText(p, priceMode)}</div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
@@ -748,8 +825,12 @@ function App() {
 
       {/* bottom nav (mobile) */}
       <nav className="bottomnav">
-        <button className="bn-item active"><Sparkles size={18} /><span>Studiya</span></button>
-        <button className="bn-item"><ShoppingBag size={18} /><span>Tuvaklar</span></button>
+        <button className="bn-item active" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+          <Sparkles size={18} /><span>Studiya</span>
+        </button>
+        <button className="bn-item" onClick={() => { const el = document.getElementById("market"); if (el) el.scrollIntoView({ behavior: "smooth" }); }}>
+          <Store size={18} /><span>Mahsulotlar</span>
+        </button>
         <button className="bn-item" onClick={() => setCartOpen(true)} style={{ position: "relative" }}>
           <ShoppingBag size={18} />
           {cartCount > 0 && <span className="bn-badge">{cartCount}</span>}
@@ -779,8 +860,29 @@ function App() {
           orderId={order.orderId}
           itemCount={order.itemCount}
           payTotal={order.payTotal}
+          shopName={order.shopName}
           onBack={() => setOrder(null)}
         />
+      )}
+      {shopConflict && (
+        <div className="ov" onClick={(e) => e.target === e.currentTarget && resolveShopConflict(false)}>
+          <div className="conflict">
+            <div className="conflict-ic"><Store size={22} color={C.laitonLo} /></div>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 20, margin: "0 0 6px" }}>Savatda boshqa do'kon mahsuloti bor</h3>
+            <p style={{ fontSize: 13.5, color: C.inkDim, margin: "0 0 16px", lineHeight: 1.55 }}>
+              Savatingizda hozir <b>{shopConflict.currentShop}</b> do'konining mahsulotlari turibdi.
+              Bitta buyurtmada faqat bitta do'kondan xarid qilinadi — avval joriy buyurtmani yakunlang,
+              yoki savatni tozalab <b>{shopConflict.newShop}</b> do'konidan boshlang.
+            </p>
+            <button className="pm-add" onClick={() => { resolveShopConflict(false); setCartOpen(true); }}>
+              <ShoppingBag size={15} /> Joriy buyurtmani yakunlash ({shopConflict.currentShop})
+            </button>
+            <button className="conflict-clear" onClick={() => resolveShopConflict(true)}>
+              Savatni tozalash va {shopConflict.newShop} dan boshlash
+            </button>
+            <button className="conflict-cancel" onClick={() => resolveShopConflict(false)}>Bekor qilish</button>
+          </div>
+        </div>
       )}
       {profileOpen && (
         <ProfileScreen onClose={() => setProfileOpen(false)} profile={profile} tokens={tokens}
@@ -847,7 +949,7 @@ const CSS = `
   font-size:12.5px;color:${C.ivoireDim}}
 
 /* ---------- MARKETPLACE ---------- */
-.market{padding:20px 16px 10px}
+.market{padding:20px 16px 10px;max-width:1100px;margin:0 auto}
 .market-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
 .market-title{font-family:${FONT_DISPLAY};font-size:24px;color:${C.ink};margin:0;font-weight:600}
 .market-sub{font-size:12px;color:${C.inkDim}}
@@ -855,14 +957,28 @@ const CSS = `
 .market-optnote{font-size:11px;color:${C.laitonLo};font-weight:600}
 .market-state{font-size:13px;color:${C.inkDim};background:${C.card};border:1px solid ${C.mline};border-radius:12px;padding:18px;text-align:center}
 .market-state.err{color:${C.sale}}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:12px}
 .pcard{background:${C.card};border:1px solid ${C.mline};border-radius:14px;padding:10px;text-align:left;cursor:pointer;
-  display:flex;flex-direction:column;gap:6px}
-.pcard-img{background:${C.paper};border-radius:10px;height:90px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  display:flex;flex-direction:column;gap:6px;font-family:${FONT_BODY}}
+.pcard-shop{display:inline-flex;align-items:center;gap:4px;background:transparent;border:none;padding:0;
+  font-size:10.5px;font-weight:700;color:${C.laitonLo};cursor:pointer;font-family:${FONT_BODY};text-align:left}
+.pcard-shop:hover{text-decoration:underline}
+.pcard-img{background:${C.paper};border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .pcard-img img{width:100%;height:100%;object-fit:cover}
 .pcard-name{font-size:12.5px;font-weight:600;color:${C.ink};line-height:1.3}
 .pcard-meta{font-size:11px;color:${C.inkDim}}
 .pcard-price{font-size:13.5px;font-weight:700;color:${C.price};margin-top:2px}
+
+/* ---------- kategoriya chiplari + do'kon banneri ---------- */
+.catchips{display:inline-flex;gap:6px}
+.catchip{border:1px solid ${C.mline};background:${C.card};color:${C.inkDim};border-radius:20px;padding:6px 12px;
+  font-size:12px;font-weight:600;cursor:pointer;font-family:${FONT_BODY}}
+.catchip.active{border-color:${C.ink};background:${C.ink};color:#fff}
+.shopbanner{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#FCF3E2;
+  border:1px solid #EFD9A8;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:${C.laitonLo}}
+.shopbanner span{display:flex;align-items:center;gap:7px}
+.shopbanner button{display:flex;align-items:center;gap:4px;background:transparent;border:1px solid ${C.laitonLo};
+  color:${C.laitonLo};border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:${FONT_BODY}}
 
 /* ---------- chakana/optom toggle ---------- */
 .pmtoggle{display:inline-flex;background:${C.card};border:1px solid ${C.mline};border-radius:20px;padding:3px}
@@ -888,14 +1004,16 @@ const CSS = `
 .pmodal{position:relative;background:${C.card};width:100%;max-width:480px;border-radius:20px 20px 0 0;
   max-height:88vh;overflow-y:auto;animation:slideup .3s ease both}
 @keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
-.pm-hero{height:170px;background:${C.paper};display:flex;align-items:center;justify-content:center;overflow:hidden}
-.pm-hero-img{width:100%;height:100%;object-fit:cover}
+.pm-hero{aspect-ratio:4/3;max-height:340px;width:100%;background:${C.paper};display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pm-hero-img{width:100%;height:100%;object-fit:contain}
 .pm-thumbrow{display:flex;gap:8px;padding:10px 20px 0}
 .pm-thumb{width:52px;height:52px;border-radius:10px;border:2px solid ${C.mline};background:${C.paper};padding:0;cursor:pointer;overflow:hidden}
 .pm-thumb.active{border-color:${C.accent}}
 .pm-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .pm-body{padding:18px 20px 24px}
-.pm-modebadge{font-size:10.5px;font-weight:700;color:${C.accent};text-transform:uppercase;letter-spacing:.04em;margin-top:8px}
+.pm-toprow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.pm-modebadge{font-size:10.5px;font-weight:700;color:${C.accent};text-transform:uppercase;letter-spacing:.04em}
+.pm-shop{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:${C.laitonLo}}
 .pm-title{font-family:${FONT_DISPLAY};font-size:22px;margin:2px 0 8px;color:${C.ink}}
 .pm-price{font-size:20px;font-weight:700;color:${C.ink};margin-bottom:14px}
 .pm-litrrow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
@@ -922,7 +1040,20 @@ const CSS = `
   max-height:85vh;overflow-y:auto;padding:18px 18px 22px;animation:slideup .3s ease both}
 .cart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .cart-modebadge{font-size:11.5px;font-weight:600;color:${C.accent};background:#EAF3EC;border-radius:10px;
-  padding:7px 10px;margin-bottom:14px;display:inline-block}
+  padding:7px 10px;margin-bottom:8px;display:inline-block}
+.cart-shopline{display:flex;align-items:center;gap:7px;font-size:12px;color:${C.laitonLo};background:#FCF3E2;
+  border-radius:10px;padding:8px 10px;margin-bottom:14px}
+.cart-shopline b{font-weight:700}
+
+/* do'kon to'qnashuvi ogohlantirishi */
+.conflict{position:relative;background:${C.card};width:100%;max-width:440px;border-radius:20px 20px 0 0;
+  padding:24px 20px 26px;animation:slideup .3s ease both;text-align:left}
+.conflict-ic{width:46px;height:46px;border-radius:14px;background:#FCF3E2;display:flex;align-items:center;
+  justify-content:center;margin-bottom:12px}
+.conflict-clear{width:100%;background:transparent;border:1.5px solid ${C.laitonLo};color:${C.laitonLo};border-radius:14px;
+  padding:12px;font-weight:600;font-size:13px;cursor:pointer;margin-top:8px;font-family:${FONT_BODY}}
+.conflict-cancel{width:100%;background:transparent;border:none;color:${C.inkDim};padding:10px;font-size:12.5px;
+  cursor:pointer;margin-top:4px;font-family:${FONT_BODY}}
 .cart-empty{text-align:center;color:${C.inkDim};font-size:13.5px;padding:30px 10px}
 .cart-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .cart-row{display:flex;align-items:center;gap:10px}
