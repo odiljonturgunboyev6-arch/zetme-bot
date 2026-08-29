@@ -54,12 +54,19 @@
   .variantRow .vhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
   .variantRow .vtitle { font-size:12px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.03em; }
   .variantRow .removeBtn { background:transparent; border:none; color:var(--sale); font-size:13px; cursor:pointer; font-weight:600; padding:2px 6px; }
-  .vgrid { display:flex; gap:10px; }
-  .vgrid .vfields { flex:1; display:flex; flex-direction:column; gap:8px; }
-  .vgrid .vfields .vf-row { display:flex; gap:8px; }
-  .vgrid .vfields .vf-row > div { flex:1; }
-  .vimgslot { width:74px; height:74px; flex-shrink:0; border:1.5px dashed var(--mline); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; background:#fff; font-size:10px; color:var(--inkDim); text-align:center; }
-  .vimgslot img { width:100%; height:100%; object-fit:cover; }
+  .vfields { display:flex; flex-direction:column; gap:8px; }
+  .vfields .vf-row { display:flex; gap:8px; }
+  .vfields .vf-row > div { flex:1; }
+  /* rasmlar qatori — 3 tagacha, har birida ✕ o'chirish tugmasi */
+  .vimgs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .vimg { position:relative; width:78px; height:78px; border-radius:10px; overflow:hidden; border:1px solid var(--mline); background:#fff; }
+  .vimg img { width:100%; height:100%; object-fit:cover; display:block; }
+  .vimg-x { position:absolute; top:3px; right:3px; width:22px; height:22px; border-radius:50%; border:none; background:rgba(0,0,0,.62); color:#fff; font-size:12px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+  .vimg-x:hover { background:var(--sale); }
+  .vimg-main { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.55); color:#fff; font-size:9px; text-align:center; padding:2px 0; }
+  .vimgslot { width:78px; height:78px; flex-shrink:0; border:1.5px dashed var(--mline); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; background:#fff; font-size:10.5px; color:var(--inkDim); text-align:center; }
+  .vimgslot:hover { border-color:var(--accent); color:var(--accent); }
+  .uploadinfo { font-size:12px; color:var(--accent); margin-top:6px; }
   .vOverrideToggle { background:transparent; border:none; color:var(--accent); font-size:11.5px; font-weight:600; cursor:pointer; padding:6px 0 0; text-align:left; }
   .vOverrideWrap { display:none; gap:8px; margin-top:8px; }
   .vOverrideWrap.open { display:flex; }
@@ -166,12 +173,12 @@
       <label>Rang (ixtiyoriy, umumiy)</label>
       <input type="text" id="fColor" placeholder="Oq" />
 
-      <label style="margin-top:16px;">Hajm (litr) variantlari — har birida o'z rasmi, chakana va optom narxi bo'ladi (1 tadan 10 tagacha)</label>
+      <label style="margin-top:16px;">Hajm (litr) variantlari — har birida 3 tagacha rasm, chakana va optom narxi bo'ladi (1 tadan 10 tagacha variant)</label>
       <div class="variantsWrap" id="variantsWrap"></div>
       <button type="button" class="addVariantBtn" id="addVariantBtn" onclick="addVariant()">+ Yana hajm (litr) qo'shish</button>
-      <div class="hint">Optom narx — mijoz 5 000 000 so'mdan yuqori xarid qilganda ko'radigan narx.</div>
+      <div class="hint">Rasmlar avtomatik siqiladi — katta telefon rasmlarini ham bemalol yuklashingiz mumkin. Birinchi rasm asosiy bo'lib, katalogda ko'rinadi. Optom narx — mijoz 5 000 000 so'mdan yuqori xarid qilganda ko'radigan narx.</div>
 
-      <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="onFile(event)" />
+      <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFile(event)" />
 
       <button class="submitbtn" id="submitBtn" onclick="submitProduct()">Saqlash</button>
       <button class="cancelbtn hidden" id="cancelBtn" onclick="cancelEdit()">Bekor qilish (yangi mahsulotga qaytish)</button>
@@ -187,6 +194,14 @@
     <!-- Do'kon sozlamalari -->
     <div class="card">
       <h3>Do'kon sozlamalari</h3>
+
+      <label>Do'kon nomi (saytda mijozlarga shu ko'rinadi)</label>
+      <input type="text" id="profShopName" placeholder="Do'kon nomi" />
+
+      <label>Do'kon rasmi / logotipi (ixtiyoriy)</label>
+      <div class="vimgs" id="shopLogoWrap"></div>
+      <input type="file" id="logoInput" accept="image/*" style="display:none" onchange="onLogoFile(event)" />
+
       <label>Telegram Chat ID (buyurtmalar shu yerga keladi)</label>
       <input type="text" id="profChatId" placeholder="Masalan: 5262377062" />
       <div class="hint">Chat ID'ni olish uchun Telegram'da <b>@zetmeai_bot</b> ga kirib <b>/myid</b> deb yozing — bot raqamingizni aytadi. Bo'sh qoldirsangiz buyurtmalar bosh administratorga boradi.</div>
@@ -314,6 +329,9 @@
       ME.seller.shopName + (ME.isSuper ? " · Super-admin" : " · Sotuvchi paneli");
     document.getElementById("plistTitle").textContent = ME.isSuper ? "Barcha mahsulotlar" : "Mahsulotlarim";
     // profil sozlamalarini to'ldirish
+    document.getElementById("profShopName").value = ME.seller.shopName || "";
+    shopLogo = { url: ME.seller.shopLogo || "", dataUrl: "", name: "", type: "" };
+    renderShopLogo();
     document.getElementById("profChatId").value = ME.seller.telegramChatId || "";
     document.getElementById("profBonus").checked = !!ME.seller.bonusEnabled;
     if (ME.seller.builtin) {
@@ -391,37 +409,58 @@
     else alert(data.error || "Xatolik");
   }
 
-  // ===================== do'kon sozlamalari =====================
-  async function saveProfile() {
-    const msgEl = document.getElementById("profMsg");
-    const payload = {
-      action: "updateProfile",
-      login: ME.login,
-      password: ME.password,
-      telegramChatId: document.getElementById("profChatId").value.trim(),
-      bonusEnabled: document.getElementById("profBonus").checked,
-    };
-    const newPw = document.getElementById("profNewPw").value;
-    if (newPw) payload.newPassword = newPw;
-    const res = await fetch("/api/sellers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+  // ===================== RASM: brauzerda siqish =====================
+  // Telefon rasmlari 3-8 MB bo'ladi, Vercel esa 4.5 MB dan katta so'rovni qabul
+  // qilmaydi — shuning uchun yuklashdan OLDIN rasmni shu yerda kichraytiramiz.
+  const MAX_SIDE = 1400;          // eng uzun tomoni (px)
+  const MAX_DATAURL = 2600000;    // ~2 MB — xavfsiz chegara
+  function compressImage(file) {
+    return new Promise((resolve, reject) => {
+      if (!file.type || !file.type.startsWith("image/")) {
+        reject(new Error("Faqat rasm fayllarini yuklang"));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Faylni o'qib bo'lmadi"));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("Bu rasmni ochib bo'lmadi (formatini tekshiring)"));
+        img.onload = () => {
+          try {
+            let w = img.naturalWidth || img.width;
+            let h = img.naturalHeight || img.height;
+            if (w > MAX_SIDE || h > MAX_SIDE) {
+              const k = MAX_SIDE / Math.max(w, h);
+              w = Math.round(w * k); h = Math.round(h * k);
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            let q = 0.85;
+            let dataUrl = canvas.toDataURL("image/jpeg", q);
+            while (dataUrl.length > MAX_DATAURL && q > 0.35) {
+              q -= 0.12;
+              dataUrl = canvas.toDataURL("image/jpeg", q);
+            }
+            const base = (file.name || "rasm").replace(/\.[^.]+$/, "").slice(0, 40) || "rasm";
+            resolve({ dataUrl, name: base + ".jpg", type: "image/jpeg" });
+          } catch (e) {
+            reject(new Error("Rasmni tayyorlashda xatolik"));
+          }
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
     });
-    const data = await res.json();
-    if (!data.ok) { msgEl.innerHTML = `<div class="msg err">${data.error || "Xatolik"}</div>`; return; }
-    if (newPw) {
-      ME.password = newPw;
-      sessionStorage.setItem("zetme_seller_session", JSON.stringify({ login: ME.login, password: newPw }));
-      document.getElementById("profNewPw").value = "";
-    }
-    ME.seller = data.seller;
-    msgEl.innerHTML = '<div class="msg ok">✅ Sozlamalar saqlandi!</div>';
   }
 
   // ===================== mahsulot formasi =====================
+  // v.imgs — 3 tagacha rasm: { url } (saqlangan) yoki { dataUrl, name, type } (yangi)
   function blankVariant() {
-    return { id: uid(), litr: "", price: "", optPrice: "", size: "", image: "", imageUrl: "", existingImages: [], newImage: null, name: "", color: "", overrideOpen: false };
+    return { id: uid(), litr: "", price: "", optPrice: "", size: "", imgs: [], name: "", color: "", overrideOpen: false };
   }
 
   function resetForm() {
@@ -463,39 +502,44 @@
   function renderVariants() {
     const wrap = document.getElementById("variantsWrap");
     wrap.innerHTML = variants.map((v, idx) => {
-      const imgSrc = v.newImage ? v.newImage.dataUrl : v.imageUrl;
-      const imgInner = imgSrc ? `<img src="${imgSrc}" />` : "+ Rasm";
       const hasOverride = v.name || v.color;
       const openClass = (v.overrideOpen || hasOverride) ? " open" : "";
+      const imgsHtml = (v.imgs || []).map((im, k) => `
+        <div class="vimg">
+          <img src="${im.dataUrl || im.url}" />
+          <button type="button" class="vimg-x" onclick="removeVariantImage(${idx},${k})" title="Rasmni o'chirish">✕</button>
+          ${k === 0 ? '<span class="vimg-main">asosiy</span>' : ""}
+        </div>
+      `).join("");
+      const addSlot = (v.imgs || []).length < 3
+        ? `<div class="vimgslot" onclick="pickVariantImage(${idx})">+ Rasm<br>(${(v.imgs || []).length}/3)</div>` : "";
       return `
         <div class="variantRow">
           <div class="vhead">
             <span class="vtitle">Variant ${idx + 1}</span>
             <button type="button" class="removeBtn" onclick="removeVariant(${idx})" ${variants.length <= 1 ? "style='visibility:hidden'" : ""}>✕ o'chirish</button>
           </div>
-          <div class="vgrid">
-            <div class="vimgslot" onclick="pickVariantImage(${idx})">${imgInner}</div>
-            <div class="vfields">
-              <div class="vf-row">
-                <div>
-                  <label style="margin:0 0 4px;">Litr</label>
-                  <input type="text" placeholder="0,5" value="${escAttr(v.litr)}" oninput="updateVariant(${idx}, 'litr', this.value)" />
-                </div>
+          <div class="vimgs">${imgsHtml}${addSlot}</div>
+          <div class="vfields">
+            <div class="vf-row">
+              <div>
+                <label style="margin:0 0 4px;">Litr</label>
+                <input type="text" placeholder="0,5" value="${escAttr(v.litr)}" oninput="updateVariant(${idx}, 'litr', this.value)" />
               </div>
-              <div class="vf-row">
-                <div>
-                  <label style="margin:0 0 4px;">Chakana narx (so'm)</label>
-                  <input type="number" placeholder="12850" value="${escAttr(v.price)}" oninput="updateVariant(${idx}, 'price', this.value)" />
-                </div>
-                <div>
-                  <label style="margin:0 0 4px;">Optom narx (so'm)</label>
-                  <input type="number" placeholder="10500" value="${escAttr(v.optPrice)}" oninput="updateVariant(${idx}, 'optPrice', this.value)" />
-                </div>
+            </div>
+            <div class="vf-row">
+              <div>
+                <label style="margin:0 0 4px;">Chakana narx (so'm)</label>
+                <input type="number" placeholder="12850" value="${escAttr(v.price)}" oninput="updateVariant(${idx}, 'price', this.value)" />
               </div>
               <div>
-                <label style="margin:0 0 4px;">O'lcham, sm (ixtiyoriy)</label>
-                <input type="text" placeholder="Ø22.5 × 21" value="${escAttr(v.size)}" oninput="updateVariant(${idx}, 'size', this.value)" />
+                <label style="margin:0 0 4px;">Optom narx (so'm)</label>
+                <input type="number" placeholder="10500" value="${escAttr(v.optPrice)}" oninput="updateVariant(${idx}, 'optPrice', this.value)" />
               </div>
+            </div>
+            <div>
+              <label style="margin:0 0 4px;">O'lcham, sm (ixtiyoriy)</label>
+              <input type="text" placeholder="Ø22.5 × 21" value="${escAttr(v.size)}" oninput="updateVariant(${idx}, 'size', this.value)" />
             </div>
           </div>
           <button type="button" class="vOverrideToggle" onclick="toggleOverride(${idx})">${(v.overrideOpen || hasOverride) ? "▾" : "▸"} Bu variant uchun boshqa nom/rang (ixtiyoriy)</button>
@@ -524,28 +568,129 @@
     activeVariantIndex = idx;
     document.getElementById("fileInput").click();
   }
-  function onFile(e) {
-    const file = e.target.files[0];
-    if (!file || activeVariantIndex === null) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      variants[activeVariantIndex].newImage = { file, dataUrl: reader.result };
-      renderVariants();
-    };
-    reader.readAsDataURL(file);
+  function removeVariantImage(idx, k) {
+    variants[idx].imgs.splice(k, 1);
+    renderVariants();
+  }
+  async function onFile(e) {
+    const files = Array.from(e.target.files || []);
     e.target.value = "";
+    if (!files.length || activeVariantIndex === null) return;
+    const v = variants[activeVariantIndex];
+    const free = 3 - v.imgs.length;
+    if (free <= 0) { alert("Bu variantda allaqachon 3 ta rasm bor"); return; }
+    const msgEl = document.getElementById("formMsg");
+    msgEl.innerHTML = '<div class="msg ok">Rasm tayyorlanmoqda…</div>';
+    for (const f of files.slice(0, free)) {
+      try {
+        const img = await compressImage(f);
+        v.imgs.push(img);
+        renderVariants();
+      } catch (err) {
+        msgEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+        return;
+      }
+    }
+    msgEl.innerHTML = "";
   }
 
+  // Rasmni serverga yuklaydi. Xatolarni tushunarli qilib qaytaradi.
   async function uploadImage(imgObj) {
     const base64 = imgObj.dataUrl.split(",")[1];
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ filename: imgObj.file.name, contentType: imgObj.file.type, dataBase64: base64 }),
-    });
-    const data = await res.json();
+    let res;
+    try {
+      res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ filename: imgObj.name, contentType: imgObj.type, dataBase64: base64 }),
+      });
+    } catch (e) {
+      throw new Error("Tarmoq xatosi — internet aloqasini tekshiring");
+    }
+    if (res.status === 413) throw new Error("Rasm juda katta — kichikroq rasm tanlang");
+    if (res.status === 401) throw new Error("Sessiya tugagan — qaytadan kiring");
+    let data;
+    try { data = await res.json(); }
+    catch (e) { throw new Error("Rasmni yuklab bo'lmadi (server javob bermadi). Kichikroq rasm bilan urinib ko'ring."); }
     if (!data.ok) throw new Error(data.error || "Yuklashda xatolik");
     return data.url;
+  }
+
+  // ===================== do'kon logotipi =====================
+  let shopLogo = { url: "", dataUrl: "", name: "", type: "" };
+  function renderShopLogo() {
+    const src = shopLogo.dataUrl || shopLogo.url;
+    document.getElementById("shopLogoWrap").innerHTML = src
+      ? `<div class="vimg"><img src="${src}" /><button type="button" class="vimg-x" onclick="removeShopLogo()" title="O'chirish">✕</button></div>`
+      : `<div class="vimgslot" onclick="document.getElementById('logoInput').click()">+ Rasm</div>`;
+  }
+  function removeShopLogo() {
+    shopLogo = { url: "", dataUrl: "", name: "", type: "" };
+    renderShopLogo();
+  }
+  async function onLogoFile(e) {
+    const f = (e.target.files || [])[0];
+    e.target.value = "";
+    if (!f) return;
+    const msgEl = document.getElementById("profMsg");
+    try {
+      const img = await compressImage(f);
+      shopLogo = { url: "", dataUrl: img.dataUrl, name: img.name, type: img.type };
+      renderShopLogo();
+      msgEl.innerHTML = '<div class="msg ok">Rasm tanlandi — "Sozlamalarni saqlash"ni bosing</div>';
+    } catch (err) {
+      msgEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+    }
+  }
+
+  // ===================== do'kon sozlamalari =====================
+  async function saveProfile() {
+    const msgEl = document.getElementById("profMsg");
+    const shopName = document.getElementById("profShopName").value.trim();
+    if (shopName.length < 2) { msgEl.innerHTML = '<div class="msg err">Do\'kon nomini kiriting</div>'; return; }
+
+    try {
+      // yangi logo tanlangan bo'lsa avval uni yuklaymiz
+      if (shopLogo.dataUrl) {
+        msgEl.innerHTML = '<div class="msg ok">Rasm yuklanmoqda…</div>';
+        const url = await uploadImage({ dataUrl: shopLogo.dataUrl, name: shopLogo.name || "logo.jpg", type: shopLogo.type || "image/jpeg" });
+        shopLogo = { url, dataUrl: "", name: "", type: "" };
+        renderShopLogo();
+      }
+    } catch (err) {
+      msgEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+      return;
+    }
+
+    const payload = {
+      action: "updateProfile",
+      login: ME.login,
+      password: ME.password,
+      shopName,
+      shopLogo: shopLogo.url || "",
+      telegramChatId: document.getElementById("profChatId").value.trim(),
+      bonusEnabled: document.getElementById("profBonus").checked,
+    };
+    const newPw = document.getElementById("profNewPw").value;
+    if (newPw) payload.newPassword = newPw;
+    const res = await fetch("/api/sellers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!data.ok) { msgEl.innerHTML = `<div class="msg err">${data.error || "Xatolik"}</div>`; return; }
+    if (newPw) {
+      ME.password = newPw;
+      sessionStorage.setItem("zetme_seller_session", JSON.stringify({ login: ME.login, password: newPw }));
+      document.getElementById("profNewPw").value = "";
+    }
+    ME.seller = data.seller;
+    document.getElementById("topShopName").textContent =
+      ME.seller.shopName + (ME.isSuper ? " · Super-admin" : " · Sotuvchi paneli");
+    msgEl.innerHTML = '<div class="msg ok">✅ Sozlamalar saqlandi!</div>';
+    loadProducts();
+    if (ME.isSuper) loadSellers();
   }
 
   async function submitProduct() {
@@ -559,29 +704,36 @@
       if (!String(v.litr).trim()) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun litr (hajm) kiriting</div>'; return; }
       if (!v.price || Number(v.price) <= 0) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun chakana narx kiriting</div>'; return; }
       if (!v.optPrice || Number(v.optPrice) <= 0) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun optom narx kiriting</div>'; return; }
-      if (!v.newImage && !v.imageUrl) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun rasm yuklang</div>'; return; }
+      if (!v.imgs || v.imgs.length === 0) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun kamida 1 ta rasm yuklang</div>'; return; }
     }
 
     btn.disabled = true;
-    msgEl.innerHTML = '<div class="msg ok">Saqlanmoqda…</div>';
+    // nechta yangi rasm yuklanishini sanaymiz (progress ko'rsatish uchun)
+    const toUpload = variants.reduce((s, v) => s + v.imgs.filter(i => i.dataUrl).length, 0);
+    let done = 0;
+    msgEl.innerHTML = toUpload
+      ? `<div class="msg ok">Rasmlar yuklanmoqda… 0/${toUpload}</div>`
+      : '<div class="msg ok">Saqlanmoqda…</div>';
 
     try {
       const outVariants = [];
       for (const v of variants) {
-        let imageUrl = v.imageUrl;
-        let images = Array.isArray(v.existingImages) ? v.existingImages.slice() : [];
-        if (v.newImage) {
-          imageUrl = await uploadImage(v.newImage);
-          images = [imageUrl];
-        } else if (images.length === 0 && imageUrl) {
-          images = [imageUrl];
+        const images = [];
+        for (const im of v.imgs) {
+          if (im.url) { images.push(im.url); continue; }
+          const url = await uploadImage(im);
+          im.url = url; im.dataUrl = "";     // muvaffaqiyatli yuklangach dataUrl kerak emas
+          images.push(url);
+          done++;
+          msgEl.innerHTML = `<div class="msg ok">Rasmlar yuklanmoqda… ${done}/${toUpload}</div>`;
         }
         outVariants.push({
           id: v.id, litr: v.litr.trim(), price: Number(v.price), optPrice: Number(v.optPrice),
-          size: v.size.trim(), image: imageUrl || images[0] || "", images,
+          size: v.size.trim(), image: images[0] || "", images,
           name: (v.name || "").trim(), color: (v.color || "").trim(),
         });
       }
+      msgEl.innerHTML = '<div class="msg ok">Saqlanmoqda…</div>';
 
       const payload = { name, category, color, variants: outVariants };
       let res;
@@ -629,22 +781,26 @@
     setCat(p.category === "gul" ? "gul" : "tuvak");
 
     if (Array.isArray(p.variants) && p.variants.length > 0) {
-      variants = p.variants.map(v => ({
-        id: v.id || uid(),
-        litr: v.litr || "",
-        price: v.price || "",
-        optPrice: v.optPrice || "",
-        size: v.size || "",
-        imageUrl: v.image || (Array.isArray(v.images) && v.images[0]) || "",
-        existingImages: Array.isArray(v.images) ? v.images.slice() : (v.image ? [v.image] : []),
-        newImage: null,
-        name: v.name || "",
-        color: v.color || "",
-        overrideOpen: !!(v.name || v.color),
-      }));
+      variants = p.variants.map(v => {
+        // eski mahsulotlarda rasm `images` massivida, yangilarida `image`da bo'lishi mumkin
+        const urls = (Array.isArray(v.images) && v.images.length ? v.images : (v.image ? [v.image] : []))
+          .filter(Boolean).slice(0, 3);
+        return {
+          id: v.id || uid(),
+          litr: v.litr || "",
+          price: v.price || "",
+          optPrice: v.optPrice || "",
+          size: v.size || "",
+          imgs: urls.map(u => ({ url: u })),
+          name: v.name || "",
+          color: v.color || "",
+          overrideOpen: !!(v.name || v.color),
+        };
+      });
     } else {
+      const urls = (Array.isArray(p.images) ? p.images : []).filter(Boolean).slice(0, 3);
       variants = [
-        { id: uid(), litr: p.capacity || "", price: p.price || "", optPrice: "", size: p.size || "", imageUrl: (p.images && p.images[0]) || "", existingImages: Array.isArray(p.images) ? p.images.slice() : [], newImage: null, name: "", color: "", overrideOpen: false },
+        { id: uid(), litr: p.capacity || "", price: p.price || "", optPrice: "", size: p.size || "", imgs: urls.map(u => ({ url: u })), name: "", color: "", overrideOpen: false },
       ];
     }
     renderVariants();
