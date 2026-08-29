@@ -151,8 +151,21 @@ function litrRangeText(p) {
   const litrs = (p.variants || []).map((v) => v.litr).filter(Boolean);
   return litrs.join(", ") + " L";
 }
+// Rasm: yangi variantlarda `image` (bitta), eskilarida `images` (massiv, 2 tagacha)
+// bo'lishi mumkin — ikkalasini ham qo'llab-quvvatlaymiz.
+function variantImg(v) {
+  if (!v) return "";
+  if (v.image) return v.image;
+  if (Array.isArray(v.images) && v.images.length > 0) return v.images[0];
+  return "";
+}
+function variantImgs(v) {
+  if (!v) return [];
+  if (Array.isArray(v.images) && v.images.length > 0) return v.images;
+  return v.image ? [v.image] : [];
+}
 function thumbUrl(p) {
-  return (p.variants && p.variants[0] && p.variants[0].image) || "";
+  return variantImg(p.variants && p.variants[0]) || "";
 }
 
 /* ============================== Small UI bits ============================== */
@@ -241,18 +254,32 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
   const variants = p.variants || [];
   const [vi, setVi] = useState(0);
   const [qty, setQty] = useState(1);
+  const [imgIdx, setImgIdx] = useState(0);
   const v = variants[vi] || variants[0] || {};
   const displayName = v.name || p.name;
   const displayColor = v.color || p.color;
   const unitPrice = priceOf(v, priceMode);
+  const imgs = variantImgs(v);
+  const heroImg = imgs[imgIdx] || imgs[0] || "";
+
+  function pickVariant(i) { setVi(i); setImgIdx(0); }
 
   return (
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="pmodal">
         <button className="pm-close" onClick={onClose}><X size={18} /></button>
         <div className="pm-hero">
-          {v.image ? <img src={v.image} alt={displayName} className="pm-hero-img" /> : <span style={{ fontSize: 54 }}>🪴</span>}
+          {heroImg ? <img src={heroImg} alt={displayName} className="pm-hero-img" /> : <span style={{ fontSize: 54 }}>🪴</span>}
         </div>
+        {imgs.length > 1 && (
+          <div className="pm-thumbrow">
+            {imgs.map((u, i) => (
+              <button key={i} type="button" className={"pm-thumb" + (u === heroImg ? " active" : "")} onClick={() => setImgIdx(i)}>
+                <img src={u} alt="" />
+              </button>
+            ))}
+          </div>
+        )}
         <div className="pm-body">
           <div className="pm-modebadge">{priceMode === "optom" ? "Optom narx" : "Chakana narx"}</div>
           <h3 className="pm-title">{displayName}</h3>
@@ -261,7 +288,7 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
           {variants.length > 1 && (
             <div className="pm-litrrow">
               {variants.map((vv, i) => (
-                <button key={vv.id || i} className={"pm-litrchip" + (i === vi ? " active" : "")} onClick={() => setVi(i)}>
+                <button key={vv.id || i} className={"pm-litrchip" + (i === vi ? " active" : "")} onClick={() => pickVariant(i)}>
                   {vv.litr} L
                 </button>
               ))}
@@ -581,7 +608,7 @@ function App() {
         key, id: fam.id, variantId: variant.id,
         name: variant.name || fam.name, litr: variant.litr,
         price: Number(variant.price), optPrice: Number(variant.optPrice),
-        image: variant.image, qty,
+        image: variantImg(variant), qty,
       }];
     });
   }
@@ -589,7 +616,7 @@ function App() {
     setCart((c) => c.map((i) => (i.key === key ? { ...i, qty: Math.max(1, i.qty + d) } : i)).filter((i) => i.qty > 0));
   }
   function sendPotToStudio(variant) {
-    setPot(variant.image || "catalog");
+    setPot(variantImg(variant) || "catalog");
   }
 
   async function checkout() {
@@ -863,6 +890,10 @@ const CSS = `
 @keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 .pm-hero{height:170px;background:${C.paper};display:flex;align-items:center;justify-content:center;overflow:hidden}
 .pm-hero-img{width:100%;height:100%;object-fit:cover}
+.pm-thumbrow{display:flex;gap:8px;padding:10px 20px 0}
+.pm-thumb{width:52px;height:52px;border-radius:10px;border:2px solid ${C.mline};background:${C.paper};padding:0;cursor:pointer;overflow:hidden}
+.pm-thumb.active{border-color:${C.accent}}
+.pm-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .pm-body{padding:18px 20px 24px}
 .pm-modebadge{font-size:10.5px;font-weight:700;color:${C.accent};text-transform:uppercase;letter-spacing:.04em;margin-top:8px}
 .pm-title{font-family:${FONT_DISPLAY};font-size:22px;margin:2px 0 8px;color:${C.ink}}
