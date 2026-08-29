@@ -25,7 +25,8 @@ function validateVariants(variants) {
     if (!v.optPrice || Number(v.optPrice) <= 0) {
       return "Har bir variant uchun optom narx ko'rsatilishi shart";
     }
-    if (!v.image) {
+    const hasImage = v.image || (Array.isArray(v.images) && v.images.length > 0);
+    if (!hasImage) {
       return "Har bir variant uchun rasm yuklanishi shart";
     }
   }
@@ -33,16 +34,24 @@ function validateVariants(variants) {
 }
 
 function normalizeVariants(variants) {
-  return variants.map((v, i) => ({
-    id: v.id || `v${Date.now()}${i}${Math.random().toString(36).slice(2, 5)}`,
-    litr: String(v.litr).trim(),
-    price: Number(v.price),
-    optPrice: Number(v.optPrice),
-    size: v.size ? String(v.size).trim() : "",
-    image: String(v.image),
-    name: v.name ? String(v.name).trim() : "",
-    color: v.color ? String(v.color).trim() : "",
-  }));
+  return variants.map((v, i) => {
+    // rasm ikki formatda kelishi mumkin: `image` (bitta URL, yangi admin) yoki
+    // `images` (massiv, eski ma'lumotlar) — ikkalasini ham saqlab qo'yamiz
+    const images = Array.isArray(v.images) && v.images.length > 0
+      ? v.images.map((u) => String(u))
+      : (v.image ? [String(v.image)] : []);
+    return {
+      id: v.id || `v${Date.now()}${i}${Math.random().toString(36).slice(2, 5)}`,
+      litr: String(v.litr).trim(),
+      price: Number(v.price),
+      optPrice: Number(v.optPrice),
+      size: v.size ? String(v.size).trim() : "",
+      image: v.image ? String(v.image) : (images[0] || ""),
+      images,
+      name: v.name ? String(v.name).trim() : "",
+      color: v.color ? String(v.color).trim() : "",
+    };
+  });
 }
 
 export default async function handler(req, res) {
