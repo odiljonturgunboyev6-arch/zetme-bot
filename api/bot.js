@@ -1,5 +1,7 @@
-// Zetme AI — Telegram buyurtma boti (Vercel serverless webhook)
+// Zetme AI — Telegram buyurtma boti (Vercel serverless webhook) — MARKETPLACE versiya
 // Kerakli ENV: BOT_TOKEN, OWNER_CHAT_ID, KV_REST_API_URL, KV_REST_API_TOKEN
+// Yangi: /myid buyrug'i (sotuvchilar Chat ID olishi uchun), buyurtma sotuvchining
+// telegramiga boradi + super-adminga nazorat nusxasi.
 
 import { kv } from "@vercel/kv";
 
@@ -34,9 +36,12 @@ const sendMessage = (chatId, text, extra = {}) =>
   tg("sendMessage", { chat_id: chatId, text, parse_mode: "Markdown", ...extra });
 const answerCallback = (id, text) => tg("answerCallbackQuery", { callback_query_id: id, text });
 
+// order = { items:[{name,price,qty}], totalQty, priceMode, total, bonus, payTotal,
+//           sellerId, shopName, sellerChatId } — marketplace: buyurtma bitta do'konga tegishli
 function orderSummaryText(order) {
   const lines = order.items.map((i) => `• ${escapeMd(i.name)} — ${i.qty} dona × ${fmt(i.price)}`).join("\n");
   let extra = "";
+  if (order.shopName) extra += `\n🏪 Do'kon: ${escapeMd(order.shopName)}`;
   if (order.priceMode === "optom") extra += `\n🏭 Optom narxda buyurtma`;
   if (order.bonus && order.bonus.gift) extra += `\n🎁 Sovg'a: tuvak (buyurtma bilan birga beriladi)`;
   if (order.bonus && order.bonus.money > 0) {
@@ -65,6 +70,16 @@ export default async function handler(req, res) {
       const chatId = msg.chat.id;
       const text = (msg.text || "").trim();
 
+      // --- /myid: sotuvchilar o'z Chat ID sini olishi uchun (admin panel profiliga yoziladi) ---
+      if (text === "/myid") {
+        await sendMessage(
+          chatId,
+          `Sizning Chat ID raqamingiz:\n\`${chatId}\`\n\nAgar siz sotuvchi bo'lsangiz, shu raqamni admin paneldagi profilingizga yozing — buyurtmalar shu yerga keladi.`
+        );
+        return res.status(200).send("ok");
+      }
+
+      // --- /start with an order id coming from the site (see api/checkout.js) ---
       if (text.startsWith("/start")) {
         const orderId = (text.split(" ")[1] || "").trim();
 
@@ -164,11 +179,19 @@ export default async function handler(req, res) {
         );
 
         const uname = from.username ? `@${escapeMd(from.username)}` : "(username yo'q)";
-        await sendMessage(
-          OWNER_CHAT_ID,
+        const orderText =
           `🛒 *Yangi buyurtma — Zetme AI*\n\n${orderSummaryText(draft)}\n\n` +
-            `👤 *Ism:* ${escapeMd(profile.name)}\n📞 *Telefon:* ${escapeMd(profile.phone)}\n📍 *Viloyat:* ${escapeMd(profile.region)}\n💬 *Telegram:* ${uname}`
-        );
+          `👤 *Ism:* ${escapeMd(profile.name)}\n📞 *Telefon:* ${escapeMd(profile.phone)}\n📍 *Viloyat:* ${escapeMd(profile.region)}\n💬 *Telegram:* ${uname}`;
+
+        // MARKETPLACE: buyurtma o'sha do'kon egasining Telegramiga boradi,
+        // super-adminga (OWNER_CHAT_ID) esa doim nazorat nusxasi yuboriladi.
+        const sellerChat = String(draft.sellerChatId || "").trim();
+        if (sellerChat && sellerChat !== String(OWNER_CHAT_ID)) {
+          await sendMessage(sellerChat, orderText);
+          await sendMessage(OWNER_CHAT_ID, `📋 *Nazorat nusxasi*\n\n${orderText}`);
+        } else {
+          await sendMessage(OWNER_CHAT_ID, orderText);
+        }
 
         await kv.del(`draft:${chatId}`);
         await kv.del(`state:${chatId}`);
