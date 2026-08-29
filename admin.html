@@ -346,3 +346,386 @@
     document.getElementById("sellersList").innerHTML = sellers.map(s => `
       <div class="srow">
         <div class="sinfo">
+          <div class="sname">${escHtml(s.shopName)} ${s.builtin ? "⭐" : ""}</div>
+          <div class="smeta">${escHtml(s.ownerName)}${s.phone ? " · " + escHtml(s.phone) : ""} · login: ${escHtml(s.login)}</div>
+        </div>
+        <span class="status-badge ${s.status}">${st[s.status] || s.status}</span>
+        <div class="sbtns">
+          ${s.status === "pending" ? `<button class="approveBtn" onclick="sellerAction('approve','${s.id}')">✅ Tasdiqlash</button>` : ""}
+          ${s.status === "active" && !s.builtin ? `<button class="blockBtn" onclick="sellerAction('block','${s.id}')">Bloklash</button>` : ""}
+          ${s.status === "blocked" ? `<button class="approveBtn" onclick="sellerAction('unblock','${s.id}')">Blokdan chiqarish</button>` : ""}
+          ${!s.builtin ? `<button onclick="resetSellerPw('${s.id}','${escAttr(s.shopName)}')">Parol berish</button>` : ""}
+          ${!s.builtin ? `<button class="removeBtn2" onclick="removeSeller('${s.id}','${escAttr(s.shopName)}')">O'chirish</button>` : ""}
+        </div>
+      </div>
+    `).join("");
+  }
+
+  async function sellerAction(action, id) {
+    const res = await fetch("/api/sellers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": ME.password },
+      body: JSON.stringify({ action, id }),
+    });
+    const data = await res.json();
+    if (data.ok) { renderSellers(data.sellers); loadProducts(); }
+    else alert(data.error || "Xatolik");
+  }
+  function removeSeller(id, name) {
+    if (!confirm(`"${name}" do'konini BUTUNLAY o'chirasizmi? Uning barcha mahsulotlari ham o'chadi!`)) return;
+    sellerAction("remove", id);
+  }
+  async function resetSellerPw(id, name) {
+    const newPw = prompt(`"${name}" do'koni uchun YANGI parol kiriting (kamida 6 belgi).\nUni sotuvchiga o'zingiz yetkazasiz:`);
+    if (newPw === null) return;
+    if (newPw.length < 6) { alert("Parol kamida 6 ta belgi bo'lsin"); return; }
+    const res = await fetch("/api/sellers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": ME.password },
+      body: JSON.stringify({ action: "resetPassword", id, newPassword: newPw }),
+    });
+    const data = await res.json();
+    if (data.ok) { alert(`✅ "${name}" uchun yangi parol o'rnatildi. Sotuvchiga ayting: endi shu parol bilan kiradi.`); renderSellers(data.sellers); }
+    else alert(data.error || "Xatolik");
+  }
+
+  // ===================== do'kon sozlamalari =====================
+  async function saveProfile() {
+    const msgEl = document.getElementById("profMsg");
+    const payload = {
+      action: "updateProfile",
+      login: ME.login,
+      password: ME.password,
+      telegramChatId: document.getElementById("profChatId").value.trim(),
+      bonusEnabled: document.getElementById("profBonus").checked,
+    };
+    const newPw = document.getElementById("profNewPw").value;
+    if (newPw) payload.newPassword = newPw;
+    const res = await fetch("/api/sellers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!data.ok) { msgEl.innerHTML = `<div class="msg err">${data.error || "Xatolik"}</div>`; return; }
+    if (newPw) {
+      ME.password = newPw;
+      sessionStorage.setItem("zetme_seller_session", JSON.stringify({ login: ME.login, password: newPw }));
+      document.getElementById("profNewPw").value = "";
+    }
+    ME.seller = data.seller;
+    msgEl.innerHTML = '<div class="msg ok">✅ Sozlamalar saqlandi!</div>';
+  }
+
+  // ===================== mahsulot formasi =====================
+  function blankVariant() {
+    return { id: uid(), litr: "", price: "", optPrice: "", size: "", image: "", imageUrl: "", existingImages: [], newImage: null, name: "", color: "", overrideOpen: false };
+  }
+
+  function resetForm() {
+    editingId = null;
+    document.getElementById("formTitle").textContent = "Yangi mahsulot qo'shish";
+    const badge = document.getElementById("modeBadge");
+    badge.textContent = "yangi";
+    badge.classList.remove("editing");
+    document.getElementById("cancelBtn").classList.add("hidden");
+    document.getElementById("submitBtn").textContent = "Saqlash";
+    document.getElementById("fName").value = "";
+    document.getElementById("fColor").value = "";
+    setCat("tuvak");
+    variants = [blankVariant()];
+    renderVariants();
+    document.getElementById("formMsg").innerHTML = "";
+  }
+
+  function setCat(c) {
+    category = c;
+    document.querySelectorAll(".tab[data-cat]").forEach(t => t.classList.toggle("active", t.dataset.cat === c));
+  }
+
+  function addVariant() {
+    if (variants.length >= 10) return;
+    variants.push(blankVariant());
+    renderVariants();
+  }
+  function removeVariant(idx) {
+    if (variants.length <= 1) return;
+    variants.splice(idx, 1);
+    renderVariants();
+  }
+  function toggleOverride(idx) {
+    variants[idx].overrideOpen = !variants[idx].overrideOpen;
+    renderVariants();
+  }
+
+  function renderVariants() {
+    const wrap = document.getElementById("variantsWrap");
+    wrap.innerHTML = variants.map((v, idx) => {
+      const imgSrc = v.newImage ? v.newImage.dataUrl : v.imageUrl;
+      const imgInner = imgSrc ? `<img src="${imgSrc}" />` : "+ Rasm";
+      const hasOverride = v.name || v.color;
+      const openClass = (v.overrideOpen || hasOverride) ? " open" : "";
+      return `
+        <div class="variantRow">
+          <div class="vhead">
+            <span class="vtitle">Variant ${idx + 1}</span>
+            <button type="button" class="removeBtn" onclick="removeVariant(${idx})" ${variants.length <= 1 ? "style='visibility:hidden'" : ""}>✕ o'chirish</button>
+          </div>
+          <div class="vgrid">
+            <div class="vimgslot" onclick="pickVariantImage(${idx})">${imgInner}</div>
+            <div class="vfields">
+              <div class="vf-row">
+                <div>
+                  <label style="margin:0 0 4px;">Litr</label>
+                  <input type="text" placeholder="0,5" value="${escAttr(v.litr)}" oninput="updateVariant(${idx}, 'litr', this.value)" />
+                </div>
+              </div>
+              <div class="vf-row">
+                <div>
+                  <label style="margin:0 0 4px;">Chakana narx (so'm)</label>
+                  <input type="number" placeholder="12850" value="${escAttr(v.price)}" oninput="updateVariant(${idx}, 'price', this.value)" />
+                </div>
+                <div>
+                  <label style="margin:0 0 4px;">Optom narx (so'm)</label>
+                  <input type="number" placeholder="10500" value="${escAttr(v.optPrice)}" oninput="updateVariant(${idx}, 'optPrice', this.value)" />
+                </div>
+              </div>
+              <div>
+                <label style="margin:0 0 4px;">O'lcham, sm (ixtiyoriy)</label>
+                <input type="text" placeholder="Ø22.5 × 21" value="${escAttr(v.size)}" oninput="updateVariant(${idx}, 'size', this.value)" />
+              </div>
+            </div>
+          </div>
+          <button type="button" class="vOverrideToggle" onclick="toggleOverride(${idx})">${(v.overrideOpen || hasOverride) ? "▾" : "▸"} Bu variant uchun boshqa nom/rang (ixtiyoriy)</button>
+          <div class="vOverrideWrap${openClass}">
+            <div>
+              <label style="margin:0 0 4px;">Nomi (bo'sh — umumiy nomdan)</label>
+              <input type="text" value="${escAttr(v.name)}" oninput="updateVariant(${idx}, 'name', this.value)" />
+            </div>
+            <div>
+              <label style="margin:0 0 4px;">Rangi (bo'sh — umumiy rangdan)</label>
+              <input type="text" value="${escAttr(v.color)}" oninput="updateVariant(${idx}, 'color', this.value)" />
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    document.getElementById("addVariantBtn").disabled = variants.length >= 10;
+  }
+
+  function updateVariant(idx, field, val) {
+    variants[idx][field] = val;
+  }
+
+  function pickVariantImage(idx) {
+    activeVariantIndex = idx;
+    document.getElementById("fileInput").click();
+  }
+  function onFile(e) {
+    const file = e.target.files[0];
+    if (!file || activeVariantIndex === null) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      variants[activeVariantIndex].newImage = { file, dataUrl: reader.result };
+      renderVariants();
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  async function uploadImage(imgObj) {
+    const base64 = imgObj.dataUrl.split(",")[1];
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ filename: imgObj.file.name, contentType: imgObj.file.type, dataBase64: base64 }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Yuklashda xatolik");
+    return data.url;
+  }
+
+  async function submitProduct() {
+    const name = document.getElementById("fName").value.trim();
+    const color = document.getElementById("fColor").value.trim();
+    const msgEl = document.getElementById("formMsg");
+    const btn = document.getElementById("submitBtn");
+
+    if (!name) { msgEl.innerHTML = '<div class="msg err">Umumiy nomni kiriting</div>'; return; }
+    for (const v of variants) {
+      if (!String(v.litr).trim()) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun litr (hajm) kiriting</div>'; return; }
+      if (!v.price || Number(v.price) <= 0) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun chakana narx kiriting</div>'; return; }
+      if (!v.optPrice || Number(v.optPrice) <= 0) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun optom narx kiriting</div>'; return; }
+      if (!v.newImage && !v.imageUrl) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun rasm yuklang</div>'; return; }
+    }
+
+    btn.disabled = true;
+    msgEl.innerHTML = '<div class="msg ok">Saqlanmoqda…</div>';
+
+    try {
+      const outVariants = [];
+      for (const v of variants) {
+        let imageUrl = v.imageUrl;
+        let images = Array.isArray(v.existingImages) ? v.existingImages.slice() : [];
+        if (v.newImage) {
+          imageUrl = await uploadImage(v.newImage);
+          images = [imageUrl];
+        } else if (images.length === 0 && imageUrl) {
+          images = [imageUrl];
+        }
+        outVariants.push({
+          id: v.id, litr: v.litr.trim(), price: Number(v.price), optPrice: Number(v.optPrice),
+          size: v.size.trim(), image: imageUrl || images[0] || "", images,
+          name: (v.name || "").trim(), color: (v.color || "").trim(),
+        });
+      }
+
+      const payload = { name, category, color, variants: outVariants };
+      let res;
+      if (editingId) {
+        res = await fetch("/api/products", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ id: editingId, ...payload }),
+        });
+      } else {
+        res = await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify(payload),
+        });
+      }
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Xatolik");
+
+      msgEl.innerHTML = `<div class="msg ok">✅ ${editingId ? "Mahsulot yangilandi!" : "Mahsulot qo'shildi!"}</div>`;
+      resetForm();
+      loadProducts();
+    } catch (err) {
+      msgEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function cancelEdit() { resetForm(); }
+
+  function editProduct(id) {
+    const p = productsCache.find(x => x.id === id);
+    if (!p) return;
+    editingId = id;
+    document.getElementById("formTitle").textContent = "Mahsulotni tahrirlash";
+    const badge = document.getElementById("modeBadge");
+    badge.textContent = "tahrirlash";
+    badge.classList.add("editing");
+    document.getElementById("cancelBtn").classList.remove("hidden");
+    document.getElementById("submitBtn").textContent = "Yangilash";
+
+    document.getElementById("fName").value = p.name || "";
+    document.getElementById("fColor").value = p.color || "";
+    setCat(p.category === "gul" ? "gul" : "tuvak");
+
+    if (Array.isArray(p.variants) && p.variants.length > 0) {
+      variants = p.variants.map(v => ({
+        id: v.id || uid(),
+        litr: v.litr || "",
+        price: v.price || "",
+        optPrice: v.optPrice || "",
+        size: v.size || "",
+        imageUrl: v.image || (Array.isArray(v.images) && v.images[0]) || "",
+        existingImages: Array.isArray(v.images) ? v.images.slice() : (v.image ? [v.image] : []),
+        newImage: null,
+        name: v.name || "",
+        color: v.color || "",
+        overrideOpen: !!(v.name || v.color),
+      }));
+    } else {
+      variants = [
+        { id: uid(), litr: p.capacity || "", price: p.price || "", optPrice: "", size: p.size || "", imageUrl: (p.images && p.images[0]) || "", existingImages: Array.isArray(p.images) ? p.images.slice() : [], newImage: null, name: "", color: "", overrideOpen: false },
+      ];
+    }
+    renderVariants();
+    document.getElementById("formMsg").innerHTML = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ===================== mahsulotlar ro'yxati =====================
+  function priceRangeText(p) {
+    if (!Array.isArray(p.variants) || p.variants.length === 0) {
+      return p.price ? Number(p.price).toLocaleString("uz-UZ").replace(/,/g, " ") + " so'm" : "";
+    }
+    const prices = p.variants.map(v => Number(v.price)).filter(n => !isNaN(n));
+    if (prices.length === 0) return "";
+    const min = Math.min(...prices), max = Math.max(...prices);
+    const f = n => n.toLocaleString("uz-UZ").replace(/,/g, " ");
+    return min === max ? `${f(min)} so'm` : `${f(min)} – ${f(max)} so'm`;
+  }
+  function optPriceRangeText(p) {
+    if (!Array.isArray(p.variants) || p.variants.length === 0) return "";
+    const prices = p.variants.map(v => Number(v.optPrice)).filter(n => !isNaN(n) && n > 0);
+    if (prices.length === 0) return "";
+    const min = Math.min(...prices), max = Math.max(...prices);
+    const f = n => n.toLocaleString("uz-UZ").replace(/,/g, " ");
+    return min === max ? `${f(min)} so'm` : `${f(min)} – ${f(max)} so'm`;
+  }
+  function litrRangeText(p) {
+    if (!Array.isArray(p.variants) || p.variants.length === 0) return p.capacity || "";
+    const litrs = p.variants.map(v => v.litr).filter(Boolean);
+    return `${litrs.join(", ")} L (${p.variants.length} variant)`;
+  }
+  function thumbUrl(p) {
+    const v0 = Array.isArray(p.variants) && p.variants[0];
+    if (v0) {
+      if (v0.image) return v0.image;
+      if (Array.isArray(v0.images) && v0.images[0]) return v0.images[0];
+    }
+    return (p.images && p.images[0]) || "";
+  }
+
+  async function loadProducts() {
+    const res = await fetch("/api/products");
+    const data = await res.json();
+    const list = document.getElementById("plist");
+    if (!data.ok) { list.innerHTML = '<p style="color:var(--sale); font-size:13px;">Yuklashda xatolik</p>'; return; }
+
+    let items = data.products || [];
+    if (!ME.isSuper) {
+      items = items.filter(p => (p.sellerId || "zetme") === ME.seller.id);
+    }
+    productsCache = items;
+
+    if (items.length === 0) {
+      list.innerHTML = '<p style="color:var(--inkDim); font-size:13px;">Hali mahsulot yo\'q. Yuqoridagi forma orqali birinchi mahsulotingizni qo\'shing.</p>';
+      return;
+    }
+    list.innerHTML = items.map(p => `
+      <div class="prow">
+        <img src="${thumbUrl(p)}" />
+        <div class="info">
+          ${ME.isSuper ? `<div class="shop">🏪 ${escHtml(p.shopName || "Tuvaklar")}</div>` : ""}
+          <div class="name">${escHtml(p.name)}</div>
+          <div class="meta">${p.category === 'gul' ? 'Gul' : 'Tuvak'}${p.color ? ' · ' + escHtml(p.color) : ''} · ${litrRangeText(p)}</div>
+          <div class="price">Chakana: ${priceRangeText(p)}</div>
+          ${optPriceRangeText(p) ? `<div class="meta opt">Optom: ${optPriceRangeText(p)}</div>` : ''}
+        </div>
+        <div class="btns">
+          <button class="editBtn" onclick="editProduct('${p.id}')">Tahrirlash</button>
+          <button class="delBtn" onclick="deleteProduct('${p.id}')">O'chirish</button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm("Bu mahsulotni butunlay o'chirasizmi?")) return;
+    await fetch("/api/products?id=" + encodeURIComponent(id), {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    if (editingId === id) resetForm();
+    loadProducts();
+  }
+</script>
+</body>
+</html>
