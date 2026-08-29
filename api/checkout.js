@@ -1,11 +1,17 @@
-// Zetme AI — Savatni tasdiqlash va Telegram botga uzatish uchun buyurtma yaratish
+// Zetme AI — Savatni tasdiqlash va Telegram botga uzatish — MARKETPLACE versiya
 // POST /api/checkout   Body: { priceMode: "chakana"|"optom", items: [{ id, variantId, qty }, ...] }
-// Javob: { ok: true, orderId, total, payTotal, bonus }
+// Javob: { ok: true, orderId, total, payTotal, bonus, shopName }
+//
+// MARKETPLACE qoidasi: bitta buyurtmadagi barcha mahsulotlar BITTA sotuvchiga
+// tegishli bo'lishi shart (sayt buni oldindan tekshiradi, server esa majburlaydi).
+// Bonus/sovg'a faqat o'sha sotuvchi bonusni yoqqan bo'lsa qo'llanadi.
+// Narx, minimal buyurtma va bonus SERVERDA hisoblanadi.
 
 import { kv } from "@vercel/kv";
 
 const MIN_ORDER = 200000;       // chakana
 const OPT_MIN_ORDER = 5000000;  // optom
+const MAIN_SELLER_ID = "zetme";
 
 const BONUS_TIERS = [
   { min: 50000000, money: 3000000, tokin: 100 },
@@ -51,11 +57,21 @@ export default async function handler(req, res) {
     const byId = Object.fromEntries(products.map((p) => [p.id, p]));
 
     const resolved = [];
+    let orderSellerId = null;
     for (const it of items) {
       const fam = byId[it && it.id];
       if (!fam) return res.status(400).json({ ok: false, error: "Mahsulotlardan biri endi mavjud emas, savatni yangilang" });
       const variant = (fam.variants || []).find((v) => v.id === it.variantId);
       if (!variant) return res.status(400).json({ ok: false, error: "Tanlangan hajm (litr) endi mavjud emas" });
+
+      const sellerId = fam.sellerId || MAIN_SELLER_ID;
+      if (orderSellerId === null) orderSellerId = sellerId;
+      if (sellerId !== orderSellerId) {
+        return res.status(400).json({
+          ok: false,
+          error: "Bitta buyurtmada faqat bitta do'kon mahsulotlari bo'lishi mumkin. Avval joriy buyurtmani yakunlang.",
+        });
+      }
 
       const unitPrice = priceMode === "optom" ? Number(variant.optPrice) : Number(variant.price);
       if (!unitPrice || unitPrice <= 0) {
@@ -70,6 +86,16 @@ export default async function handler(req, res) {
       });
     }
 
+    // sotuvchi ma'lumotlari (buyurtma kimga borishi + bonus yoqilganmi)
+    const sellers = (await kv.get("sellers")) || [];
+    const seller = sellers.find((s) => s.id === orderSellerId);
+    if (seller && seller.status !== "active") {
+      return res.status(400).json({ ok: false, error: "Bu do'kon hozircha faol emas" });
+    }
+    const shopName = (seller && seller.shopName) || "Tuvaklar";
+    const bonusEnabled = seller ? !!seller.bonusEnabled : true;
+    const sellerChatId = (seller && seller.telegramChatId) || "";
+
     const totalQty = resolved.reduce((s, i) => s + i.qty, 0);
     const total = resolved.reduce((s, i) => s + i.price * i.qty, 0);
 
@@ -83,7 +109,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const bonus = bonusFor(total);
+    const bonus = bonusEnabled ? bonusFor(total) : null;
     const payTotal = bonus && bonus.money ? total - bonus.money : total;
 
     let orderId = genOrderId();
@@ -100,12 +126,15 @@ export default async function handler(req, res) {
       total,
       bonus,
       payTotal,
+      sellerId: orderSellerId,
+      shopName,
+      sellerChatId,
       createdAt: Date.now(),
     };
 
     await kv.set(`order:${orderId}`, order, { ex: 3600 });
 
-    return res.status(200).json({ ok: true, orderId, total, payTotal, bonus });
+    return res.status(200).json({ ok: true, orderId, total, payTotal, bonus, shopName });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, error: "Server xatosi" });
