@@ -3,25 +3,32 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Zetme AI — Admin</title>
+<title>Zetme AI — Sotuvchi paneli</title>
 <style>
   :root {
     --noir: #0B211B; --vert: #0F2E24; --ivoire: #F1ECDF; --ivoireDim: #B9C4B6;
-    --laiton: #C6A05B; --laitonHi: #E7D3A0; --line: #2A4438;
+    --laiton: #C6A05B; --laitonHi: #E7D3A0; --laitonLo: #9C7C3E; --line: #2A4438;
     --paper: #F5F6F3; --ink: #16211B; --inkDim: #69756D; --mline: #E4E7E1; --accent: #2F6B4F;
+    --sale: #C6472E;
   }
   * { box-sizing: border-box; }
   body { margin:0; font-family: 'Jost', system-ui, -apple-system, sans-serif; background: var(--paper); color: var(--ink); }
-  .topbar { background: linear-gradient(120deg, var(--vert), var(--noir)); color: var(--ivoire); padding: 18px 20px; display:flex; align-items:center; justify-content:space-between; }
+  .topbar { background: linear-gradient(120deg, var(--vert), var(--noir)); color: var(--ivoire); padding: 18px 20px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .topbar b { font-family: Georgia, serif; font-size: 20px; }
   .topbar span { color: var(--laiton); }
+  .topbar .shopname { font-size:12.5px; color: var(--ivoireDim); }
   .wrap { max-width: 640px; margin: 0 auto; padding: 24px 18px 60px; }
 
   /* login gate */
-  #gate { max-width: 340px; margin: 80px auto; text-align:center; }
-  #gate input { width:100%; padding:12px 14px; border:1px solid var(--mline); border-radius:10px; font-size:15px; margin-top:14px; }
-  #gate button { width:100%; margin-top:14px; padding:12px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; font-size:14px; cursor:pointer; }
-  #gate .err { color:#C6472E; font-size:12.5px; margin-top:10px; min-height:16px; }
+  #gate { max-width: 380px; margin: 50px auto; padding: 0 16px; }
+  .gate-tabs { display:flex; gap:8px; margin:20px 0 14px; }
+  .gate-tab { flex:1; padding:11px; border:1px solid var(--mline); border-radius:10px; text-align:center; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--inkDim); background:#fff; }
+  .gate-tab.active { background: var(--accent); color:#fff; border-color:var(--accent); }
+  #gate input { width:100%; padding:12px 14px; border:1px solid var(--mline); border-radius:10px; font-size:15px; margin-top:10px; font-family:inherit; }
+  #gate button.mainbtn { width:100%; margin-top:14px; padding:12px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; font-size:14px; cursor:pointer; }
+  #gate .err { color:var(--sale); font-size:12.5px; margin-top:10px; min-height:16px; }
+  #gate .okmsg { color:var(--accent); font-size:13px; margin-top:10px; background:#EAF3EC; border-radius:10px; padding:10px 12px; }
+  .gate-hint { font-size:11.5px; color:var(--inkDim); margin-top:10px; line-height:1.5; }
 
   /* form */
   .card { background:#fff; border:1px solid var(--mline); border-radius:16px; padding:20px; margin-bottom:18px; }
@@ -30,7 +37,7 @@
   .card h3 .badge.editing { background:#FCEFE2; color:#B5711A; }
   label { display:block; font-size:12.5px; color:var(--inkDim); margin:12px 0 5px; }
   label:first-of-type { margin-top:0; }
-  input[type=text], input[type=number], select { width:100%; padding:10px 12px; border:1px solid var(--mline); border-radius:9px; font-size:14px; font-family:inherit; }
+  input[type=text], input[type=number], input[type=password], select { width:100%; padding:10px 12px; border:1px solid var(--mline); border-radius:9px; font-size:14px; font-family:inherit; }
   .tabs { display:flex; gap:8px; margin-bottom:4px; }
   .tab { flex:1; padding:10px; border:1px solid var(--mline); border-radius:9px; text-align:center; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--inkDim); }
   .tab.active { background: var(--accent); color:#fff; border-color:var(--accent); }
@@ -39,14 +46,14 @@
   .cancelbtn { width:100%; margin-top:9px; padding:11px; border:1px solid var(--mline); border-radius:11px; background:transparent; color:var(--inkDim); font-weight:600; font-size:13.5px; cursor:pointer; }
   .msg { font-size:13px; margin-top:10px; padding:10px 12px; border-radius:9px; }
   .msg.ok { background:#EAF3EC; color:var(--accent); }
-  .msg.err { background:#FBEFEA; color:#C6472E; }
+  .msg.err { background:#FBEFEA; color:var(--sale); }
 
   /* variants (litr) */
   .variantsWrap { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
   .variantRow { border:1.5px solid var(--mline); border-radius:12px; padding:12px; position:relative; background:var(--paper); }
   .variantRow .vhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
   .variantRow .vtitle { font-size:12px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.03em; }
-  .variantRow .removeBtn { background:transparent; border:none; color:#C6472E; font-size:13px; cursor:pointer; font-weight:600; padding:2px 6px; }
+  .variantRow .removeBtn { background:transparent; border:none; color:var(--sale); font-size:13px; cursor:pointer; font-weight:600; padding:2px 6px; }
   .vgrid { display:flex; gap:10px; }
   .vgrid .vfields { flex:1; display:flex; flex-direction:column; gap:8px; }
   .vgrid .vfields .vf-row { display:flex; gap:8px; }
@@ -59,7 +66,7 @@
   .vOverrideWrap > div { flex:1; }
   .addVariantBtn { width:100%; padding:11px; border:1.5px dashed var(--accent); border-radius:11px; background:transparent; color:var(--accent); font-weight:700; font-size:13.5px; cursor:pointer; margin-top:4px; }
   .addVariantBtn:disabled { opacity:.4; cursor:not-allowed; border-color:var(--inkDim); color:var(--inkDim); }
-  .hint { font-size:11.5px; color:var(--inkDim); margin-top:6px; }
+  .hint { font-size:11.5px; color:var(--inkDim); margin-top:6px; line-height:1.5; }
 
   /* list */
   .plist { display:flex; flex-direction:column; gap:10px; }
@@ -68,32 +75,82 @@
   .prow .info { flex:1; min-width:0; }
   .prow .name { font-weight:600; font-size:13.5px; }
   .prow .meta { font-size:11.5px; color:var(--inkDim); }
-  .prow .meta.opt { color:var(--laitonLo, #9C7C3E); }
+  .prow .meta.opt { color:var(--laitonLo); }
+  .prow .shop { font-size:10.5px; color:var(--laitonLo); font-weight:700; }
   .prow .price { font-weight:700; font-size:12.5px; white-space:nowrap; }
   .prow .btns { display:flex; flex-direction:column; gap:6px; }
   .prow button { background:transparent; border:1px solid var(--mline); border-radius:8px; padding:6px 10px; font-size:11.5px; cursor:pointer; white-space:nowrap; }
   .prow .editBtn { color:var(--accent); border-color:var(--accent); }
-  .prow .delBtn { color:#C6472E; }
+  .prow .delBtn { color:var(--sale); }
+
+  /* sellers (super-admin) */
+  .srow { display:flex; gap:10px; align-items:center; background:#fff; border:1px solid var(--mline); border-radius:12px; padding:12px; margin-bottom:10px; flex-wrap:wrap; }
+  .srow .sinfo { flex:1; min-width:150px; }
+  .srow .sname { font-weight:700; font-size:14px; }
+  .srow .smeta { font-size:11.5px; color:var(--inkDim); }
+  .status-badge { font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:99px; }
+  .status-badge.pending { background:#FCEFE2; color:#B5711A; }
+  .status-badge.active { background:#EAF3EC; color:var(--accent); }
+  .status-badge.blocked { background:#FBEFEA; color:var(--sale); }
+  .srow .sbtns { display:flex; gap:6px; flex-wrap:wrap; }
+  .srow .sbtns button { background:transparent; border:1px solid var(--mline); border-radius:8px; padding:6px 10px; font-size:11.5px; cursor:pointer; }
+  .srow .approveBtn { color:var(--accent); border-color:var(--accent); font-weight:700; }
+  .srow .blockBtn { color:#B5711A; }
+  .srow .removeBtn2 { color:var(--sale); }
+
+  .checkrow { display:flex; align-items:center; gap:10px; margin-top:12px; font-size:13.5px; }
+  .checkrow input[type=checkbox] { width:18px; height:18px; accent-color: var(--accent); }
   .hidden { display:none !important; }
 </style>
 </head>
 <body>
 
+<!-- ======================= KIRISH / RO'YXATDAN O'TISH ======================= -->
 <div id="gate">
   <div class="topbar" style="border-radius:14px; justify-content:center;"><b>ZETME <span>AI</span></b></div>
-  <p style="color:var(--inkDim); font-size:13.5px; margin-top:18px;">Admin panelga kirish uchun parolni kiriting</p>
-  <input type="password" id="pwInput" placeholder="Parol" />
-  <button onclick="tryLogin()">Kirish</button>
-  <div class="err" id="loginErr"></div>
+  <div class="gate-tabs">
+    <div class="gate-tab active" id="tabLogin" onclick="gateTab('login')">Kirish</div>
+    <div class="gate-tab" id="tabReg" onclick="gateTab('reg')">Sotuvchi bo'lish</div>
+  </div>
+
+  <div id="loginPane">
+    <input type="text" id="loginInput" placeholder="Login" autocomplete="username" />
+    <input type="password" id="pwInput" placeholder="Parol" autocomplete="current-password" />
+    <button class="mainbtn" onclick="tryLogin()">Kirish</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+
+  <div id="regPane" class="hidden">
+    <input type="text" id="regShop" placeholder="Do'kon nomi (masalan: Gul Markaz)" />
+    <input type="text" id="regOwner" placeholder="Ismingiz" />
+    <input type="text" id="regPhone" placeholder="Telefon (+998 ...)" />
+    <input type="text" id="regLogin" placeholder="Login (lotin harflar, masalan: gulmarkaz)" />
+    <input type="password" id="regPw" placeholder="Parol (kamida 6 belgi)" />
+    <button class="mainbtn" onclick="tryRegister()">Ariza yuborish</button>
+    <div class="err" id="regErr"></div>
+    <div class="okmsg hidden" id="regOk">✅ Arizangiz yuborildi! Administrator tasdiqlagach shu yerdan login-parolingiz bilan kirasiz.</div>
+    <p class="gate-hint">Ro'yxatdan o'tgach do'koningiz administrator tomonidan tasdiqlanadi. Tasdiqdan so'ng o'z mahsulotlaringizni qo'shib, sotishni boshlaysiz.</p>
+  </div>
 </div>
 
+<!-- ======================= PANEL ======================= -->
 <div id="app" class="hidden">
   <div class="topbar">
-    <b>ZETME <span>AI</span> — Admin</b>
+    <div>
+      <b>ZETME <span>AI</span></b>
+      <div class="shopname" id="topShopName"></div>
+    </div>
     <button onclick="logout()" style="background:transparent;border:1px solid var(--line);color:var(--ivoire);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;">Chiqish</button>
   </div>
   <div class="wrap">
 
+    <!-- SUPER-ADMIN: sotuvchilar boshqaruvi -->
+    <div class="card hidden" id="sellersCard">
+      <h3>Sotuvchilar <span class="badge" id="sellersBadge"></span></h3>
+      <div id="sellersList"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
+    </div>
+
+    <!-- Mahsulot qo'shish/tahrirlash -->
     <div class="card">
       <h3><span id="formTitle">Yangi mahsulot qo'shish</span> <span class="badge" id="modeBadge">yangi</span></h3>
 
@@ -112,7 +169,7 @@
       <label style="margin-top:16px;">Hajm (litr) variantlari — har birida o'z rasmi, chakana va optom narxi bo'ladi (1 tadan 10 tagacha)</label>
       <div class="variantsWrap" id="variantsWrap"></div>
       <button type="button" class="addVariantBtn" id="addVariantBtn" onclick="addVariant()">+ Yana hajm (litr) qo'shish</button>
-      <div class="hint" id="variantHint">Kamida 1 ta variant bilan boshlang, kerak bo'lsa 10 tagacha qo'shishingiz mumkin. Optom narx — mijoz 5 000 000 so'mdan yuqori xarid qilganda ko'radigan narx.</div>
+      <div class="hint">Optom narx — mijoz 5 000 000 so'mdan yuqori xarid qilganda ko'radigan narx.</div>
 
       <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="onFile(event)" />
 
@@ -121,31 +178,234 @@
       <div id="formMsg"></div>
     </div>
 
+    <!-- Mahsulotlar ro'yxati -->
     <div class="card">
-      <h3>Mavjud mahsulotlar</h3>
+      <h3><span id="plistTitle">Mahsulotlarim</span></h3>
       <div class="plist" id="plist"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
+    </div>
+
+    <!-- Do'kon sozlamalari -->
+    <div class="card">
+      <h3>Do'kon sozlamalari</h3>
+      <label>Telegram Chat ID (buyurtmalar shu yerga keladi)</label>
+      <input type="text" id="profChatId" placeholder="Masalan: 5262377062" />
+      <div class="hint">Chat ID'ni olish uchun Telegram'da <b>@zetmeai_bot</b> ga kirib <b>/myid</b> deb yozing — bot raqamingizni aytadi. Bo'sh qoldirsangiz buyurtmalar bosh administratorga boradi.</div>
+      <div class="checkrow">
+        <input type="checkbox" id="profBonus" />
+        <span>Bonus/sovg'a tizimi yoqilsin (1 mln+ buyurtmalarga sovg'a va pul bonuslari — bonusni do'kon o'z hisobidan beradi)</span>
+      </div>
+      <label style="margin-top:14px;" id="newPwLabel">Yangi parol (o'zgartirmoqchi bo'lsangizgina to'ldiring)</label>
+      <input type="password" id="profNewPw" placeholder="Yangi parol" />
+      <button class="submitbtn" onclick="saveProfile()">Sozlamalarni saqlash</button>
+      <div id="profMsg"></div>
     </div>
 
   </div>
 </div>
 
 <script>
-  let PASSWORD = "";
+  // ===================== sessiya =====================
+  let ME = null;           // { login, password, isSuper, seller:{id, shopName, ...} }
   let category = "tuvak";
   let productsCache = [];
-  let editingId = null; // null = yangi mahsulot, aks holda tahrirlanayotgan mahsulot ID si
-
-  // Har bir variant: { id, litr, price (chakana), optPrice (optom), size,
-  //                     name/color (ixtiyoriy override),
-  //                     imageUrl (ko'rsatiladigan mavjud rasm URL),
-  //                     existingImages (eski `images` massivi — saqlanadi),
-  //                     newImage: {file, dataUrl}|null, overrideOpen: bool }
+  let editingId = null;
   let variants = [];
   let activeVariantIndex = null;
 
   function uid() { return Math.random().toString(36).slice(2, 9); }
   function escAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+  function escHtml(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
+  function authHeaders() {
+    const h = {
+      "x-seller-login": ME.login,
+      "x-seller-password": ME.password,
+    };
+    if (ME.isSuper) h["x-admin-password"] = ME.password;
+    return h;
+  }
+
+  // ===================== kirish / ro'yxat =====================
+  function gateTab(which) {
+    document.getElementById("tabLogin").classList.toggle("active", which === "login");
+    document.getElementById("tabReg").classList.toggle("active", which === "reg");
+    document.getElementById("loginPane").classList.toggle("hidden", which !== "login");
+    document.getElementById("regPane").classList.toggle("hidden", which !== "reg");
+  }
+
+  async function tryLogin() {
+    const login = document.getElementById("loginInput").value.trim().toLowerCase();
+    const password = document.getElementById("pwInput").value;
+    const errEl = document.getElementById("loginErr");
+    errEl.textContent = "";
+    if (!login || !password) { errEl.textContent = "Login va parolni kiriting"; return; }
+    try {
+      const res = await fetch("/api/sellers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "login", login, password }),
+      });
+      const data = await res.json();
+      if (!data.ok) { errEl.textContent = data.error || "Kirish amalga oshmadi"; return; }
+      ME = { login, password, isSuper: !!data.isSuper, seller: data.seller };
+      sessionStorage.setItem("zetme_seller_session", JSON.stringify({ login, password }));
+      enterPanel();
+    } catch (e) {
+      errEl.textContent = "Tarmoq xatosi — qayta urinib ko'ring";
+    }
+  }
+
+  async function tryRegister() {
+    const errEl = document.getElementById("regErr");
+    const okEl = document.getElementById("regOk");
+    errEl.textContent = ""; okEl.classList.add("hidden");
+    const payload = {
+      action: "register",
+      shopName: document.getElementById("regShop").value.trim(),
+      ownerName: document.getElementById("regOwner").value.trim(),
+      phone: document.getElementById("regPhone").value.trim(),
+      login: document.getElementById("regLogin").value.trim().toLowerCase(),
+      password: document.getElementById("regPw").value,
+    };
+    try {
+      const res = await fetch("/api/sellers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!data.ok) { errEl.textContent = data.error || "Xatolik"; return; }
+      okEl.classList.remove("hidden");
+      ["regShop","regOwner","regPhone","regLogin","regPw"].forEach(id => document.getElementById(id).value = "");
+    } catch (e) {
+      errEl.textContent = "Tarmoq xatosi — qayta urinib ko'ring";
+    }
+  }
+
+  function logout() {
+    sessionStorage.removeItem("zetme_seller_session");
+    location.reload();
+  }
+
+  window.addEventListener("DOMContentLoaded", async () => {
+    const saved = sessionStorage.getItem("zetme_seller_session");
+    if (!saved) return;
+    try {
+      const { login, password } = JSON.parse(saved);
+      const res = await fetch("/api/sellers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "login", login, password }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        ME = { login, password, isSuper: !!data.isSuper, seller: data.seller };
+        enterPanel();
+      } else {
+        sessionStorage.removeItem("zetme_seller_session");
+      }
+    } catch (e) {}
+  });
+
+  function enterPanel() {
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    document.getElementById("topShopName").textContent =
+      ME.seller.shopName + (ME.isSuper ? " · Super-admin" : " · Sotuvchi paneli");
+    document.getElementById("plistTitle").textContent = ME.isSuper ? "Barcha mahsulotlar" : "Mahsulotlarim";
+    // profil sozlamalarini to'ldirish
+    document.getElementById("profChatId").value = ME.seller.telegramChatId || "";
+    document.getElementById("profBonus").checked = !!ME.seller.bonusEnabled;
+    if (ME.seller.builtin) {
+      document.getElementById("newPwLabel").classList.add("hidden");
+      document.getElementById("profNewPw").classList.add("hidden");
+    }
+    if (ME.isSuper) {
+      document.getElementById("sellersCard").classList.remove("hidden");
+      loadSellers();
+    }
+    resetForm();
+    loadProducts();
+  }
+
+  // ===================== SUPER-ADMIN: sotuvchilar =====================
+  async function loadSellers() {
+    const res = await fetch("/api/sellers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": ME.password },
+      body: JSON.stringify({ action: "adminList" }),
+    });
+    const data = await res.json();
+    if (!data.ok) return;
+    renderSellers(data.sellers);
+  }
+
+  function renderSellers(sellers) {
+    const pending = sellers.filter(s => s.status === "pending").length;
+    document.getElementById("sellersBadge").textContent =
+      pending > 0 ? `${pending} ta yangi ariza` : `${sellers.length} ta`;
+    const st = { pending: "Ariza kutmoqda", active: "Faol", blocked: "Bloklangan" };
+    document.getElementById("sellersList").innerHTML = sellers.map(s => `
+      <div class="srow">
+        <div class="sinfo">
+          <div class="sname">${escHtml(s.shopName)} ${s.builtin ? "⭐" : ""}</div>
+          <div class="smeta">${escHtml(s.ownerName)}${s.phone ? " · " + escHtml(s.phone) : ""} · login: ${escHtml(s.login)}</div>
+        </div>
+        <span class="status-badge ${s.status}">${st[s.status] || s.status}</span>
+        <div class="sbtns">
+          ${s.status === "pending" ? `<button class="approveBtn" onclick="sellerAction('approve','${s.id}')">✅ Tasdiqlash</button>` : ""}
+          ${s.status === "active" && !s.builtin ? `<button class="blockBtn" onclick="sellerAction('block','${s.id}')">Bloklash</button>` : ""}
+          ${s.status === "blocked" ? `<button class="approveBtn" onclick="sellerAction('unblock','${s.id}')">Blokdan chiqarish</button>` : ""}
+          ${!s.builtin ? `<button class="removeBtn2" onclick="removeSeller('${s.id}','${escAttr(s.shopName)}')">O'chirish</button>` : ""}
+        </div>
+      </div>
+    `).join("");
+  }
+
+  async function sellerAction(action, id) {
+    const res = await fetch("/api/sellers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": ME.password },
+      body: JSON.stringify({ action, id }),
+    });
+    const data = await res.json();
+    if (data.ok) { renderSellers(data.sellers); loadProducts(); }
+    else alert(data.error || "Xatolik");
+  }
+  function removeSeller(id, name) {
+    if (!confirm(`"${name}" do'konini BUTUNLAY o'chirasizmi? Uning barcha mahsulotlari ham o'chadi!`)) return;
+    sellerAction("remove", id);
+  }
+
+  // ===================== do'kon sozlamalari =====================
+  async function saveProfile() {
+    const msgEl = document.getElementById("profMsg");
+    const payload = {
+      action: "updateProfile",
+      login: ME.login,
+      password: ME.password,
+      telegramChatId: document.getElementById("profChatId").value.trim(),
+      bonusEnabled: document.getElementById("profBonus").checked,
+    };
+    const newPw = document.getElementById("profNewPw").value;
+    if (newPw) payload.newPassword = newPw;
+    const res = await fetch("/api/sellers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!data.ok) { msgEl.innerHTML = `<div class="msg err">${data.error || "Xatolik"}</div>`; return; }
+    if (newPw) {
+      ME.password = newPw;
+      sessionStorage.setItem("zetme_seller_session", JSON.stringify({ login: ME.login, password: newPw }));
+      document.getElementById("profNewPw").value = "";
+    }
+    ME.seller = data.seller;
+    msgEl.innerHTML = '<div class="msg ok">✅ Sozlamalar saqlandi!</div>';
+  }
+
+  // ===================== mahsulot formasi =====================
   function blankVariant() {
     return { id: uid(), litr: "", price: "", optPrice: "", size: "", image: "", imageUrl: "", existingImages: [], newImage: null, name: "", color: "", overrideOpen: false };
   }
@@ -168,7 +428,7 @@
 
   function setCat(c) {
     category = c;
-    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.cat === c));
+    document.querySelectorAll(".tab[data-cat]").forEach(t => t.classList.toggle("active", t.dataset.cat === c));
   }
 
   function addVariant() {
@@ -228,11 +488,11 @@
           <div class="vOverrideWrap${openClass}">
             <div>
               <label style="margin:0 0 4px;">Nomi (bo'sh — umumiy nomdan)</label>
-              <input type="text" placeholder="${escAttr(document.getElementById('fName') ? document.getElementById('fName').value : '')}" value="${escAttr(v.name)}" oninput="updateVariant(${idx}, 'name', this.value)" />
+              <input type="text" value="${escAttr(v.name)}" oninput="updateVariant(${idx}, 'name', this.value)" />
             </div>
             <div>
               <label style="margin:0 0 4px;">Rangi (bo'sh — umumiy rangdan)</label>
-              <input type="text" placeholder="${escAttr(document.getElementById('fColor') ? document.getElementById('fColor').value : '')}" value="${escAttr(v.color)}" oninput="updateVariant(${idx}, 'color', this.value)" />
+              <input type="text" value="${escAttr(v.color)}" oninput="updateVariant(${idx}, 'color', this.value)" />
             </div>
           </div>
         </div>
@@ -262,52 +522,11 @@
     e.target.value = "";
   }
 
-  function tryLogin() {
-    const pw = document.getElementById("pwInput").value;
-    if (!pw) return;
-    fetch("/api/verify-admin", { headers: { "x-admin-password": pw } })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.ok) {
-          document.getElementById("loginErr").textContent = "Noto'g'ri parol";
-          return;
-        }
-        PASSWORD = pw;
-        document.getElementById("gate").classList.add("hidden");
-        document.getElementById("app").classList.remove("hidden");
-        sessionStorage.setItem("zetme_admin_pw", pw);
-        resetForm();
-        loadProducts();
-      });
-  }
-  function logout() {
-    sessionStorage.removeItem("zetme_admin_pw");
-    location.reload();
-  }
-  window.addEventListener("DOMContentLoaded", () => {
-    const saved = sessionStorage.getItem("zetme_admin_pw");
-    if (saved) {
-      fetch("/api/verify-admin", { headers: { "x-admin-password": saved } })
-        .then(r => r.json())
-        .then(data => {
-          if (data.ok) {
-            PASSWORD = saved;
-            document.getElementById("gate").classList.add("hidden");
-            document.getElementById("app").classList.remove("hidden");
-            resetForm();
-            loadProducts();
-          } else {
-            sessionStorage.removeItem("zetme_admin_pw");
-          }
-        });
-    }
-  });
-
   async function uploadImage(imgObj) {
     const base64 = imgObj.dataUrl.split(",")[1];
     const res = await fetch("/api/upload", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": PASSWORD },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ filename: imgObj.file.name, contentType: imgObj.file.type, dataBase64: base64 }),
     });
     const data = await res.json();
@@ -321,31 +540,12 @@
     const msgEl = document.getElementById("formMsg");
     const btn = document.getElementById("submitBtn");
 
-    if (!name) {
-      msgEl.innerHTML = '<div class="msg err">Umumiy nomni kiriting</div>';
-      return;
-    }
-    if (variants.length < 1) {
-      msgEl.innerHTML = '<div class="msg err">Kamida 1 ta hajm (litr) varianti kerak</div>';
-      return;
-    }
+    if (!name) { msgEl.innerHTML = '<div class="msg err">Umumiy nomni kiriting</div>'; return; }
     for (const v of variants) {
-      if (!String(v.litr).trim()) {
-        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun litr (hajm) kiriting</div>';
-        return;
-      }
-      if (!v.price || Number(v.price) <= 0) {
-        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun chakana narx kiriting</div>';
-        return;
-      }
-      if (!v.optPrice || Number(v.optPrice) <= 0) {
-        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun optom narx kiriting</div>';
-        return;
-      }
-      if (!v.newImage && !v.imageUrl) {
-        msgEl.innerHTML = '<div class="msg err">Har bir variant uchun rasm yuklang</div>';
-        return;
-      }
+      if (!String(v.litr).trim()) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun litr (hajm) kiriting</div>'; return; }
+      if (!v.price || Number(v.price) <= 0) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun chakana narx kiriting</div>'; return; }
+      if (!v.optPrice || Number(v.optPrice) <= 0) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun optom narx kiriting</div>'; return; }
+      if (!v.newImage && !v.imageUrl) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun rasm yuklang</div>'; return; }
     }
 
     btn.disabled = true;
@@ -358,7 +558,7 @@
         let images = Array.isArray(v.existingImages) ? v.existingImages.slice() : [];
         if (v.newImage) {
           imageUrl = await uploadImage(v.newImage);
-          images = [imageUrl]; // yangi rasm yuklansa, eski to'plam o'rniga shu qo'yiladi
+          images = [imageUrl];
         } else if (images.length === 0 && imageUrl) {
           images = [imageUrl];
         }
@@ -374,13 +574,13 @@
       if (editingId) {
         res = await fetch("/api/products", {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "x-admin-password": PASSWORD },
+          headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({ id: editingId, ...payload }),
         });
       } else {
         res = await fetch("/api/products", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-admin-password": PASSWORD },
+          headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify(payload),
         });
       }
@@ -397,9 +597,7 @@
     }
   }
 
-  function cancelEdit() {
-    resetForm();
-  }
+  function cancelEdit() { resetForm(); }
 
   function editProduct(id) {
     const p = productsCache.find(x => x.id === id);
@@ -423,7 +621,6 @@
         price: v.price || "",
         optPrice: v.optPrice || "",
         size: v.size || "",
-        // eski mahsulotlarda rasm `images` massivida, yangilarida `image`da bo'ladi
         imageUrl: v.image || (Array.isArray(v.images) && v.images[0]) || "",
         existingImages: Array.isArray(v.images) ? v.images.slice() : (v.image ? [v.image] : []),
         newImage: null,
@@ -432,7 +629,6 @@
         overrideOpen: !!(v.name || v.color),
       }));
     } else {
-      // Eski (litr-variantsiz) mahsulot — bitta variant sifatida ko'rsatamiz.
       variants = [
         { id: uid(), litr: p.capacity || "", price: p.price || "", optPrice: "", size: p.size || "", imageUrl: (p.images && p.images[0]) || "", existingImages: Array.isArray(p.images) ? p.images.slice() : [], newImage: null, name: "", color: "", overrideOpen: false },
       ];
@@ -442,6 +638,7 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  // ===================== mahsulotlar ro'yxati =====================
   function priceRangeText(p) {
     if (!Array.isArray(p.variants) || p.variants.length === 0) {
       return p.price ? Number(p.price).toLocaleString("uz-UZ").replace(/,/g, " ") + " so'm" : "";
@@ -478,18 +675,25 @@
     const res = await fetch("/api/products");
     const data = await res.json();
     const list = document.getElementById("plist");
-    if (!data.ok || data.products.length === 0) {
-      productsCache = [];
-      list.innerHTML = '<p style="color:var(--inkDim); font-size:13px;">Hali mahsulot yo\'q.</p>';
+    if (!data.ok) { list.innerHTML = '<p style="color:var(--sale); font-size:13px;">Yuklashda xatolik</p>'; return; }
+
+    let items = data.products || [];
+    if (!ME.isSuper) {
+      items = items.filter(p => (p.sellerId || "zetme") === ME.seller.id);
+    }
+    productsCache = items;
+
+    if (items.length === 0) {
+      list.innerHTML = '<p style="color:var(--inkDim); font-size:13px;">Hali mahsulot yo\'q. Yuqoridagi forma orqali birinchi mahsulotingizni qo\'shing.</p>';
       return;
     }
-    productsCache = data.products;
-    list.innerHTML = data.products.map(p => `
+    list.innerHTML = items.map(p => `
       <div class="prow">
         <img src="${thumbUrl(p)}" />
         <div class="info">
-          <div class="name">${p.name}</div>
-          <div class="meta">${p.category === 'gul' ? 'Gul' : 'Tuvak'}${p.color ? ' · ' + p.color : ''} · ${litrRangeText(p)}</div>
+          ${ME.isSuper ? `<div class="shop">🏪 ${escHtml(p.shopName || "Tuvaklar")}</div>` : ""}
+          <div class="name">${escHtml(p.name)}</div>
+          <div class="meta">${p.category === 'gul' ? 'Gul' : 'Tuvak'}${p.color ? ' · ' + escHtml(p.color) : ''} · ${litrRangeText(p)}</div>
           <div class="price">Chakana: ${priceRangeText(p)}</div>
           ${optPriceRangeText(p) ? `<div class="meta opt">Optom: ${optPriceRangeText(p)}</div>` : ''}
         </div>
@@ -505,7 +709,7 @@
     if (!confirm("Bu mahsulotni butunlay o'chirasizmi?")) return;
     await fetch("/api/products?id=" + encodeURIComponent(id), {
       method: "DELETE",
-      headers: { "x-admin-password": PASSWORD },
+      headers: authHeaders(),
     });
     if (editingId === id) resetForm();
     loadProducts();
