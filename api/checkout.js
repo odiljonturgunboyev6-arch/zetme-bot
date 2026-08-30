@@ -79,8 +79,9 @@ export default async function handler(req, res) {
       }
 
       const qty = Math.max(1, Math.min(999, Math.floor(Number(it.qty) || 1)));
+      const UNIT_SHORT = { litr: "L", gramm: "g", olcham: "sm", dona: "dona" };
       resolved.push({
-        name: `${variant.name || fam.name} — ${variant.litr} L`,
+        name: `${variant.name || fam.name} — ${variant.litr} ${UNIT_SHORT[fam.unit] || "L"}`,
         price: unitPrice,
         qty,
       });

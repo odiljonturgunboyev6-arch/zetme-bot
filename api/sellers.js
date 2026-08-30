@@ -172,6 +172,23 @@ export default async function handler(req, res) {
       if (seller.status !== "active") return res.status(403).json({ ok: false, error: "Do'kon faol emas" });
 
       const updated = { ...seller };
+
+      // Do'kon nomi/rasmi haftada faqat 1 marta o'zgaradi (super-admin zetme cheklovsiz).
+      const newNameVal = body.shopName !== undefined ? String(body.shopName).trim() : null;
+      const newLogoVal = body.shopLogo !== undefined ? String(body.shopLogo).trim().slice(0, 600) : null;
+      const brandChanging =
+        (newNameVal !== null && newNameVal !== seller.shopName) ||
+        (newLogoVal !== null && newLogoVal !== (seller.shopLogo || ""));
+      if (brandChanging && !seller.builtin) {
+        const WEEK = 7 * 24 * 3600 * 1000;
+        const last = Number(seller.brandChangedAt || 0);
+        if (last && Date.now() - last < WEEK) {
+          const days = Math.max(1, Math.ceil((WEEK - (Date.now() - last)) / (24 * 3600 * 1000)));
+          return res.status(400).json({ ok: false, error: `Do'kon nomi va rasmini haftada bir marta o'zgartirish mumkin — yana ${days} kundan keyin urinib ko'ring (yoki administratordan ruxsat so'rang)` });
+        }
+        updated.brandChangedAt = Date.now();
+      }
+
       if (body.telegramChatId !== undefined) updated.telegramChatId = String(body.telegramChatId).trim();
       if (body.bonusEnabled !== undefined) updated.bonusEnabled = !!body.bonusEnabled;
       if (body.phone !== undefined && String(body.phone).trim()) updated.phone = String(body.phone).trim();
@@ -223,6 +240,9 @@ export default async function handler(req, res) {
       list[idx].status = "blocked";
     } else if (action === "unblock") {
       list[idx].status = "active";
+    } else if (action === "allowBrandChange") {
+      // super-admin sotuvchiga nom/rasmni muddatidan oldin o'zgartirishga ruxsat beradi
+      delete list[idx].brandChangedAt;
     } else if (action === "remove") {
       const removedId = list[idx].id;
       list.splice(idx, 1);

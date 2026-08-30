@@ -48,6 +48,27 @@
   .msg.ok { background:#EAF3EC; color:var(--accent); }
   .msg.err { background:#FBEFEA; color:var(--sale); }
 
+  /* panel bo'limlari (Profil | Mahsulotlar) */
+  .paneltabs { display:flex; gap:8px; margin-bottom:16px; position:sticky; top:10px; z-index:30; }
+  .ptab { flex:1; padding:12px 10px; border-radius:12px; border:1px solid var(--mline); background:#fff; color:var(--inkDim); font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.04); }
+  .ptab.active { background:var(--vert); border-color:var(--vert); color:var(--ivoire); }
+  .newprodbtn { width:100%; padding:14px; margin-bottom:16px; border:1.5px dashed var(--accent); border-radius:14px; background:#EAF3EC; color:var(--accent); font-size:15px; font-weight:700; font-family:inherit; cursor:pointer; }
+  .newprodbtn:hover { background:#dfeee3; }
+
+  /* analitika */
+  .stat-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:14px; }
+  .stat-tile { background:var(--paper); border:1px solid var(--mline); border-radius:12px; padding:12px; }
+  .stat-tile b { display:block; font-size:19px; color:var(--ink); font-family:Georgia,serif; }
+  .stat-tile span { font-size:11px; color:var(--inkDim); text-transform:uppercase; letter-spacing:.6px; }
+  .rank { margin:0 0 4px; }
+  .rank h4 { margin:12px 0 8px; font-size:13px; color:var(--ink); }
+  .rank-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--paper); font-size:13px; }
+  .rank-row:last-child { border-bottom:none; }
+  .rank-n { width:20px; height:20px; flex-shrink:0; border-radius:50%; background:#EAF3EC; color:var(--accent); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .rank-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rank-val { font-weight:700; font-size:12px; white-space:nowrap; }
+  .rank-bar { height:4px; border-radius:2px; background:var(--accent); opacity:.25; }
+
   /* do'kon bo'limlari */
   select { width:100%; padding:11px 12px; border:1px solid var(--mline); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; color:var(--ink); margin-top:4px; }
   .secrow { display:flex; align-items:center; gap:8px; margin-top:8px; }
@@ -158,19 +179,35 @@
   </div>
   <div class="wrap">
 
+    <!-- ======== PANEL BO'LIMLARI: Profil | Mahsulotlar ======== -->
+    <div class="paneltabs">
+      <button class="ptab active" id="ptab-profil" onclick="showPane('profil')">👤 Profil</button>
+      <button class="ptab" id="ptab-mahsulot" onclick="showPane('mahsulot')">🛍 Mahsulotlar</button>
+    </div>
+
+    <!-- PROFIL: sotuvlar va analitika -->
+    <div class="card" data-pane="profil" id="statsCard">
+      <h3>Sotuvlar va analitika <span class="badge" id="statsBadge"></span></h3>
+      <div id="statsBody"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
+    </div>
+
     <!-- SUPER-ADMIN: sotuvchilar boshqaruvi -->
-    <div class="card hidden" id="sellersCard">
+    <div class="card hidden" data-pane="profil" id="sellersCard">
       <h3>Sotuvchilar <span class="badge" id="sellersBadge"></span></h3>
       <div id="sellersList"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
     </div>
 
+    <!-- MAHSULOTLAR: yangi mahsulot tugmasi -->
+    <button class="newprodbtn" data-pane="mahsulot" id="newProdBtn" onclick="openNewProduct()">＋ Yangi mahsulot qo'shish</button>
+    <div data-pane="mahsulot" id="paneMsg" style="margin:-6px 0 12px;"></div>
+
     <!-- Mahsulot qo'shish/tahrirlash -->
-    <div class="card">
+    <div class="card hidden" data-pane="mahsulot" id="formCard">
       <h3><span id="formTitle">Yangi mahsulot qo'shish</span> <span class="badge" id="modeBadge">yangi</span></h3>
 
       <label>Do'kon bo'limi (saytda mijoz shu bo'lim ostida ko'radi)</label>
       <select id="fSection"></select>
-      <div class="hint" id="secHint">Bo'limlarni pastdagi "Do'kon sozlamalari" kartasida yaratasiz (5 tagacha).</div>
+      <div class="hint" id="secHint">Bo'limlarni "Profil" bo'limidagi Do'kon sozlamalarida yaratasiz (5 tagacha).</div>
 
       <label style="margin-top:14px;">Studiya turi — AI studiyasi rasmni qaysi katakka qo'yishini hal qiladi</label>
       <div class="tabs">
@@ -205,13 +242,13 @@
     </div>
 
     <!-- Mahsulotlar ro'yxati -->
-    <div class="card">
+    <div class="card" data-pane="mahsulot">
       <h3><span id="plistTitle">Mahsulotlarim</span></h3>
       <div class="plist" id="plist"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
     </div>
 
     <!-- Do'kon sozlamalari -->
-    <div class="card">
+    <div class="card" data-pane="profil">
       <h3>Do'kon sozlamalari</h3>
 
       <label>Do'kon nomi (saytda mijozlarga shu ko'rinadi)</label>
@@ -254,6 +291,26 @@
   function uid() { return Math.random().toString(36).slice(2, 9); }
   function escAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
   function escHtml(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  // ===================== panel bo'limlari =====================
+  function showPane(p) {
+    document.querySelectorAll("[data-pane]").forEach(el => {
+      el.style.display = el.dataset.pane === p ? "" : "none";
+    });
+    document.getElementById("ptab-profil").classList.toggle("active", p === "profil");
+    document.getElementById("ptab-mahsulot").classList.toggle("active", p === "mahsulot");
+    window.scrollTo({ top: 0 });
+  }
+  function openNewProduct() {
+    resetForm();
+    document.getElementById("cancelBtn").classList.remove("hidden");   // formani yopish uchun
+    document.getElementById("formCard").classList.remove("hidden");
+    document.getElementById("newProdBtn").classList.add("hidden");
+  }
+  function closeProductForm() {
+    document.getElementById("formCard").classList.add("hidden");
+    document.getElementById("newProdBtn").classList.remove("hidden");
+  }
 
   function authHeaders() {
     const h = {
@@ -371,6 +428,92 @@
     }
     resetForm();
     loadProducts();
+    showPane("profil");
+    loadAnalytics();
+  }
+
+  // ===================== sotuvlar va analitika =====================
+  const fmtSum = n => Math.round(n).toLocaleString("uz-UZ").replace(/,/g, " ") + " so'm";
+  async function loadAnalytics() {
+    const el = document.getElementById("statsBody");
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ action: "list" }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Xatolik");
+      renderAnalytics(data.orders || []);
+    } catch (err) {
+      el.innerHTML = `<p style="color:var(--inkDim);font-size:13px;">Analitikani yuklab bo'lmadi: ${escHtml(err.message)}</p>`;
+    }
+  }
+  function renderAnalytics(orders) {
+    const el = document.getElementById("statsBody");
+    document.getElementById("statsBadge").textContent = orders.length ? `${orders.length} ta buyurtma` : "";
+    if (orders.length === 0) {
+      el.innerHTML = `<p style="color:var(--inkDim);font-size:13px;line-height:1.6;">Hali buyurtma yo'q. Mijoz saytda buyurtma berib, Telegram botda tasdiqlagach — sotuvlar, top mahsulotlar va mijozlar shu yerda ko'rinadi.</p>`;
+      return;
+    }
+    const now = Date.now(), WEEK = 7 * 24 * 3600 * 1000, MONTH = 30 * 24 * 3600 * 1000;
+    const sum = a => a.reduce((s, o) => s + (o.payTotal || 0), 0);
+    const week = orders.filter(o => now - o.ts < WEEK);
+    const month = orders.filter(o => now - o.ts < MONTH);
+
+    // top mahsulotlar (necha dona sotildi) va sust sotilayotganlar
+    const prod = {};
+    orders.forEach(o => (o.items || []).forEach(i => {
+      prod[i.name] = prod[i.name] || { qty: 0, sum: 0 };
+      prod[i.name].qty += i.qty || 0;
+      prod[i.name].sum += (i.price || 0) * (i.qty || 0);
+    }));
+    const ranked = Object.entries(prod).sort((a, b) => b[1].qty - a[1].qty);
+    const top = ranked.slice(0, 5);
+    const slow = ranked.length > 5 ? ranked.slice(-3).reverse() : [];
+
+    // top mijozlar (buyurtmalar soni + jami xarid)
+    const cust = {};
+    orders.forEach(o => {
+      const c = o.customer || {};
+      const key = c.phone || c.chatId || "?";
+      cust[key] = cust[key] || { name: c.name || "Mijoz", phone: c.phone || "", n: 0, sum: 0 };
+      cust[key].n++; cust[key].sum += o.payTotal || 0;
+    });
+    const topCust = Object.values(cust).sort((a, b) => b.sum - a.sum).slice(0, 5);
+
+    const maxQty = top.length ? top[0][1].qty : 1;
+    el.innerHTML = `
+      <div class="stat-tiles">
+        <div class="stat-tile"><b>${orders.length}</b><span>jami buyurtma</span></div>
+        <div class="stat-tile"><b>${fmtSum(sum(orders))}</b><span>jami savdo</span></div>
+        <div class="stat-tile"><b>${week.length}</b><span>oxirgi 7 kun</span></div>
+        <div class="stat-tile"><b>${fmtSum(sum(month))}</b><span>oxirgi 30 kun savdo</span></div>
+      </div>
+      <div class="rank">
+        <h4>🔥 Eng yaxshi ketayotgan mahsulotlar</h4>
+        ${top.map(([name, v], i) => `
+          <div class="rank-row">
+            <span class="rank-n">${i + 1}</span>
+            <span class="rank-name" title="${escAttr(name)}">${escHtml(name)}
+              <div class="rank-bar" style="width:${Math.max(8, Math.round(v.qty / maxQty * 100))}%"></div>
+            </span>
+            <span class="rank-val">${v.qty} dona · ${fmtSum(v.sum)}</span>
+          </div>`).join("")}
+        ${slow.length ? `<h4>🐢 Sust sotilayotganlar</h4>` + slow.map(([name, v]) => `
+          <div class="rank-row">
+            <span class="rank-n" style="background:#FBEFEA;color:var(--sale);">↓</span>
+            <span class="rank-name">${escHtml(name)}</span>
+            <span class="rank-val">${v.qty} dona</span>
+          </div>`).join("") : ""}
+        <h4>👤 Eng faol mijozlar</h4>
+        ${topCust.map((c, i) => `
+          <div class="rank-row">
+            <span class="rank-n">${i + 1}</span>
+            <span class="rank-name">${escHtml(c.name)}${c.phone ? ` · ${escHtml(c.phone)}` : ""}</span>
+            <span class="rank-val">${c.n} ta · ${fmtSum(c.sum)}</span>
+          </div>`).join("")}
+      </div>`;
   }
 
   // ===================== SUPER-ADMIN: sotuvchilar =====================
@@ -402,6 +545,7 @@
           ${s.status === "active" && !s.builtin ? `<button class="blockBtn" onclick="sellerAction('block','${s.id}')">Bloklash</button>` : ""}
           ${s.status === "blocked" ? `<button class="approveBtn" onclick="sellerAction('unblock','${s.id}')">Blokdan chiqarish</button>` : ""}
           ${!s.builtin ? `<button onclick="resetSellerPw('${s.id}','${escAttr(s.shopName)}')">Parol berish</button>` : ""}
+          ${!s.builtin && s.brandChangedAt ? `<button onclick="sellerAction('allowBrandChange','${s.id}')" title="Nom/rasmni muddatidan oldin o'zgartirishga ruxsat">Nom/rasmga ruxsat</button>` : ""}
           ${!s.builtin ? `<button class="removeBtn2" onclick="removeSeller('${s.id}','${escAttr(s.shopName)}')">O'chirish</button>` : ""}
         </div>
       </div>
@@ -849,8 +993,12 @@
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Xatolik");
 
-      msgEl.innerHTML = `<div class="msg ok">✅ ${editingId ? "Mahsulot yangilandi!" : "Mahsulot qo'shildi!"}</div>`;
+      const wasEditing = !!editingId;
       resetForm();
+      closeProductForm();
+      const pm = document.getElementById("paneMsg");
+      pm.innerHTML = `<div class="msg ok">✅ ${wasEditing ? "Mahsulot yangilandi!" : "Mahsulot qo'shildi!"}</div>`;
+      setTimeout(() => { pm.innerHTML = ""; }, 4000);
       loadProducts();
     } catch (err) {
       msgEl.innerHTML = `<div class="msg err">${err.message}</div>`;
@@ -859,11 +1007,14 @@
     }
   }
 
-  function cancelEdit() { resetForm(); }
+  function cancelEdit() { resetForm(); closeProductForm(); }
 
   function editProduct(id) {
     const p = productsCache.find(x => x.id === id);
     if (!p) return;
+    showPane("mahsulot");
+    document.getElementById("formCard").classList.remove("hidden");
+    document.getElementById("newProdBtn").classList.add("hidden");
     editingId = id;
     document.getElementById("formTitle").textContent = "Mahsulotni tahrirlash";
     const badge = document.getElementById("modeBadge");

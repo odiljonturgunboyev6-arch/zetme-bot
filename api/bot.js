@@ -193,6 +193,30 @@ export default async function handler(req, res) {
           await sendMessage(OWNER_CHAT_ID, orderText);
         }
 
+        // ANALITIKA: buyurtmani sotuvchining doimiy tarixiga yozamiz (oxirgi 500 ta)
+        try {
+          const okey = `orders:${draft.sellerId || "zetme"}`;
+          const arr = (await kv.get(okey)) || [];
+          arr.unshift({
+            ts: Date.now(),
+            total: draft.total || 0,
+            payTotal: draft.payTotal || draft.total || 0,
+            priceMode: draft.priceMode || "chakana",
+            totalQty: draft.totalQty || 0,
+            bonusApplied: !!draft.bonus,
+            items: (draft.items || []).map((i) => ({ name: i.name, price: i.price, qty: i.qty })),
+            customer: {
+              chatId: String(chatId),
+              name: profile.name || "",
+              phone: profile.phone || "",
+              region: profile.region || "",
+              username: from.username || "",
+            },
+          });
+          if (arr.length > 500) arr.length = 500;
+          await kv.set(okey, arr);
+        } catch (e) { console.error("order log:", e); }
+
         await kv.del(`draft:${chatId}`);
         await kv.del(`state:${chatId}`);
         await kv.del(`draft_name:${chatId}`);
