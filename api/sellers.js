@@ -6,7 +6,8 @@
 //        -> yangi sotuvchi arizasi (status: "pending" — super-admin tasdiqlaydi)
 //   { action:"login", login, password }
 //        -> sotuvchi kirishini tekshirish (faqat status "active" bo'lsa kiradi)
-//   { action:"updateProfile", login, password, shopName?, shopLogo?, telegramChatId?, bonusEnabled?, newPassword? }
+//   { action:"updateProfile", login, password, shopName?, shopLogo?, sections?, telegramChatId?, bonusEnabled?, newPassword? }
+//        sections: [{id?,name}] — do'kon bo'limlari, 5 tagacha (Gullar, Toshlar, ...)
 //        -> sotuvchi o'z profilini yangilaydi
 //   Super-admin (x-admin-password header bilan):
 //   { action:"adminList" }               -> barcha sotuvchilar (pending ham)
@@ -62,7 +63,24 @@ function publicSeller(s) {
     shopName: s.shopName,
     bonusEnabled: !!s.bonusEnabled,
     shopLogo: s.shopLogo || "", // do'kon logotipi (sotuvchi admin panelda o'zi yuklaydi)
+    sections: normalizeSections(s.sections), // do'kon bo'limlari (5 tagacha): [{id,name}]
   };
+}
+
+// Do'kon bo'limlari — sotuvchi o'zi nomlaydi (Gullar, Toshlar, Sovg'alar...).
+// Ko'pi bilan 5 ta, nomi 1-24 belgi. Mahsulot shu bo'limlardan biriga biriktiriladi.
+const MAX_SECTIONS = 5;
+function normalizeSections(arr) {
+  if (!Array.isArray(arr)) return [];
+  const out = [];
+  for (const s of arr) {
+    const name = String((s && s.name) || "").trim().slice(0, 24);
+    if (!name) continue;
+    if (out.some((x) => x.name.toLowerCase() === name.toLowerCase())) continue;
+    out.push({ id: String((s && s.id) || `sec${Date.now()}${out.length}${Math.random().toString(36).slice(2, 5)}`), name });
+    if (out.length >= MAX_SECTIONS) break;
+  }
+  return out;
 }
 function adminSeller(s) {
   const { salt, passwordHash, ...rest } = s;
@@ -158,6 +176,7 @@ export default async function handler(req, res) {
       if (body.bonusEnabled !== undefined) updated.bonusEnabled = !!body.bonusEnabled;
       if (body.phone !== undefined && String(body.phone).trim()) updated.phone = String(body.phone).trim();
       if (body.shopLogo !== undefined) updated.shopLogo = String(body.shopLogo).trim().slice(0, 600);
+      if (body.sections !== undefined) updated.sections = normalizeSections(body.sections);
       if (body.shopName !== undefined) {
         const newName = String(body.shopName).trim();
         if (newName.length < 2) return res.status(400).json({ ok: false, error: "Do'kon nomi kamida 2 ta belgi bo'lsin" });

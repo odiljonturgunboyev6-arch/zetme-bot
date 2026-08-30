@@ -42,13 +42,22 @@ async function resolveActor(req) {
   return hashPassword(password, seller.salt) === seller.passwordHash ? seller : null;
 }
 
-function validateVariants(variants) {
+// Mahsulot o'lchov birligi — sotuvchi tanlaydi. Variantdagi qiymat (v.litr)
+// shu birlikda o'qiladi: 0,5 L / 500 g / 22 sm / 3 dona.
+const UNITS = ["litr", "gramm", "olcham", "dona"];
+const UNIT_WORD = { litr: "hajm (litr)", gramm: "og'irlik (gramm)", olcham: "o'lcham", dona: "miqdor (dona)" };
+function normUnit(u) {
+  return UNITS.includes(String(u)) ? String(u) : "litr";
+}
+
+function validateVariants(variants, unit) {
+  const word = UNIT_WORD[normUnit(unit)];
   if (!Array.isArray(variants) || variants.length < 1 || variants.length > 10) {
-    return "Kamida 1 ta, ko'pi bilan 10 ta hajm (litr) varianti kerak";
+    return `Kamida 1 ta, ko'pi bilan 10 ta ${word} varianti kerak`;
   }
   for (const v of variants) {
     if (!v.litr || String(v.litr).trim() === "") {
-      return "Har bir variant uchun litr (hajm) ko'rsatilishi shart";
+      return `Har bir variant uchun ${word} ko'rsatilishi shart`;
     }
     if (!v.price || Number(v.price) <= 0) {
       return "Har bir variant uchun chakana narx ko'rsatilishi shart";
@@ -64,11 +73,23 @@ function validateVariants(variants) {
   return null;
 }
 
+// Mahsulot faqat o'z do'konining bo'limiga biriktirilishi mumkin.
+// Noma'lum yoki bo'sh bo'lsa "" qaytadi ("Boshqalar" bo'limida ko'rinadi).
+async function resolveSection(sellerId, sectionId) {
+  const sid = String(sectionId || "").trim();
+  if (!sid) return "";
+  const sellers = (await kv.get("sellers")) || [];
+  const seller = sellers.find((s) => s.id === sellerId);
+  const secs = (seller && Array.isArray(seller.sections)) ? seller.sections : [];
+  return secs.some((x) => x.id === sid) ? sid : "";
+}
+
 function normalizeVariants(variants) {
   return variants.map((v, i) => {
-    const images = Array.isArray(v.images) && v.images.length > 0
+    // har variantda ko'pi bilan 3 ta rasm
+    const images = (Array.isArray(v.images) && v.images.length > 0
       ? v.images.map((u) => String(u))
-      : (v.image ? [String(v.image)] : []);
+      : (v.image ? [String(v.image)] : [])).filter(Boolean).slice(0, 3);
     return {
       id: v.id || `v${Date.now()}${i}${Math.random().toString(36).slice(2, 5)}`,
       litr: String(v.litr).trim(),
@@ -102,11 +123,19 @@ export default async function handler(req, res) {
           if (!s) return p.sellerId === MAIN_SELLER_ID;
           return s.status === "active";
         })
-        .map((p) => ({
-          ...p,
-          shopName: (byId[p.sellerId] && byId[p.sellerId].shopName) || "Tuvaklar",
-          bonusEnabled: byId[p.sellerId] ? !!byId[p.sellerId].bonusEnabled : true,
-        }));
+        .map((p) => {
+          const s = byId[p.sellerId];
+          const secs = (s && Array.isArray(s.sections)) ? s.sections : [];
+          const sec = secs.find((x) => x.id === p.sectionId);
+          return {
+            ...p,
+            unit: p.unit || "litr",
+            sectionId: sec ? sec.id : "",
+            sectionName: sec ? sec.name : "",
+            shopName: (s && s.shopName) || "Tuvaklar",
+            bonusEnabled: s ? !!s.bonusEnabled : true,
+          };
+        });
       return res.status(200).json({ ok: true, products: out });
     }
 
@@ -119,7 +148,8 @@ export default async function handler(req, res) {
       if (!name || !category) {
         return res.status(400).json({ ok: false, error: "Nomi va kategoriya shart" });
       }
-      const vErr = validateVariants(variants);
+      const unit = normUnit(body.unit);
+      const vErr = validateVariants(variants, unit);
       if (vErr) return res.status(400).json({ ok: false, error: vErr });
 
       // sotuvchi faqat o'z nomidan qo'shadi; super-admin xohlagan sellerId bilan
@@ -133,6 +163,8 @@ export default async function handler(req, res) {
         sellerId,
         name: String(name),
         category: category === "gul" ? "gul" : "tuvak",
+        unit,
+        sectionId: await resolveSection(sellerId, body.sectionId),
         color: color ? String(color) : "",
         variants: normalizeVariants(variants),
         createdAt: Date.now(),
@@ -153,7 +185,8 @@ export default async function handler(req, res) {
       if (!name || !category) {
         return res.status(400).json({ ok: false, error: "Nomi va kategoriya shart" });
       }
-      const vErr = validateVariants(variants);
+      const unit = normUnit(body.unit);
+      const vErr = validateVariants(variants, unit);
       if (vErr) return res.status(400).json({ ok: false, error: vErr });
 
       const list = (await kv.get(KEY)) || [];
@@ -170,6 +203,8 @@ export default async function handler(req, res) {
         sellerId: ownerId,
         name: String(name),
         category: category === "gul" ? "gul" : "tuvak",
+        unit,
+        sectionId: await resolveSection(ownerId, body.sectionId),
         color: color ? String(color) : "",
         variants: normalizeVariants(variants),
         updatedAt: Date.now(),

@@ -48,6 +48,13 @@
   .msg.ok { background:#EAF3EC; color:var(--accent); }
   .msg.err { background:#FBEFEA; color:var(--sale); }
 
+  /* do'kon bo'limlari */
+  select { width:100%; padding:11px 12px; border:1px solid var(--mline); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; color:var(--ink); margin-top:4px; }
+  .secrow { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .secrow input { flex:1; margin:0; }
+  .secnum { width:24px; height:24px; flex-shrink:0; border-radius:50%; background:#EAF3EC; color:var(--accent); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .secrow .removeBtn { flex-shrink:0; }
+
   /* variants (litr) */
   .variantsWrap { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
   .variantRow { border:1.5px solid var(--mline); border-radius:12px; padding:12px; position:relative; background:var(--paper); }
@@ -161,10 +168,14 @@
     <div class="card">
       <h3><span id="formTitle">Yangi mahsulot qo'shish</span> <span class="badge" id="modeBadge">yangi</span></h3>
 
-      <label>Kategoriya</label>
+      <label>Do'kon bo'limi (saytda mijoz shu bo'lim ostida ko'radi)</label>
+      <select id="fSection"></select>
+      <div class="hint" id="secHint">Bo'limlarni pastdagi "Do'kon sozlamalari" kartasida yaratasiz (5 tagacha).</div>
+
+      <label style="margin-top:14px;">Studiya turi — AI studiyasi rasmni qaysi katakka qo'yishini hal qiladi</label>
       <div class="tabs">
-        <div class="tab active" data-cat="tuvak" onclick="setCat('tuvak')">Tuvak</div>
-        <div class="tab" data-cat="gul" onclick="setCat('gul')">Gul</div>
+        <div class="tab active" data-cat="tuvak" onclick="setCat('tuvak')">Tuvak / buyum</div>
+        <div class="tab" data-cat="gul" onclick="setCat('gul')">Gul / o'simlik</div>
       </div>
 
       <label>Umumiy nomi (masalan: Gul tuvak rombik)</label>
@@ -173,9 +184,17 @@
       <label>Rang (ixtiyoriy, umumiy)</label>
       <input type="text" id="fColor" placeholder="Oq" />
 
-      <label style="margin-top:16px;">Hajm (litr) variantlari — har birida 3 tagacha rasm, chakana va optom narxi bo'ladi (1 tadan 10 tagacha variant)</label>
+      <label style="margin-top:14px;">O'lchov birligi — variantlar shu birlikda kiritiladi</label>
+      <div class="tabs">
+        <div class="tab active" data-unit="litr" onclick="setUnit('litr')">Litr</div>
+        <div class="tab" data-unit="gramm" onclick="setUnit('gramm')">Gramm</div>
+        <div class="tab" data-unit="olcham" onclick="setUnit('olcham')">O'lcham</div>
+        <div class="tab" data-unit="dona" onclick="setUnit('dona')">Dona</div>
+      </div>
+
+      <label style="margin-top:16px;" id="variantsLabel">Hajm (litr) variantlari — har birida 3 tagacha rasm, chakana va optom narxi bo'ladi (1 tadan 10 tagacha variant)</label>
       <div class="variantsWrap" id="variantsWrap"></div>
-      <button type="button" class="addVariantBtn" id="addVariantBtn" onclick="addVariant()">+ Yana hajm (litr) qo'shish</button>
+      <button type="button" class="addVariantBtn" id="addVariantBtn" onclick="addVariant()">+ Yana variant qo'shish</button>
       <div class="hint">Rasmlar avtomatik siqiladi — katta telefon rasmlarini ham bemalol yuklashingiz mumkin. Birinchi rasm asosiy bo'lib, katalogda ko'rinadi. Optom narx — mijoz 5 000 000 so'mdan yuqori xarid qilganda ko'radigan narx.</div>
 
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFile(event)" />
@@ -201,6 +220,11 @@
       <label>Do'kon rasmi / logotipi (ixtiyoriy)</label>
       <div class="vimgs" id="shopLogoWrap"></div>
       <input type="file" id="logoInput" accept="image/*" style="display:none" onchange="onLogoFile(event)" />
+
+      <label style="margin-top:16px;">Do'kon bo'limlari (5 tagacha)</label>
+      <div id="sectionsWrap"></div>
+      <button type="button" class="addVariantBtn" id="addSectionBtn" onclick="addSection()">+ Bo'lim qo'shish</button>
+      <div class="hint">Mijoz do'koningizga kirganda mahsulotlar shu bo'limlar bo'yicha ajratilib ko'rinadi — masalan "Gullar", "Tuvaklar", "Toshlar", "Sovg'alar". Bo'limi ko'rsatilmagan mahsulotlar "Boshqalar" ostida chiqadi.</div>
 
       <label>Telegram Chat ID (buyurtmalar shu yerga keladi)</label>
       <input type="text" id="profChatId" placeholder="Masalan: 5262377062" />
@@ -334,6 +358,9 @@
     renderShopLogo();
     document.getElementById("profChatId").value = ME.seller.telegramChatId || "";
     document.getElementById("profBonus").checked = !!ME.seller.bonusEnabled;
+    sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name })) : [];
+    renderSections();
+    renderSectionSelect();
     if (ME.seller.builtin) {
       document.getElementById("newPwLabel").classList.add("hidden");
       document.getElementById("profNewPw").classList.add("hidden");
@@ -474,14 +501,73 @@
     document.getElementById("fName").value = "";
     document.getElementById("fColor").value = "";
     setCat("tuvak");
+    renderSectionSelect();
+    document.getElementById("fSection").value = "";
     variants = [blankVariant()];
-    renderVariants();
+    setUnit("litr");   // renderVariants ni ham chaqiradi
     document.getElementById("formMsg").innerHTML = "";
   }
 
   function setCat(c) {
     category = c;
     document.querySelectorAll(".tab[data-cat]").forEach(t => t.classList.toggle("active", t.dataset.cat === c));
+  }
+
+  // ===================== o'lchov birligi =====================
+  // Variantdagi qiymat (litr maydoni) shu birlikda o'qiladi: 0,5 L / 500 g / 22 sm / 3 dona
+  const UNIT_META = {
+    litr:   { field: "Litr",    short: "L",    ph: "0,5", label: "Hajm (litr)" },
+    gramm:  { field: "Gramm",   short: "g",    ph: "500", label: "Og'irlik (gramm)" },
+    olcham: { field: "O'lcham", short: "sm",   ph: "22",  label: "O'lcham" },
+    dona:   { field: "Dona",    short: "dona", ph: "3",   label: "Miqdor (dona)" },
+  };
+  let unit = "litr";
+  function unitMeta() { return UNIT_META[unit] || UNIT_META.litr; }
+  function setUnit(u) {
+    unit = UNIT_META[u] ? u : "litr";
+    document.querySelectorAll(".tab[data-unit]").forEach(t => t.classList.toggle("active", t.dataset.unit === unit));
+    document.getElementById("variantsLabel").textContent =
+      `${unitMeta().label} variantlari — har birida 3 tagacha rasm, chakana va optom narxi bo'ladi (1 tadan 10 tagacha variant)`;
+    renderVariants();
+  }
+
+  // ===================== do'kon bo'limlari =====================
+  let sections = [];
+  function renderSections() {
+    const wrap = document.getElementById("sectionsWrap");
+    wrap.innerHTML = sections.length === 0
+      ? `<p style="color:var(--inkDim);font-size:12.5px;margin:6px 0 0;">Hali bo'lim yo'q — "+ Bo'lim qo'shish" bosing.</p>`
+      : sections.map((s, i) => `
+        <div class="secrow">
+          <span class="secnum">${i + 1}</span>
+          <input type="text" maxlength="24" placeholder="Masalan: Gullar" value="${escAttr(s.name)}"
+            oninput="updateSection(${i}, this.value)" />
+          <button type="button" class="removeBtn" onclick="removeSection(${i})">✕</button>
+        </div>`).join("");
+    document.getElementById("addSectionBtn").disabled = sections.length >= 5;
+  }
+  function addSection() {
+    if (sections.length >= 5) return;
+    sections.push({ id: "sec" + uid(), name: "" });
+    renderSections();
+  }
+  function updateSection(i, val) { sections[i].name = val; }
+  function removeSection(i) {
+    if (!confirm("Bu bo'limni o'chirasizmi? Undagi mahsulotlar \"Boshqalar\"ga o'tadi.")) return;
+    sections.splice(i, 1);
+    renderSections();
+    renderSectionSelect();
+  }
+  function renderSectionSelect() {
+    const sel = document.getElementById("fSection");
+    const cur = sel.value;
+    const named = sections.filter(s => String(s.name).trim());
+    sel.innerHTML = `<option value="">Boshqalar (bo'limsiz)</option>` +
+      named.map(s => `<option value="${escAttr(s.id)}">${escHtml(s.name)}</option>`).join("");
+    if (cur && named.some(s => s.id === cur)) sel.value = cur;
+    document.getElementById("secHint").textContent = named.length
+      ? `${named.length} ta bo'lim mavjud. Yangi bo'lim qo'shish uchun "Do'kon sozlamalari" kartasiga tushing.`
+      : `Bo'limlarni pastdagi "Do'kon sozlamalari" kartasida yaratasiz (5 tagacha).`;
   }
 
   function addVariant() {
@@ -523,8 +609,8 @@
           <div class="vfields">
             <div class="vf-row">
               <div>
-                <label style="margin:0 0 4px;">Litr</label>
-                <input type="text" placeholder="0,5" value="${escAttr(v.litr)}" oninput="updateVariant(${idx}, 'litr', this.value)" />
+                <label style="margin:0 0 4px;">${unitMeta().field}</label>
+                <input type="text" placeholder="${unitMeta().ph}" value="${escAttr(v.litr)}" oninput="updateVariant(${idx}, 'litr', this.value)" />
               </div>
             </div>
             <div class="vf-row">
@@ -537,10 +623,11 @@
                 <input type="number" placeholder="10500" value="${escAttr(v.optPrice)}" oninput="updateVariant(${idx}, 'optPrice', this.value)" />
               </div>
             </div>
+            ${unit === "olcham" ? "" : `
             <div>
-              <label style="margin:0 0 4px;">O'lcham, sm (ixtiyoriy)</label>
+              <label style="margin:0 0 4px;">Qo'shimcha o'lcham, sm (ixtiyoriy)</label>
               <input type="text" placeholder="Ø22.5 × 21" value="${escAttr(v.size)}" oninput="updateVariant(${idx}, 'size', this.value)" />
-            </div>
+            </div>`}
           </div>
           <button type="button" class="vOverrideToggle" onclick="toggleOverride(${idx})">${(v.overrideOpen || hasOverride) ? "▾" : "▸"} Bu variant uchun boshqa nom/rang (ixtiyoriy)</button>
           <div class="vOverrideWrap${openClass}">
@@ -668,6 +755,7 @@
       password: ME.password,
       shopName,
       shopLogo: shopLogo.url || "",
+      sections: sections.filter(s => String(s.name).trim()).map(s => ({ id: s.id, name: String(s.name).trim() })),
       telegramChatId: document.getElementById("profChatId").value.trim(),
       bonusEnabled: document.getElementById("profBonus").checked,
     };
@@ -686,6 +774,10 @@
       document.getElementById("profNewPw").value = "";
     }
     ME.seller = data.seller;
+    // server bo'limlarni normallashtiradi (bo'shlari tushib qoladi, id beriladi) — panelni yangilaymiz
+    sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name })) : [];
+    renderSections();
+    renderSectionSelect();
     document.getElementById("topShopName").textContent =
       ME.seller.shopName + (ME.isSuper ? " · Super-admin" : " · Sotuvchi paneli");
     msgEl.innerHTML = '<div class="msg ok">✅ Sozlamalar saqlandi!</div>';
@@ -701,7 +793,7 @@
 
     if (!name) { msgEl.innerHTML = '<div class="msg err">Umumiy nomni kiriting</div>'; return; }
     for (const v of variants) {
-      if (!String(v.litr).trim()) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun litr (hajm) kiriting</div>'; return; }
+      if (!String(v.litr).trim()) { msgEl.innerHTML = `<div class="msg err">Har bir variant uchun ${unitMeta().field.toLowerCase()} qiymatini kiriting</div>`; return; }
       if (!v.price || Number(v.price) <= 0) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun chakana narx kiriting</div>'; return; }
       if (!v.optPrice || Number(v.optPrice) <= 0) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun optom narx kiriting</div>'; return; }
       if (!v.imgs || v.imgs.length === 0) { msgEl.innerHTML = '<div class="msg err">Har bir variant uchun kamida 1 ta rasm yuklang</div>'; return; }
@@ -735,7 +827,11 @@
       }
       msgEl.innerHTML = '<div class="msg ok">Saqlanmoqda…</div>';
 
-      const payload = { name, category, color, variants: outVariants };
+      const payload = {
+        name, category, color, unit,
+        sectionId: document.getElementById("fSection").value || "",
+        variants: outVariants,
+      };
       let res;
       if (editingId) {
         res = await fetch("/api/products", {
@@ -779,6 +875,9 @@
     document.getElementById("fName").value = p.name || "";
     document.getElementById("fColor").value = p.color || "";
     setCat(p.category === "gul" ? "gul" : "tuvak");
+    renderSectionSelect();
+    document.getElementById("fSection").value =
+      sections.some(s => s.id === p.sectionId) ? p.sectionId : "";
 
     if (Array.isArray(p.variants) && p.variants.length > 0) {
       variants = p.variants.map(v => {
@@ -803,7 +902,7 @@
         { id: uid(), litr: p.capacity || "", price: p.price || "", optPrice: "", size: p.size || "", imgs: urls.map(u => ({ url: u })), name: "", color: "", overrideOpen: false },
       ];
     }
-    renderVariants();
+    setUnit(p.unit || "litr");   // renderVariants ni ham chaqiradi
     document.getElementById("formMsg").innerHTML = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -829,8 +928,13 @@
   }
   function litrRangeText(p) {
     if (!Array.isArray(p.variants) || p.variants.length === 0) return p.capacity || "";
+    const short = (UNIT_META[p.unit] || UNIT_META.litr).short;
     const litrs = p.variants.map(v => v.litr).filter(Boolean);
-    return `${litrs.join(", ")} L (${p.variants.length} variant)`;
+    return `${litrs.join(", ")} ${short} (${p.variants.length} variant)`;
+  }
+  function sectionNameOf(p) {
+    const s = sections.find(x => x.id === p.sectionId);
+    return s ? s.name : (p.sectionName || "");
   }
   function thumbUrl(p) {
     const v0 = Array.isArray(p.variants) && p.variants[0];
@@ -863,7 +967,7 @@
         <div class="info">
           ${ME.isSuper ? `<div class="shop">🏪 ${escHtml(p.shopName || "Tuvaklar")}</div>` : ""}
           <div class="name">${escHtml(p.name)}</div>
-          <div class="meta">${p.category === 'gul' ? 'Gul' : 'Tuvak'}${p.color ? ' · ' + escHtml(p.color) : ''} · ${litrRangeText(p)}</div>
+          <div class="meta">${sectionNameOf(p) ? escHtml(sectionNameOf(p)) : 'Boshqalar'}${p.color ? ' · ' + escHtml(p.color) : ''} · ${litrRangeText(p)}</div>
           <div class="price">Chakana: ${priceRangeText(p)}</div>
           ${optPriceRangeText(p) ? `<div class="meta opt">Optom: ${optPriceRangeText(p)}</div>` : ''}
         </div>

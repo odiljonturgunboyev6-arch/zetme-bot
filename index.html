@@ -147,9 +147,18 @@ function priceRangeText(p, mode) {
   const min = Math.min(...prices), max = Math.max(...prices);
   return min === max ? fmt(min) : `${fmt(min)} – ${fmt(max)}`;
 }
+// O'lchov birligi — sotuvchi mahsulotga tanlaydi (admin panel).
+// Eski mahsulotlarda `unit` yo'q — ular litr hisoblanadi.
+const UNIT_META = {
+  litr:   { short: "L",    spec: "Hajmi" },
+  gramm:  { short: "g",    spec: "Og'irligi" },
+  olcham: { short: "sm",   spec: "O'lchami" },
+  dona:   { short: "dona", spec: "Miqdori" },
+};
+const unitOf = (u) => UNIT_META[u] || UNIT_META.litr;
 function litrRangeText(p) {
   const litrs = (p.variants || []).map((v) => v.litr).filter(Boolean);
-  return litrs.join(", ") + " L";
+  return litrs.join(", ") + " " + unitOf(p.unit).short;
 }
 // Rasm: yangi variantlarda `image` (bitta), eskilarida `images` (massiv, 2 tagacha)
 // bo'lishi mumkin — ikkalasini ham qo'llab-quvvatlaymiz.
@@ -292,14 +301,14 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
             <div className="pm-litrrow">
               {variants.map((vv, i) => (
                 <button key={vv.id || i} className={"pm-litrchip" + (i === vi ? " active" : "")} onClick={() => pickVariant(i)}>
-                  {vv.litr} L
+                  {vv.litr} {unitOf(p.unit).short}
                 </button>
               ))}
             </div>
           )}
 
           <div className="pm-specs">
-            <div><span>Hajmi</span><b>{v.litr ? `${v.litr} L` : "—"}</b></div>
+            <div><span>{unitOf(p.unit).spec}</span><b>{v.litr ? `${v.litr} ${unitOf(p.unit).short}` : "—"}</b></div>
             <div><span>O'lcham</span><b>{v.size || "—"}</b></div>
             <div><span>Rang</span><b>{displayColor || "—"}</b></div>
           </div>
@@ -357,7 +366,7 @@ function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, ch
                   <div className="cart-emoji">{it.image ? <img src={it.image} alt="" /> : "🪴"}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: 13.5 }}>{it.name}</div>
-                    <div style={{ fontSize: 12, color: C.inkDim }}>{it.litr} L · {fmt(priceOf(it, priceMode))}</div>
+                    <div style={{ fontSize: 12, color: C.inkDim }}>{it.litr} {unitOf(it.unit).short} · {fmt(priceOf(it, priceMode))}</div>
                   </div>
                   <div className="qty-mini">
                     <button onClick={() => onQty(it.key, -1)}><Minus size={13} /></button>
@@ -671,7 +680,7 @@ function App() {
       if (ex) return c.map((i) => (i.key === key ? { ...i, qty: i.qty + qty } : i));
       return [...c, {
         key, id: fam.id, variantId: variant.id,
-        name: variant.name || fam.name, litr: variant.litr,
+        name: variant.name || fam.name, litr: variant.litr, unit: fam.unit || "litr",
         price: Number(variant.price), optPrice: Number(variant.optPrice),
         image: variantImg(variant), qty,
         sellerId: fam.sellerId || "zetme",
@@ -699,7 +708,7 @@ function App() {
       const { fam, variant, qty } = shopConflict;
       setCart([{
         key: `${fam.id}_${variant.id}`, id: fam.id, variantId: variant.id,
-        name: variant.name || fam.name, litr: variant.litr,
+        name: variant.name || fam.name, litr: variant.litr, unit: fam.unit || "litr",
         price: Number(variant.price), optPrice: Number(variant.optPrice),
         image: variantImg(variant), qty,
         sellerId: fam.sellerId || "zetme",
