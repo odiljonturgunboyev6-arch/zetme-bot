@@ -530,6 +530,8 @@ function App() {
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(null);
+  const [shops, setShops] = useState([]);              // studiyadagi do'konlar devori
+  const [shopsLoading, setShopsLoading] = useState(true);
   const [priceMode, setPriceMode] = useState("chakana"); // "chakana" | "optom"
   const [catFilter, setCatFilter] = useState("all");     // "all" | "tuvak" | "gul"
   const [shopFilter, setShopFilter] = useState(null);    // null | { id, name } — do'kon sahifasi
@@ -575,6 +577,48 @@ function App() {
       .catch((err) => setProductsError(err.message))
       .finally(() => setProductsLoading(false));
   }, []);
+
+  // faol do'konlar ro'yxati (studiyadagi "Do'konlar" devori uchun)
+  // api/sellers.js GET -> { ok, sellers:[{ id, shopName, shopLogo, bonusEnabled }] }
+  useEffect(() => {
+    fetch(`${API_BASE}/api/sellers`)
+      .then((r) => r.json())
+      .then((data) => { if (data.ok) setShops(data.sellers || []); })
+      .catch(() => {})
+      .finally(() => setShopsLoading(false));
+  }, []);
+
+  // Har do'kon uchun: rasm (sotuvchi yuklagan logotip, bo'lmasa birinchi mahsulot rasmi)
+  // + mahsulotlar soni. Mahsuloti yo'q do'konlar ko'rsatilmaydi (bo'sh do'kon sahifasi ochilmasin).
+  const shopWall = useMemo(() => {
+    const count = {}, firstImg = {};
+    products.forEach((p) => {
+      const sid = p.sellerId || "zetme";
+      count[sid] = (count[sid] || 0) + 1;
+      if (!firstImg[sid]) {
+        const im = thumbUrl(p);
+        if (im) firstImg[sid] = im;
+      }
+    });
+    return shops
+      .map((s) => ({
+        id: s.id,
+        name: s.shopName || "Do'kon",
+        img: s.shopLogo || firstImg[s.id] || "",
+        count: count[s.id] || 0,
+        bonus: !!s.bonusEnabled,
+      }))
+      .filter((s) => s.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [shops, products]);
+
+  function openShopById(s) {
+    setShopFilter({ id: s.id, name: s.name });
+    setCatFilter("all");
+    setActiveProduct(null);
+    const el = document.getElementById("market");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }
 
   // Filtrlash: narx rejimi (optom narxi yo'q variantlar yashirinadi) +
   // kategoriya (Barchasi/Tuvaklar/Gullar) + do'kon sahifasi (shopFilter)
@@ -759,6 +803,82 @@ function App() {
             <span>Tayyor! Natija va moslik tahlili shu yerda ko'rinadi.</span>
           </div>
         )}
+      </section>
+
+      {/* ===================== STUDIYA: do'konlar devori ===================== */}
+      <section className="shopwall" id="shops">
+        <div className="sw-glow" />
+        <div className="sw-inner">
+          <p className="sw-eyebrow">Bizning hamkorlar</p>
+          <h2 className="sw-title">Do'konlar</h2>
+          <p className="sw-sub">
+            {shopWall.length > 0
+              ? `${shopWall.length} ta tasdiqlangan do'kon · rasmga bosing`
+              : "Do'konlar tez orada"}
+          </p>
+
+          {shopsLoading || productsLoading ? (
+            <div className="sw-grid">
+              {[0, 1, 2, 3].map((i) => <div key={i} className="sw-tile sw-skel" style={{ animationDelay: `${i * 90}ms` }} />)}
+            </div>
+          ) : shopWall.length === 0 ? (
+            <div className="sw-empty"><Store size={16} color={C.laitonLo} /> Hozircha faol do'kon yo'q</div>
+          ) : (
+            <div className="sw-grid">
+              {shopWall.map((s, i) => (
+                <button key={s.id} className="sw-tile" style={{ animationDelay: `${i * 80}ms` }}
+                  onClick={() => openShopById(s)} title={`${s.name} do'koni mahsulotlari`}>
+                  <div className="sw-img">
+                    {s.img
+                      ? <img src={s.img} alt={s.name} loading="lazy" />
+                      : <span className="sw-letter">{(s.name || "?").trim().charAt(0).toUpperCase()}</span>}
+                  </div>
+                  <span className="sw-shine" />
+                  <div className="sw-veil" />
+                  <div className="sw-name"><Store size={11} color={C.laitonHi} /><span>{s.name}</span></div>
+                  <div className="sw-count">{s.count}</div>
+                  {s.bonus && <div className="sw-bonus" title="Bonus tizimi yoqilgan">★</div>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ===================== STUDIYA: Zetme AI haqida ===================== */}
+      <section className="about" id="about">
+        <div className="ab-inner">
+          <p className="sw-eyebrow">Zetme AI</p>
+          <h2 className="ab-title">Sotib olishdan <em>oldin</em> ko'ring</h2>
+          <p className="ab-lead">
+            Zetme AI — gul va tuvakni bitta kadrda birlashtiradigan botanik studiya.
+            Gulingiz qaysi tuvakda chiroyli ko'rinishini, qaysi rang xonangizga mos tushishini
+            xariddan oldin bilib olasiz. Tanlov — taxmin emas, ko'rilgan natija.
+          </p>
+
+          <div className="ab-grid">
+            {[
+              { ic: Sparkles, t: "Avval ko'ring, keyin oling", d: "Gul va tuvak rasmini yuklang — AI ularni birlashtiradi va moslikni baholab beradi." },
+              { ic: Clock,    t: "Bir necha soniyada",         d: "Dizayner kutish yo'q, o'lchov yo'q. Natija shu zahoti ekraningizda paydo bo'ladi." },
+              { ic: Store,    t: "Tasdiqlangan do'konlar",     d: "Har bir sotuvchi administrator tomonidan tekshiriladi. Buyurtma to'g'ridan-to'g'ri do'konga boradi." },
+              { ic: Coins,    t: "Bonus va sovg'alar",         d: "1 mln so'mdan yuqori buyurtmalarga sovg'a, yirik xaridlarga esa pul bonuslari beriladi." },
+            ].map((f, i) => (
+              <div key={f.t} className="ab-card" style={{ animationDelay: `${120 + i * 90}ms` }}>
+                <div className="ab-ic"><f.ic size={19} color={C.laitonHi} /></div>
+                <div className="ab-ct">{f.t}</div>
+                <div className="ab-cd">{f.d}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="ab-stats">
+            <div className="ab-stat"><b>{shopWall.length || "—"}</b><span>do'kon</span></div>
+            <div className="ab-stat-sep" />
+            <div className="ab-stat"><b>{products.length || "—"}</b><span>mahsulot</span></div>
+            <div className="ab-stat-sep" />
+            <div className="ab-stat"><b>24/7</b><span>ochiq</span></div>
+          </div>
+        </div>
       </section>
 
       {/* ===================== BOTTOM: marketplace — Mahsulotlar ===================== */}
@@ -947,6 +1067,83 @@ const CSS = `
 .gen-cta:disabled{opacity:.4;cursor:not-allowed}
 .gen-result{position:relative;z-index:2;display:flex;align-items:center;gap:8px;justify-content:center;margin-top:14px;
   font-size:12.5px;color:${C.ivoireDim}}
+
+/* ---------- STUDIYA: DO'KONLAR DEVORI ---------- */
+@keyframes swRise{from{opacity:0;transform:translateY(22px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes swFade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes swShine{0%{transform:translateX(-140%) rotate(18deg)}55%{transform:translateX(240%) rotate(18deg)}100%{transform:translateX(240%) rotate(18deg)}}
+@keyframes swGlow{0%,100%{opacity:.55;transform:translate(-50%,0) scale(1)}50%{opacity:.9;transform:translate(-50%,-8px) scale(1.08)}}
+@keyframes swSkel{0%,100%{opacity:.35}50%{opacity:.7}}
+
+.shopwall{position:relative;background:linear-gradient(180deg,${C.noir} 0%,${C.vert} 100%);color:${C.ivoire};
+  padding:26px 16px 30px;overflow:hidden}
+.sw-glow{position:absolute;top:-90px;left:50%;width:420px;height:260px;pointer-events:none;
+  background:radial-gradient(50% 50% at 50% 50%, ${C.laiton}22, transparent 70%);animation:swGlow 7s ease-in-out infinite}
+.sw-inner{position:relative;z-index:2;max-width:1100px;margin:0 auto}
+.sw-eyebrow{font-size:10.5px;letter-spacing:3px;text-transform:uppercase;color:${C.laiton};text-align:center;margin:0 0 4px;
+  animation:swFade .6s ease both}
+.sw-title{font-family:${FONT_DISPLAY};font-weight:500;font-size:clamp(24px,6vw,32px);text-align:center;margin:0 0 4px;
+  animation:swFade .6s ease .06s both}
+.sw-sub{font-size:12px;color:${C.ivoireDim};text-align:center;margin:0 0 18px;animation:swFade .6s ease .12s both}
+.sw-empty{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:${C.ivoireDim};
+  border:1px dashed ${C.line};border-radius:14px;padding:20px}
+
+.sw-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+.sw-tile{flex:0 1 clamp(112px,26vw,168px);max-width:168px;
+  position:relative;aspect-ratio:1/1;border-radius:18px;overflow:hidden;cursor:pointer;padding:0;
+  border:1px solid ${C.line};background:#0c261e;animation:swRise .62s cubic-bezier(.22,1,.36,1) both;
+  transition:transform .32s cubic-bezier(.22,1,.36,1),border-color .32s,box-shadow .32s}
+.sw-tile:hover,.sw-tile:focus-visible{transform:translateY(-6px);border-color:${C.laitonLo};
+  box-shadow:0 16px 34px #0009,0 0 0 1px ${C.laiton}33;outline:none}
+.sw-tile:active{transform:translateY(-2px) scale(.985)}
+.sw-img{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(150deg,${C.vertLo},${C.noir})}
+.sw-img img{width:100%;height:100%;object-fit:cover;transition:transform .55s cubic-bezier(.22,1,.36,1)}
+.sw-tile:hover .sw-img img{transform:scale(1.09)}
+.sw-letter{font-family:${FONT_DISPLAY};font-size:40px;color:${C.laiton};opacity:.7}
+.sw-veil{position:absolute;inset:0;background:linear-gradient(to top,#000000cc 0%,#00000055 34%,transparent 62%)}
+.sw-shine{position:absolute;top:-60%;left:0;width:42%;height:220%;pointer-events:none;
+  background:linear-gradient(90deg,transparent,#ffffff26,transparent);transform:translateX(-140%) rotate(18deg)}
+.sw-tile:hover .sw-shine{animation:swShine 1.05s ease-out}
+.sw-name{position:absolute;left:9px;right:9px;bottom:9px;display:flex;align-items:center;gap:5px;
+  font-size:12px;font-weight:600;color:${C.ivoire};text-shadow:0 1px 6px #000c;text-align:left;line-height:1.25}
+.sw-name span{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.sw-count{position:absolute;top:8px;left:8px;min-width:20px;height:20px;padding:0 6px;border-radius:20px;
+  background:#0b211bcc;border:1px solid ${C.line};color:${C.laitonHi};font-size:10.5px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.sw-bonus{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:20px;background:${C.laiton};
+  color:${C.noir};font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.sw-skel{background:linear-gradient(150deg,${C.vertLo},${C.noir});animation:swSkel 1.4s ease-in-out infinite}
+
+/* ---------- STUDIYA: ZETME AI HAQIDA ---------- */
+.about{background:linear-gradient(180deg,${C.vert} 0%,${C.noir} 100%);color:${C.ivoire};padding:30px 16px 34px;
+  border-top:1px solid ${C.line}}
+.ab-inner{max-width:1100px;margin:0 auto}
+.ab-title{font-family:${FONT_DISPLAY};font-weight:500;font-size:clamp(24px,6.2vw,34px);text-align:center;margin:0 0 10px;
+  animation:swFade .6s ease .06s both}
+.ab-title em{font-style:italic;color:${C.laitonHi}}
+.ab-lead{max-width:620px;margin:0 auto 22px;text-align:center;font-size:13.5px;line-height:1.7;color:${C.ivoireDim};
+  animation:swFade .6s ease .12s both}
+.ab-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
+.ab-card{background:#ffffff08;border:1px solid ${C.line};border-radius:16px;padding:16px 15px;
+  animation:swFade .65s cubic-bezier(.22,1,.36,1) both;transition:transform .3s,border-color .3s,background .3s}
+.ab-card:hover{transform:translateY(-4px);border-color:${C.laitonLo};background:#ffffff0d}
+.ab-ic{width:38px;height:38px;border-radius:12px;border:1px solid ${C.laitonLo}66;background:#0c261e;
+  display:flex;align-items:center;justify-content:center;margin-bottom:11px}
+.ab-ct{font-size:14px;font-weight:600;margin-bottom:5px;color:${C.ivoire}}
+.ab-cd{font-size:12.5px;line-height:1.6;color:${C.ivoireDim}}
+.ab-stats{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:22px;
+  animation:swFade .7s ease .5s both}
+.ab-stat{display:flex;flex-direction:column;align-items:center;gap:1px}
+.ab-stat b{font-family:${FONT_DISPLAY};font-size:26px;font-weight:600;color:${C.laitonHi};line-height:1}
+.ab-stat span{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:${C.ivoireDim}}
+.ab-stat-sep{width:1px;height:28px;background:${C.line}}
+
+@media (prefers-reduced-motion: reduce){
+  .sw-tile,.ab-card,.sw-eyebrow,.sw-title,.sw-sub,.ab-title,.ab-lead,.ab-stats,.sw-glow{animation:none!important}
+  .sw-tile:hover .sw-shine{animation:none}
+  .sw-tile,.ab-card{opacity:1;transform:none}
+}
 
 /* ---------- MARKETPLACE ---------- */
 .market{padding:20px 16px 10px;max-width:1100px;margin:0 auto}

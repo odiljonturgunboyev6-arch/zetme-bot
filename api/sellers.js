@@ -6,7 +6,7 @@
 //        -> yangi sotuvchi arizasi (status: "pending" — super-admin tasdiqlaydi)
 //   { action:"login", login, password }
 //        -> sotuvchi kirishini tekshirish (faqat status "active" bo'lsa kiradi)
-//   { action:"updateProfile", login, password, telegramChatId?, bonusEnabled?, newPassword? }
+//   { action:"updateProfile", login, password, shopName?, shopLogo?, telegramChatId?, bonusEnabled?, newPassword? }
 //        -> sotuvchi o'z profilini yangilaydi
 //   Super-admin (x-admin-password header bilan):
 //   { action:"adminList" }               -> barcha sotuvchilar (pending ham)
@@ -57,7 +57,12 @@ async function loadSellers() {
 }
 
 function publicSeller(s) {
-  return { id: s.id, shopName: s.shopName, bonusEnabled: !!s.bonusEnabled };
+  return {
+    id: s.id,
+    shopName: s.shopName,
+    bonusEnabled: !!s.bonusEnabled,
+    shopLogo: s.shopLogo || "", // do'kon logotipi (sotuvchi admin panelda o'zi yuklaydi)
+  };
 }
 function adminSeller(s) {
   const { salt, passwordHash, ...rest } = s;
@@ -152,6 +157,14 @@ export default async function handler(req, res) {
       if (body.telegramChatId !== undefined) updated.telegramChatId = String(body.telegramChatId).trim();
       if (body.bonusEnabled !== undefined) updated.bonusEnabled = !!body.bonusEnabled;
       if (body.phone !== undefined && String(body.phone).trim()) updated.phone = String(body.phone).trim();
+      if (body.shopLogo !== undefined) updated.shopLogo = String(body.shopLogo).trim().slice(0, 600);
+      if (body.shopName !== undefined) {
+        const newName = String(body.shopName).trim();
+        if (newName.length < 2) return res.status(400).json({ ok: false, error: "Do'kon nomi kamida 2 ta belgi bo'lsin" });
+        const taken = list.some((s) => s.id !== seller.id && s.shopName.toLowerCase() === newName.toLowerCase());
+        if (taken) return res.status(400).json({ ok: false, error: "Bu do'kon nomi band — boshqasini tanlang" });
+        updated.shopName = newName;
+      }
       if (body.newPassword) {
         if (seller.builtin) return res.status(400).json({ ok: false, error: "Asosiy do'kon paroli Vercel'dagi ADMIN_PASSWORD orqali o'zgartiriladi" });
         if (String(body.newPassword).length < 6) return res.status(400).json({ ok: false, error: "Yangi parol kamida 6 ta belgi bo'lsin" });
