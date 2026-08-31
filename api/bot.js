@@ -100,6 +100,29 @@ export default async function handler(req, res) {
         return res.status(200).send("ok");
       }
 
+      // --- /stat: FAQAT egasi (OWNER_CHAT_ID) uchun umumiy statistika ---
+      if (text === "/stat" && String(chatId) === String(OWNER_CHAT_ID)) {
+        const sellers = (await kv.get("sellers")) || [];
+        const WEEK = 7 * 24 * 3600 * 1000, now = Date.now();
+        let lines = [], tOrders = 0, tSum = 0, w7 = 0, s7 = 0;
+        for (const s of sellers) {
+          const arr = (await kv.get(`orders:${s.id}`)) || [];
+          if (!arr.length) continue;
+          const act = arr.filter((o) => o.status !== "bekor");
+          const sm = act.reduce((a, o) => a + (o.payTotal || 0), 0);
+          const w = act.filter((o) => now - o.ts < WEEK);
+          tOrders += act.length; tSum += sm;
+          w7 += w.length; s7 += w.reduce((a, o) => a + (o.payTotal || 0), 0);
+          const paid = act.filter((o) => o.paymentStatus === "tolangan").length;
+          lines.push(`• ${escapeMd(s.shopName)}: ${act.length} ta · ${fmt(sm)}${paid ? ` · to'langan: ${paid}` : ""}${arr.length - act.length ? ` · bekor: ${arr.length - act.length}` : ""}`);
+        }
+        await sendMessage(
+          chatId,
+          `📊 *Zetme AI statistikasi*\n\nJami: ${tOrders} ta buyurtma · ${fmt(tSum)}\nOxirgi 7 kun: ${w7} ta · ${fmt(s7)}\n\n${lines.join("\n") || "Hali buyurtma yo'q"}`
+        );
+        return res.status(200).send("ok");
+      }
+
       // --- /start with an order id coming from the site (see api/checkout.js) ---
       if (text.startsWith("/start")) {
         const orderId = (text.split(" ")[1] || "").trim();

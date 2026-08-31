@@ -57,10 +57,11 @@ export default async function handler(req, res) {
     }
 
     if (action === "setStatus") {
-      const STATUSES = ["yangi", "tayyorlanmoqda", "yetkazildi", "bekor"];
+      const STATUSES = ["yangi", "tayyorlanmoqda", "yuborildi", "bekor"];
       const LABELS = {
         yangi: "🆕 Yangi",
         tayyorlanmoqda: "📦 Tayyorlanmoqda",
+        yuborildi: "🚚 Yuborildi",
         yetkazildi: "✅ Yetkazib berildi",
         bekor: "❌ Bekor qilindi",
       };
@@ -129,13 +130,14 @@ export default async function handler(req, res) {
           }
         } catch (e) { console.error("myorders status:", e); }
 
-        // mijozga Telegram xabar (xato bo'lsa ham status saqlangan bo'ladi)
+        // mijozga Telegram xabar — faqat Telegram orqali ulangan mijozlarga
+        // ("w..." bilan boshlanadigan sayt hisoblari TG olmaydi, ular saytdagi profilda ko'radi)
         try {
           const BOT_TOKEN = process.env.BOT_TOKEN;
-          if (BOT_TOKEN) {
+          if (BOT_TOKEN && /^\d+$/.test(String(chatId))) {
             const shopName = orders[idx].shopName || (seller && seller.shopName) || "";
             const text = status === "bekor"
-              ? `Buyurtmangiz bekor qilindi 😔\n\n#${id}${shopName ? ` · ${shopName} do'koni` : ""}\nSabab: ${cancelReason}\n\n🎁 Uzr sifatida keyingi buyurtmangizga ${bonusPercent}% chegirma taqdim etildi (buyurtmaning 1 mln so'mgacha qismiga). U keyingi buyurtmani tasdiqlaganingizda avtomatik qo'llanadi.`
+              ? `Buyurtmangiz bekor qilindi 😔\n\n#${id}${shopName ? ` · ${shopName} do'koni` : ""}\nSabab: ${cancelReason}\n\n🎁 Uzr sifatida keyingi buyurtmangizga ${bonusPercent}% chegirma taqdim etildi (buyurtmaning 1 mln so'mgacha qismiga). U keyingi buyurtma berganingizda avtomatik qo'llanadi.`
               : `Buyurtmangiz holati yangilandi\n\n#${id}${shopName ? ` · ${shopName} do'koni` : ""}\nYangi holat: ${LABELS[status]}`;
             await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
               method: "POST",
@@ -146,6 +148,41 @@ export default async function handler(req, res) {
         } catch (e) { console.error("status tg:", e); }
       }
 
+      return res.status(200).json({ ok: true, orders });
+    }
+
+    /* ---------- to'lovni qabul qilish (sotuvchi tasdiqlaydi) ---------- */
+    if (action === "confirmPayment") {
+      const id = String(body.id || "");
+      if (!id) return res.status(400).json({ ok: false, error: "Buyurtma ID si yo'q" });
+      const okey = `orders:${sellerId}`;
+      const orders = (await kv.get(okey)) || [];
+      const idx = orders.findIndex((o) => o.id === id);
+      if (idx === -1) return res.status(404).json({ ok: false, error: "Buyurtma topilmadi" });
+
+      orders[idx].paymentStatus = "tolangan";
+      orders[idx].paymentConfirmTs = Date.now();
+      await kv.set(okey, orders);
+
+      const chatId = orders[idx].customer && orders[idx].customer.chatId;
+      if (chatId) {
+        try {
+          const mkey = `myorders:${chatId}`;
+          const mine = (await kv.get(mkey)) || [];
+          const mi = mine.findIndex((o) => o.id === id);
+          if (mi !== -1) { mine[mi].paymentStatus = "tolangan"; mine[mi].paymentConfirmTs = Date.now(); await kv.set(mkey, mine); }
+        } catch (e) { console.error("pay myorders:", e); }
+        try {
+          const BOT_TOKEN = process.env.BOT_TOKEN;
+          if (BOT_TOKEN && /^\d+$/.test(String(chatId))) {
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chat_id: chatId, text: `✅ To'lovingiz qabul qilindi\n\n#${id}${orders[idx].shopName ? ` · ${orders[idx].shopName}` : ""}\nRahmat!` }),
+            });
+          }
+        } catch (e) { console.error("pay tg:", e); }
+      }
       return res.status(200).json({ ok: true, orders });
     }
 

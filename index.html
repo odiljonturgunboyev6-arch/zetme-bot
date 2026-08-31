@@ -425,26 +425,67 @@ function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, ch
 }
 
 /* ============================== Telegram redirect screen ============================== */
-function TelegramRedirect({ orderId, itemCount, payTotal, shopName, onBack }) {
-  const botUrl = `https://t.me/${BOT_USERNAME}?start=${encodeURIComponent(orderId)}`;
+const REGIONS = [
+  "Toshkent shahri", "Toshkent viloyati", "Andijon", "Farg'ona", "Namangan",
+  "Samarqand", "Buxoro", "Navoiy", "Qashqadaryo", "Surxondaryo",
+  "Jizzax", "Sirdaryo", "Xorazm", "Qoraqalpog'iston",
+];
+
+/* Buyurtma formasi — Telegram SHART EMAS: ism/telefon/viloyat shu yerda to'ldiriladi,
+   buyurtma darhol sotuvchi paneliga tushadi. Ma'lumotlar eslab qolinadi. */
+function CheckoutForm({ initial, itemCount, payTotal, shopName, busy, error, onSubmit, onClose }) {
+  const [name, setName] = useState(initial.name || "");
+  const [phone, setPhone] = useState(initial.phone || "");
+  const [region, setRegion] = useState(initial.region || "");
+  return (
+    <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="checkout">
+        <button className="pm-close" onClick={onClose}><X size={18} /></button>
+        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, margin: "4px 0 4px" }}>Buyurtmani rasmiylashtirish</h3>
+        <p style={{ color: C.inkDim, fontSize: 13, margin: "0 0 14px" }}>
+          {shopName ? `${shopName} do'koni · ` : ""}{itemCount} xil mahsulot · {fmt(payTotal)}
+        </p>
+        <label className="co-label">Ismingiz</label>
+        <input className="co-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ismingiz" />
+        <label className="co-label">Telefon raqamingiz</label>
+        <input className="co-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+998 90 123 45 67" inputMode="tel" />
+        <label className="co-label">Viloyat</label>
+        <select className="co-input" value={region} onChange={(e) => setRegion(e.target.value)}>
+          <option value="">Tanlang…</option>
+          {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        {error && <div className="prof-err" style={{ marginTop: 8 }}>{error}</div>}
+        <button className="pm-add" style={{ marginTop: 14 }} disabled={busy}
+          onClick={() => onSubmit({ name: name.trim(), phone: phone.trim(), region })}>
+          {busy ? "Yuborilmoqda…" : "Buyurtmani yuborish"}
+        </button>
+        <p className="co-hint">Buyurtma darhol do'konga tushadi. Holatini Profil bo'limida kuzatib borasiz — sotuvchi tayyorlab, yuborganida ko'rinadi.</p>
+      </div>
+    </div>
+  );
+}
+
+function OrderSuccess({ orderId, payTotal, shopName, voucherDiscount, voucherPercent, onClose, onOpenProfile }) {
   return (
     <div className="ov">
-      <div className="checkout">
-        <button className="pm-close" onClick={onBack}><ArrowLeft size={18} /></button>
-        <div className="tg-badge">Telegram bot</div>
-        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, margin: "8px 0 4px" }}>Buyurtma botga o'tadi</h3>
-        <p style={{ color: C.inkDim, fontSize: 13.5, margin: "0 0 16px" }}>
-          {shopName ? `${shopName} do'konidan ` : ""}{itemCount} xil mahsulot — to'lov summasi {fmt(payTotal)}
+      <div className="checkout" style={{ textAlign: "center" }}>
+        <div className="os-ic"><Check size={26} color="#fff" /></div>
+        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 23, margin: "12px 0 4px" }}>Buyurtma qabul qilindi!</h3>
+        <p style={{ color: C.inkDim, fontSize: 13.5, margin: "0 0 6px" }}>
+          #{orderId}{shopName ? ` · ${shopName} do'koni` : ""}
         </p>
-        <div className="tg-steps">
-          <div className="tg-step"><span>1</span> Bot buyurtmangizni ko'rsatadi</div>
-          <div className="tg-step"><span>2</span> Ism, telefon va viloyat so'raydi (birinchi martada)</div>
-          <div className="tg-step"><span>3</span> Tasdiqlaysiz — 5 daqiqada operator bog'lanadi</div>
-        </div>
-        <a className="pm-add" href={botUrl} target="_blank" rel="noreferrer" style={{ marginTop: 16, textDecoration: "none" }}>
-          <Send size={15} /> @{BOT_USERNAME}'ga o'tish
-        </a>
-        <p className="co-hint">Ikkinchi martadan boshlab ism va viloyat qayta so'ralmaydi — bot sizni tanib oladi.</p>
+        <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 4px" }}>{fmt(payTotal)}</p>
+        {voucherDiscount > 0 && (
+          <p style={{ color: C.laitonLo, fontSize: 12.5, margin: "0 0 8px" }}>
+            🎁 {voucherPercent}% chegirma bonusingiz qo'llandi: −{fmt(voucherDiscount)}
+          </p>
+        )}
+        <p style={{ color: C.inkDim, fontSize: 12.5, lineHeight: 1.6, margin: "8px 0 16px" }}>
+          Sotuvchi tez orada siz bilan bog'lanadi. Buyurtma holatini (tayyorlanmoqda, yuborildi)
+          Profil bo'limida kuzatib borasiz.
+        </p>
+        <button className="pm-add" onClick={onOpenProfile}><User size={15} /> Profilda kuzatish</button>
+        <button className="conflict-cancel" onClick={onClose}>Yopish</button>
       </div>
     </div>
   );
@@ -452,16 +493,32 @@ function TelegramRedirect({ orderId, itemCount, payTotal, shopName, onBack }) {
 
 /* ============================== Profile screen ============================== */
 function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBuyTokens, onBuyBadge,
-  cust, orders, linked, vouchers, onLink, onSaveName, onPhoto, onCancelOrder }) {
+  cust, orders, linked, vouchers, onLink, onSaveName, onPhoto, onCancelOrder, onReceiveOrder, onPaidOrder }) {
   const [cancelingId, setCancelingId] = useState(null); // "tasdiqlaysizmi?" bosqichi
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelErr, setCancelErr] = useState("");
+  const [payFormId, setPayFormId] = useState(null);     // "To'lov qildim" izoh formasi
+  const [payNote, setPayNote] = useState("");
+  const [actBusy, setActBusy] = useState(false);
   async function doCancelOrder(id) {
     setCancelBusy(true); setCancelErr("");
     const err = await onCancelOrder(id);
     setCancelBusy(false);
     setCancelingId(null);
     if (err) setCancelErr(err);
+  }
+  async function doReceive(id) {
+    setActBusy(true); setCancelErr("");
+    const err = await onReceiveOrder(id);
+    setActBusy(false);
+    if (err) setCancelErr(err);
+  }
+  async function doPaid(id) {
+    setActBusy(true); setCancelErr("");
+    const err = await onPaidOrder(id, payNote.trim());
+    setActBusy(false);
+    if (err) setCancelErr(err);
+    else { setPayFormId(null); setPayNote(""); }
   }
   const tier = tierForTokens(tokens, badgeOwned);
   const nextTier = TIERS_BADGE.find((t) => t.min > tokens);
@@ -598,7 +655,7 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
                     <div className="prof-order-top">
                       <span className="prof-order-date">{dateOf(o.ts)}</span>
                       <span className={"po-status po-" + (o.status || "yangi")}>
-                        {({ yangi: "🆕 Yangi", tayyorlanmoqda: "📦 Tayyorlanmoqda", yetkazildi: "✅ Yetkazildi", bekor: "❌ Bekor" })[o.status || "yangi"]}
+                        {({ yangi: "🆕 Yangi", tayyorlanmoqda: "📦 Tayyorlanmoqda", yuborildi: "🚚 Yuborildi", yetkazildi: "✅ Yetkazildi", qabul: "✅ Qabul qilindi", bekor: "❌ Bekor" })[o.status || "yangi"]}
                       </span>
                     </div>
                     {o.shopName && <div className="prof-order-shop" style={{ marginBottom: 5 }}><Store size={10} /> {o.shopName}</div>}
@@ -632,6 +689,40 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
                         <button className="po-cancelbtn" onClick={() => { setCancelErr(""); setCancelingId(o.id); }}>
                           Bekor qilish
                         </button>
+                      )
+                    )}
+
+                    {/* Buyurtma yuborilgan — mijoz qabul qilganda bosadi */}
+                    {(o.status === "yuborildi") && o.id && o.sellerId && (
+                      <button className="po-receivebtn" disabled={actBusy} onClick={() => doReceive(o.id)}>
+                        ✅ Buyurtmani qabul qildim
+                      </button>
+                    )}
+
+                    {/* To'lov chizig'i: sotuvchi bilan kelishib to'laysiz, keyin belgilaysiz */}
+                    {(o.status || "yangi") !== "bekor" && o.id && o.sellerId && (
+                      o.paymentStatus === "tolangan" ? (
+                        <div className="po-payrow po-pay-done">✅ To'lov qabul qilingan</div>
+                      ) : o.paymentStatus === "mijoz_toladi" ? (
+                        <div className="po-payrow po-pay-wait">
+                          💸 To'lov qilganingizni aytdingiz{o.paymentNote ? ` (${o.paymentNote})` : ""} — sotuvchi tasdiqlashi kutilmoqda
+                        </div>
+                      ) : (
+                        <div className="po-payrow po-pay-none">
+                          To'lov usulini sotuvchi bilan kelishasiz
+                          {o.shopPhone && <a className="po-shoptel" href={"tel:" + o.shopPhone}>📞 {o.shopPhone}</a>}
+                          <div style={{ marginTop: 7 }}>
+                            {payFormId === o.id ? (
+                              <div className="po-payform">
+                                <input value={payNote} placeholder="Qanday to'ladingiz? (Payme, naqd...)"
+                                  onChange={(e) => setPayNote(e.target.value)} />
+                                <button disabled={actBusy} onClick={() => doPaid(o.id)}>{actBusy ? "…" : "Yuborish"}</button>
+                              </div>
+                            ) : (
+                              <button className="po-paybtn" onClick={() => { setPayFormId(o.id); setPayNote(""); }}>💸 To'lov qildim</button>
+                            )}
+                          </div>
+                        </div>
                       )
                     )}
                   </div>
@@ -722,7 +813,8 @@ function App() {
   const [shopConflict, setShopConflict] = useState(null);
   const [checking, setChecking] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
-  const [order, setOrder] = useState(null); // { orderId, itemCount, payTotal }
+  const [order, setOrder] = useState(null); // { orderId, payTotal, shopName, voucherDiscount, voucherPercent }
+  const [checkoutFormOpen, setCheckoutFormOpen] = useState(false);
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [profile, setProfile] = useState({ name: "", phone: "" });
@@ -771,7 +863,10 @@ function App() {
   }, [custAuth && custAuth.chatId]);
 
   async function linkCustomer(code) {
-    const d = await customerApi({ action: "link", code });
+    // saytdagi "web" hisob bo'lsa, tarixi Telegram hisobiga ko'chiriladi
+    const extra = custAuth && String(custAuth.chatId).startsWith("w")
+      ? { oldChatId: custAuth.chatId, oldToken: custAuth.token } : {};
+    const d = await customerApi({ action: "link", code, ...extra });
     if (!d.ok) return d.error || "Xatolik";
     const auth = { chatId: d.chatId, token: d.token };
     setCustAuth(auth);
@@ -779,6 +874,47 @@ function App() {
     setCustOrders(d.orders || []);
     setCustVouchers(d.vouchers || []);
     storageSet("zetme_cust_auth", JSON.stringify(auth));
+    return null;
+  }
+
+  // Holat o'zgarishlarini kuzatish: har 60 soniyada yangilanadi,
+  // yangilik bo'lsa pastki "Profil" tugmasida qizil nuqta chiqadi
+  useEffect(() => {
+    if (!custAuth) return;
+    const t = setInterval(() => {
+      customerApi({ action: "me", chatId: custAuth.chatId, token: custAuth.token })
+        .then((d) => { if (d.ok) { setCustOrders(d.orders || []); setCustVouchers(d.vouchers || []); } })
+        .catch(() => {});
+    }, 60000);
+    return () => clearInterval(t);
+  }, [custAuth && custAuth.chatId]);
+
+  // Profil ochilganda holatni darhol yangilaymiz
+  useEffect(() => {
+    if (!profileOpen || !custAuth) return;
+    customerApi({ action: "me", chatId: custAuth.chatId, token: custAuth.token })
+      .then((d) => { if (d.ok) { setCustProfile(d.profile); setCustOrders(d.orders || []); setCustVouchers(d.vouchers || []); } })
+      .catch(() => {});
+  }, [profileOpen]);
+
+  const seenTs = Number(storageGet("zetme_seen_ts", "0")) || 0;
+  const hasNews = custOrders.some((o) => Math.max(o.statusTs || 0, o.paymentConfirmTs || 0) > seenTs);
+  useEffect(() => {
+    if (profileOpen) storageSet("zetme_seen_ts", String(Date.now()));
+  }, [profileOpen, custOrders.length]);
+
+  async function receiveCustOrder(id) {
+    if (!custAuth) return "Hisob topilmadi";
+    const d = await customerApi({ action: "receiveOrder", ...custAuth, id });
+    if (!d.ok) return d.error || "Xatolik";
+    setCustOrders(d.orders || []);
+    return null;
+  }
+  async function paidCustOrder(id, note) {
+    if (!custAuth) return "Hisob topilmadi";
+    const d = await customerApi({ action: "paidOrder", ...custAuth, id, note });
+    if (!d.ok) return d.error || "Xatolik";
+    setCustOrders(d.orders || []);
     return null;
   }
 
@@ -1018,7 +1154,14 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function checkout() {
+  // "Buyurtma berish" bosilganda forma ochiladi (Telegram kerak emas)
+  function checkout() {
+    setCartOpen(false);
+    setCheckoutError(null);
+    setCheckoutFormOpen(true);
+  }
+
+  async function placeOrder(customerData) {
     setChecking(true);
     setCheckoutError(null);
     try {
@@ -1028,13 +1171,26 @@ function App() {
         body: JSON.stringify({
           priceMode,
           items: cart.map((i) => ({ id: i.id, variantId: i.variantId, qty: i.qty })),
+          customer: customerData,
+          auth: custAuth || undefined,
         }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Buyurtmani yuborib bo'lmadi");
-      setOrder({ orderId: data.orderId, itemCount: cart.length, payTotal: data.payTotal, shopName: data.shopName });
+      // hisob: server yangi "web" hisob ochgan bo'lishi mumkin — saqlaymiz
+      if (data.auth && data.auth.chatId) {
+        setCustAuth(data.auth);
+        storageSet("zetme_cust_auth", JSON.stringify(data.auth));
+      }
+      // forma ma'lumotlarini eslab qolamiz
+      setProfile({ name: customerData.name, phone: customerData.phone, region: customerData.region });
+      storageSet("zetme_customer", JSON.stringify({ name: customerData.name, phone: customerData.phone, region: customerData.region }));
+      setOrder({
+        orderId: data.orderId, payTotal: data.payTotal, shopName: data.shopName,
+        voucherDiscount: data.voucherDiscount || 0, voucherPercent: data.voucherPercent || 0,
+      });
       setCart([]);
-      setCartOpen(false);
+      setCheckoutFormOpen(false);
     } catch (err) {
       setCheckoutError(err.message);
     } finally {
@@ -1043,6 +1199,7 @@ function App() {
   }
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+  const cartPayTotal = cart.reduce((s, i) => s + priceOf(i, priceMode) * i.qty, 0);
   const tier = tierForTokens(tokens, badgeOwned);
 
   return (
@@ -1292,8 +1449,10 @@ function App() {
           {cartCount > 0 && <span className="bn-badge">{cartCount}</span>}
           <span>Savat</span>
         </button>
-        <button className="bn-item" onClick={() => setProfileOpen(true)}>
-          <User size={18} /><span>Profil</span>
+        <button className="bn-item" onClick={() => setProfileOpen(true)} style={{ position: "relative" }}>
+          <User size={18} />
+          {hasNews && !profileOpen && <span className="bn-dot" />}
+          <span>Profil</span>
         </button>
       </nav>
 
@@ -1311,13 +1470,31 @@ function App() {
           checkoutError={checkoutError}
         />
       )}
+      {checkoutFormOpen && (
+        <CheckoutForm
+          initial={{
+            name: (custProfile && (custProfile.firstName || custProfile.name)) || profile.name || "",
+            phone: (custProfile && custProfile.phone) || profile.phone || "",
+            region: (custProfile && custProfile.region) || profile.region || "",
+          }}
+          itemCount={cart.length}
+          payTotal={cartPayTotal}
+          shopName={cart[0] ? cart[0].shopName : ""}
+          busy={checking}
+          error={checkoutError}
+          onSubmit={placeOrder}
+          onClose={() => setCheckoutFormOpen(false)}
+        />
+      )}
       {order && (
-        <TelegramRedirect
+        <OrderSuccess
           orderId={order.orderId}
-          itemCount={order.itemCount}
           payTotal={order.payTotal}
           shopName={order.shopName}
-          onBack={() => setOrder(null)}
+          voucherDiscount={order.voucherDiscount}
+          voucherPercent={order.voucherPercent}
+          onClose={() => setOrder(null)}
+          onOpenProfile={() => { setOrder(null); setProfileOpen(true); }}
         />
       )}
       {shopConflict && (
@@ -1345,7 +1522,8 @@ function App() {
           badgeOwned={badgeOwned} generations={generations} onBuyTokens={buyTokens} onBuyBadge={buyBadge}
           cust={custProfile} orders={custOrders} linked={!!custAuth}
           vouchers={custVouchers.map((v) => ({ ...v, shopName: (shops.find((s) => s.id === v.sellerId) || {}).shopName || "" }))}
-          onLink={linkCustomer} onSaveName={saveCustName} onPhoto={setCustPhoto} onCancelOrder={cancelCustOrder} />
+          onLink={linkCustomer} onSaveName={saveCustName} onPhoto={setCustPhoto} onCancelOrder={cancelCustOrder}
+          onReceiveOrder={receiveCustOrder} onPaidOrder={paidCustOrder} />
       )}
     </div>
   );
@@ -1694,6 +1872,22 @@ const CSS = `
 .po-tayyorlanmoqda{background:#FBF3E2;color:#8a6a2f}
 .po-yetkazildi{background:#EAF3EC;color:${C.accent}}
 .po-bekor{background:#FBEFEA;color:${C.sale}}
+.po-yuborildi{background:#EEE9FB;color:#6B4FBB}
+.po-qabul{background:#EAF3EC;color:${C.accent}}
+.co-label{display:block;font-size:11.5px;font-weight:600;color:${C.inkDim};margin:10px 0 4px;text-align:left}
+.co-input{width:100%;padding:11px 13px;border:1px solid ${C.mline};border-radius:11px;font-size:14.5px;font-family:${FONT_BODY};background:#fff;color:${C.ink}}
+.os-ic{width:54px;height:54px;border-radius:50%;background:${C.accent};display:flex;align-items:center;justify-content:center;margin:6px auto 0}
+.po-payrow{margin-top:8px;padding:9px 11px;border-radius:10px;font-size:12px;line-height:1.55}
+.po-pay-none{background:${C.paper};border:1px dashed ${C.mline}}
+.po-pay-wait{background:#FBF3E2;color:#6d5426}
+.po-pay-done{background:#EAF3EC;color:${C.accent};font-weight:600}
+.po-paybtn{background:${C.ink};border:none;color:#fff;border-radius:16px;padding:7px 14px;font-size:11.5px;font-weight:600;font-family:inherit;cursor:pointer}
+.po-payform{display:flex;gap:6px;margin-top:7px}
+.po-payform input{flex:1;padding:8px 11px;border:1px solid ${C.mline};border-radius:9px;font-size:12.5px;font-family:inherit}
+.po-payform button{background:${C.accent};border:none;color:#fff;border-radius:9px;padding:8px 13px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer}
+.po-receivebtn{margin-top:8px;width:100%;background:${C.accent};border:none;color:#fff;border-radius:12px;padding:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer}
+.po-shoptel{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#2B7FD6;text-decoration:none;font-weight:600;margin-left:8px}
+.bn-dot{position:absolute;top:2px;right:14px;width:8px;height:8px;border-radius:50%;background:${C.sale}}
 .prof-vouchers{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
 .prof-voucher{background:#FBF3E2;border:1px solid ${C.laiton}55;border-radius:12px;padding:10px 13px;font-size:12.5px;line-height:1.55;color:#6d5426}
 .po-vdisc{font-weight:600;font-size:11.5px;color:${C.laitonLo}}

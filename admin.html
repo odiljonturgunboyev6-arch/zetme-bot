@@ -81,6 +81,16 @@
   .ord-cancelform { margin-top:10px; padding:12px; background:#fff; border:1px dashed var(--sale); border-radius:11px; }
   .ord-cancelform textarea { width:100%; padding:9px 11px; border:1px solid var(--mline); border-radius:9px; font-size:13px; font-family:inherit; resize:vertical; }
   .ord-bonusrow { display:flex; gap:6px; }
+  .ordrow.st-yuborildi { border-left:3px solid #6B4FBB; }
+  .ordrow.st-qabul { border-left:3px solid var(--accent); }
+  .ord-st.on-yuborildi { background:#EEE9FB; border-color:#6B4FBB; color:#6B4FBB; }
+  .ord-qabul { font-size:12.5px; font-weight:700; color:var(--accent); background:#EAF3EC; border-radius:9px; padding:8px 11px; }
+  .ord-payrow { margin-top:8px; font-size:12px; border-radius:9px; padding:8px 11px; line-height:1.6; }
+  .ord-payrow.pay-none { background:var(--paper); border:1px dashed var(--mline); color:var(--inkDim); }
+  .ord-payrow.pay-wait { background:#FBF3E2; color:#6d5426; }
+  .ord-payrow.pay-done { background:#EAF3EC; color:var(--accent); font-weight:700; }
+  .ord-refresh { margin-left:auto; background:transparent; border:1px solid var(--mline); border-radius:16px; padding:5px 11px; font-size:11.5px; font-weight:600; color:var(--inkDim); font-family:inherit; cursor:pointer; }
+  .ord-payconfirm { display:block; margin-top:7px; background:var(--accent); border:none; color:#fff; border-radius:9px; padding:8px 13px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; }
   .ord-bekorinfo { font-size:12px; color:var(--sale); background:#FBEFEA; border-radius:8px; padding:7px 10px; margin-bottom:8px; line-height:1.5; }
 
   /* analitika */
@@ -221,7 +231,8 @@
 
     <!-- PROFIL: buyurtmalar boshqaruvi -->
     <div class="card" data-pane="profil" id="ordersCard">
-      <h3>Buyurtmalar <span class="badge" id="ordBadge"></span></h3>
+      <h3>Buyurtmalar <span class="badge" id="ordBadge"></span>
+        <button type="button" class="ord-refresh" onclick="loadAnalytics()" title="Yangilash">⟳ Yangilash</button></h3>
       <div class="ordfilters" id="ordFilters"></div>
       <div id="ordList"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
     </div>
@@ -465,6 +476,7 @@
     loadProducts();
     showPane("profil");
     loadAnalytics();
+    if (!window.__ordTimer) window.__ordTimer = setInterval(loadAnalytics, 60000);
   }
 
   // ===================== sotuvlar va analitika =====================
@@ -491,7 +503,7 @@
   // ===================== buyurtmalar boshqaruvi =====================
   let ordersCache = [];
   let ordFilter = "faol"; // faol | yangi | yetkazildi | bekor | all
-  const ST_LABEL = { yangi: "🆕 Yangi", tayyorlanmoqda: "📦 Tayyorlanmoqda", yetkazildi: "✅ Yetkazildi", bekor: "❌ Bekor" };
+  const ST_LABEL = { yangi: "🆕 Yangi", tayyorlanmoqda: "📦 Tayyorlanmoqda", yuborildi: "🚚 Yuborildi", yetkazildi: "✅ Yetkazildi (eski)", qabul: "✅ Qabul qilindi", bekor: "❌ Bekor" };
   const stOf = o => o.status || "yangi";
   function setOrdFilter(f) { ordFilter = f; renderOrders(); }
   function ordDate(ts) {
@@ -501,20 +513,23 @@
   function renderOrders() {
     const yangiCount = ordersCache.filter(o => stOf(o) === "yangi").length;
     document.getElementById("ordBadge").textContent = yangiCount ? `${yangiCount} ta yangi` : (ordersCache.length ? `${ordersCache.length} ta` : "");
+    const FAOL = o => ["yangi", "tayyorlanmoqda", "yuborildi"].includes(stOf(o));
+    const YAKUN = o => stOf(o) === "qabul" || stOf(o) === "yetkazildi";
     const counts = {
-      faol: ordersCache.filter(o => stOf(o) === "yangi" || stOf(o) === "tayyorlanmoqda").length,
+      faol: ordersCache.filter(FAOL).length,
       yangi: yangiCount,
-      yetkazildi: ordersCache.filter(o => stOf(o) === "yetkazildi").length,
+      yakun: ordersCache.filter(YAKUN).length,
       bekor: ordersCache.filter(o => stOf(o) === "bekor").length,
       all: ordersCache.length,
     };
     document.getElementById("ordFilters").innerHTML = [
-      ["faol", "Faol"], ["yangi", "Yangi"], ["yetkazildi", "Yetkazilgan"], ["bekor", "Bekor"], ["all", "Hammasi"],
+      ["faol", "Faol"], ["yangi", "Yangi"], ["yakun", "Yakunlangan"], ["bekor", "Bekor"], ["all", "Hammasi"],
     ].map(([f, l]) => `<button class="ordfilter${ordFilter === f ? " active" : ""}" onclick="setOrdFilter('${f}')">${l} (${counts[f]})</button>`).join("");
 
     const list = ordersCache.filter(o => {
       if (ordFilter === "all") return true;
-      if (ordFilter === "faol") return stOf(o) === "yangi" || stOf(o) === "tayyorlanmoqda";
+      if (ordFilter === "faol") return FAOL(o);
+      if (ordFilter === "yakun") return YAKUN(o);
       return stOf(o) === ordFilter;
     });
     const el = document.getElementById("ordList");
@@ -526,7 +541,7 @@
     el.innerHTML = list.map(o => {
       const c = o.customer || {};
       const items = (o.items || []).map(i => `${i.qty} × ${escHtml(i.name)}`).join("<br>");
-      const stBtns = ["yangi", "tayyorlanmoqda", "yetkazildi", "bekor"].map(s => {
+      const stBtns = ["yangi", "tayyorlanmoqda", "yuborildi", "bekor"].map(s => {
         const click = s === "bekor" ? `openCancelForm('${escAttr(o.id)}')` : `setOrderStatus('${escAttr(o.id)}','${s}')`;
         return `<button class="ord-st${stOf(o) === s ? " on-" + s : ""}" ${!o.id ? "disabled" : `onclick="${click}"`}>${ST_LABEL[s]}</button>`;
       }).join("");
@@ -558,12 +573,43 @@
           <div class="ord-items">${items}</div>
           <div class="ord-total">${fmtSum(o.payTotal || o.total || 0)}${o.priceMode === "optom" ? " · optom" : ""}${o.voucherDiscount ? ` · 🎁 −${fmtSum(o.voucherDiscount)} chegirma qo'llangan` : ""}</div>
           ${bekorInfo}
-          <div class="ord-statusrow">${stBtns}</div>
+          ${stOf(o) === "qabul" ? `<div class="ord-qabul">✅ Mijoz buyurtmani qabul qilgan</div>` : `<div class="ord-statusrow">${stBtns}</div>`}
+          ${payRow(o)}
           ${cancelForm}
           ${!o.id ? `<div class="hint" style="margin-top:6px;">Eski buyurtma — statusi boshqarilmaydi</div>` : ""}
         </div>`;
     }).join("");
   }
+  function payRow(o) {
+    if (!o.id || stOf(o) === "bekor") return "";
+    if (o.paymentStatus === "tolangan") {
+      return `<div class="ord-payrow pay-done">✅ To'lov qabul qilingan</div>`;
+    }
+    if (o.paymentStatus === "mijoz_toladi") {
+      return `<div class="ord-payrow pay-wait">💸 Mijoz "To'lov qildim" dedi${o.paymentNote ? ` — <b>${escHtml(o.paymentNote)}</b>` : ""}.
+        Pul kelganini tekshiring:
+        <button class="ord-payconfirm" onclick="confirmPayment('${escAttr(o.id)}')">✅ To'lovni qabul qildim</button></div>`;
+    }
+    return `<div class="ord-payrow pay-none">To'lov: mijoz bilan kelishasiz — u "To'lov qildim"ni bosganda shu yerda ko'rinadi</div>`;
+  }
+  async function confirmPayment(id) {
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ action: "confirmPayment", id }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Xatolik");
+      ordersCache = data.orders || [];
+      renderOrders();
+    } catch (err) {
+      const el = document.getElementById("ordList");
+      el.insertAdjacentHTML("afterbegin", `<div class="msg err" style="margin-bottom:10px;">${escHtml(err.message)}</div>`);
+      setTimeout(renderOrders, 3500);
+    }
+  }
+
   let cancelFormId = null;
   let cancelBonus = 5;
   let cancelDraft = "";
