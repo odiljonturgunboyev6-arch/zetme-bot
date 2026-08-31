@@ -1232,19 +1232,45 @@ function App() {
                 animationDuration: pt.d + "s", animationDelay: pt.dl + "s" }} />
           ))}
         </div>
-        {/* orqa fonda chizilib paydo bo'ladigan botanik chizma */}
-        <svg className="hero-art" viewBox="0 0 200 220" fill="none" aria-hidden="true">
-          <path className="ha ha1" d="M60 160 L140 160 L128 214 L72 214 Z" />
-          <path className="ha ha2" d="M100 160 C100 130 100 110 100 84" />
-          <path className="ha ha3" d="M100 122 C78 118 64 102 62 82 C84 84 98 100 100 122 Z" />
-          <path className="ha ha4" d="M100 108 C122 104 136 88 138 68 C116 70 102 86 100 108 Z" />
-          <circle className="ha ha5" cx="100" cy="62" r="9" />
-          <circle className="ha ha5" cx="100" cy="38" r="9" />
-          <circle className="ha ha5" cx="78" cy="50" r="9" />
-          <circle className="ha ha5" cx="122" cy="50" r="9" />
-          <circle className="ha ha5" cx="89" cy="72" r="9" />
-          <circle className="ha ha5" cx="111" cy="72" r="9" />
-        </svg>
+        {/* KINEMATIK SAHNA: qora tun, nurlanuvchi nilufar, suv sathi va halqa to'lqinlar */}
+        <div className="hero-scene" aria-hidden="true">
+          <div className="mist m1" />
+          <div className="mist m2" />
+          <svg className="lotus" viewBox="0 0 240 200">
+            <defs>
+              <radialGradient id="lpet" cx="50%" cy="30%" r="80%">
+                <stop offset="0%" stopColor="#ffedb8" />
+                <stop offset="45%" stopColor="#dfb56b" />
+                <stop offset="100%" stopColor="#6e5220" />
+              </radialGradient>
+              <radialGradient id="lcore" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#fff3cf" />
+                <stop offset="100%" stopColor="#c6a05b" />
+              </radialGradient>
+              <filter id="lglow" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="7" result="b" />
+                <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
+            <g className="lotus-g" filter="url(#lglow)">
+              <path className="lp lp5" d="M120 168 C82 164 50 140 40 104 C80 108 110 132 120 168 Z" />
+              <path className="lp lp5" d="M120 168 C158 164 190 140 200 104 C160 108 130 132 120 168 Z" />
+              <path className="lp lp3" d="M120 168 C92 152 76 122 76 86 C104 100 118 130 120 168 Z" />
+              <path className="lp lp3" d="M120 168 C148 152 164 122 164 86 C136 100 122 130 120 168 Z" />
+              <path className="lp lp1" d="M120 168 C102 132 102 84 120 44 C138 84 138 132 120 168 Z" />
+              <circle className="lp-core" cx="120" cy="150" r="7" />
+            </g>
+          </svg>
+          <div className="water">
+            <div className="water-glow" />
+            <span className="ripple rp1" />
+            <span className="ripple rp2" />
+            <span className="ripple rp3" />
+          </div>
+          <span className="drop" />
+          <span className="fire ff1" /><span className="fire ff2" /><span className="fire ff3" />
+          <span className="fire ff4" /><span className="fire ff5" /><span className="fire ff6" />
+        </div>
         <header className="topbar">
           <img src={LOGO_STACK} alt="Zetme AI" className="logo" />
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1599,8 +1625,8 @@ const CSS = `
 .rv1{animation-delay:.05s}.rv2{animation-delay:.16s}.rv3{animation-delay:.3s}
 .rv4{animation-delay:.42s}.rv5{animation-delay:.56s}.rv6{animation-delay:.75s}
 
-.hero{position:relative;background:radial-gradient(120% 100% at 50% 0%, ${C.vert}, ${C.noir});color:${C.ivoire};
-  padding:16px 18px 30px;overflow:hidden}
+.hero{position:relative;color:${C.ivoire};padding:16px 18px 34px;overflow:hidden;
+  background:radial-gradient(130% 110% at 50% 0%, #0e2c21 0%, #071811 45%, #020906 78%, #000 100%)}
 .hero-grain{position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%, #ffffff08, transparent 60%)}
 .hero-glow{position:absolute;border-radius:50%;pointer-events:none;filter:blur(6px)}
 .hg1{top:-120px;left:50%;margin-left:-210px;width:420px;height:300px;
@@ -1608,15 +1634,50 @@ const CSS = `
 .hg2{bottom:-140px;right:-120px;width:380px;height:320px;
   background:radial-gradient(50% 50% at 50% 50%, ${C.accent}30, transparent 70%);animation:hgPulse 11s ease-in-out 2s infinite}
 .hero-petals{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.petal{position:absolute;bottom:-24px;display:block;animation:petalFloat linear infinite}
+.petal{position:absolute;bottom:-24px;display:block;animation:petalFloat linear infinite;filter:blur(.4px)}
 .pk0{background:${C.laiton};border-radius:70% 0 70% 0}
 .pk1{background:${C.bloom};border-radius:50% 50% 50% 0}
 .pk2{background:${C.laitonHi};border-radius:70% 0 70% 0;transform:rotate(45deg)}
-.hero-art{position:absolute;left:50%;top:54%;width:250px;height:275px;margin-left:-125px;pointer-events:none;
-  stroke:${C.ivoire};opacity:.07}
-.ha{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;
-  stroke-dasharray:600;stroke-dashoffset:600;animation:artDraw 3.5s ease .6s forwards}
-.ha5{stroke-dasharray:60;stroke-dashoffset:60;animation-duration:1.6s;animation-delay:2.2s}
+/* --- kinematik sahna: nilufar + suv --- */
+@keyframes lotusSway{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(1.6deg)}}
+@keyframes lotusBreathe{0%,100%{opacity:.8;filter:brightness(.95)}50%{opacity:1;filter:brightness(1.18)}}
+@keyframes rippleOut{0%{transform:translateX(-50%) scale(.12);opacity:.8}80%{opacity:.18}100%{transform:translateX(-50%) scale(1.35);opacity:0}}
+@keyframes dropFall{0%,55%{opacity:0;transform:translateY(0)}60%{opacity:.9}96%{opacity:.9;transform:translateY(102px)}100%{opacity:0;transform:translateY(104px)}}
+@keyframes fireDrift{0%,100%{transform:translate(0,0)}25%{transform:translate(9px,-14px)}50%{transform:translate(-6px,-24px)}75%{transform:translate(-12px,-9px)}}
+@keyframes fireTwinkle{0%,100%{opacity:.15}50%{opacity:.85}}
+@keyframes mistDrift{0%{transform:translateX(-8%)}100%{transform:translateX(8%)}}
+
+.hero-scene{position:absolute;inset:0;pointer-events:none}
+.mist{position:absolute;width:150%;left:-25%;height:180px;filter:blur(34px);opacity:.5}
+.m1{top:28%;background:radial-gradient(50% 60% at 50% 50%, #7fd8c81a, transparent 70%);
+  animation:mistDrift 26s ease-in-out infinite alternate}
+.m2{top:58%;background:radial-gradient(50% 60% at 40% 50%, ${C.laiton}14, transparent 70%);
+  animation:mistDrift 34s ease-in-out 4s infinite alternate-reverse}
+.lotus{position:absolute;left:50%;top:44%;width:272px;height:227px;margin-left:-136px;opacity:.46}
+.lotus-g{transform-origin:120px 168px;animation:lotusSway 7s ease-in-out infinite, lotusBreathe 5.2s ease-in-out infinite}
+.lp{fill:url(#lpet);stroke:#f5dfae55;stroke-width:1}
+.lp1{opacity:.95}.lp3{opacity:.7}.lp5{opacity:.45}
+.lp-core{fill:url(#lcore)}
+.water{position:absolute;left:0;right:0;bottom:0;height:96px;
+  background:linear-gradient(to bottom, transparent, #03120dcc 55%, #020c08)}
+.water-glow{position:absolute;left:50%;bottom:6px;width:280px;height:56px;transform:translateX(-50%);
+  background:radial-gradient(50% 50% at 50% 50%, ${C.laiton}30, transparent 70%);filter:blur(8px);
+  animation:lotusBreathe 5.2s ease-in-out infinite}
+.ripple{position:absolute;left:50%;bottom:26px;width:190px;height:34px;border:1.5px solid #d9c58a66;
+  border-radius:50%;transform:translateX(-50%) scale(.12);opacity:0;animation:rippleOut 5.2s ease-out infinite}
+.rp2{animation-delay:1.7s;border-color:#7fd8c84d}
+.rp3{animation-delay:3.4s}
+.drop{position:absolute;left:50%;top:56%;width:3.5px;height:9px;margin-left:-2px;border-radius:50% 50% 60% 60%;
+  background:linear-gradient(#fff3cf,#c6a05b);box-shadow:0 0 8px #ffedb8aa;
+  animation:dropFall 5.2s ease-in .2s infinite}
+.fire{position:absolute;border-radius:50%;
+  animation:fireDrift 9s ease-in-out infinite, fireTwinkle 3.4s ease-in-out infinite}
+.ff1{left:12%;top:34%;width:4px;height:4px;background:#ffe9b0;box-shadow:0 0 10px 2px #ffe9b088}
+.ff2{left:84%;top:30%;width:3px;height:3px;background:#7fd8c8;box-shadow:0 0 9px 2px #7fd8c877;animation-delay:1.2s,.6s}
+.ff3{left:22%;top:66%;width:3px;height:3px;background:#ffe9b0;box-shadow:0 0 9px 2px #ffe9b077;animation-delay:2.4s,1.4s}
+.ff4{left:74%;top:62%;width:4px;height:4px;background:#e8b7c8;box-shadow:0 0 10px 2px #e8b7c877;animation-delay:3.6s,2s}
+.ff5{left:48%;top:24%;width:3px;height:3px;background:#7fd8c8;box-shadow:0 0 8px 2px #7fd8c866;animation-delay:4.8s,.9s}
+.ff6{left:63%;top:44%;width:3px;height:3px;background:#ffe9b0;box-shadow:0 0 9px 2px #ffe9b066;animation-delay:6s,2.7s}
 .topbar{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .logo{height:26px;width:auto}
 .lang-wrap{position:relative}
@@ -1755,7 +1816,9 @@ const CSS = `
 .ab-stat-sep{width:1px;height:28px;background:${C.line}}
 
 @media (prefers-reduced-motion: reduce){
-  .rv,.hero-glow,.petal,.htitle em,.ha,.cta-shine,.sh-chev,.genslot-box,.genslot-empty svg{animation:none!important}
+  .rv,.hero-glow,.petal,.htitle em,.cta-shine,.sh-chev,.genslot-box,.genslot-empty svg,
+  .lotus-g,.ripple,.drop,.fire,.mist,.water-glow{animation:none!important}
+  .ripple,.drop{opacity:0}
   .rv{opacity:1;transform:none}
   .sw-tile,.ab-card,.sw-eyebrow,.sw-title,.sw-sub,.ab-title,.ab-lead,.ab-stats,.sw-glow{animation:none!important}
   .sw-tile:hover .sw-shine{animation:none}
