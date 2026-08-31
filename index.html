@@ -87,6 +87,11 @@ const PETALS = [
   { l: 93, d: 23, dl: 8,   s: 11, o: .26, k: 0 },
 ];
 
+/* Hero kinematik video: tuvakka ekilgan gul sekin ochiladi (AI, qora fonda).
+   Poster — video yuklangunga qadar ko'rinadigan kadr. */
+const HERO_POSTER = "https://d8j0ntlcm91z4.cloudfront.net/user_370qfkcxfpKcDA0sH662HyZQBGj/hf_20260831_190935_684762ca-e59a-4228-8391-43638302beae.png";
+const HERO_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_370qfkcxfpKcDA0sH662HyZQBGj/hf_20260831_191049_6c6f5128-cb65-4d7f-92a8-6147352ebf2c.mp4";
+
 const LOGO_STACK = "https://d8j0ntlcm91z4.cloudfront.net/user_370qfkcxfpKcDA0sH662HyZQBGj/hf_20260822_075921_266218b5-e18b-41f0-9412-33c7dfe35eed.png";
 
 // Same origin as this page (site + admin + api all live in one Vercel project).
@@ -1234,33 +1239,11 @@ function App() {
         </div>
         {/* KINEMATIK SAHNA: qora tun, nurlanuvchi nilufar, suv sathi va halqa to'lqinlar */}
         <div className="hero-scene" aria-hidden="true">
+          <video className="hero-video" src={HERO_VIDEO} poster={HERO_POSTER}
+            autoPlay muted loop playsInline preload="metadata" />
+          <div className="hero-veil" />
           <div className="mist m1" />
           <div className="mist m2" />
-          <svg className="lotus" viewBox="0 0 240 200">
-            <defs>
-              <radialGradient id="lpet" cx="50%" cy="30%" r="80%">
-                <stop offset="0%" stopColor="#ffedb8" />
-                <stop offset="45%" stopColor="#dfb56b" />
-                <stop offset="100%" stopColor="#6e5220" />
-              </radialGradient>
-              <radialGradient id="lcore" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#fff3cf" />
-                <stop offset="100%" stopColor="#c6a05b" />
-              </radialGradient>
-              <filter id="lglow" x="-60%" y="-60%" width="220%" height="220%">
-                <feGaussianBlur stdDeviation="7" result="b" />
-                <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-              </filter>
-            </defs>
-            <g className="lotus-g" filter="url(#lglow)">
-              <path className="lp lp5" d="M120 168 C82 164 50 140 40 104 C80 108 110 132 120 168 Z" />
-              <path className="lp lp5" d="M120 168 C158 164 190 140 200 104 C160 108 130 132 120 168 Z" />
-              <path className="lp lp3" d="M120 168 C92 152 76 122 76 86 C104 100 118 130 120 168 Z" />
-              <path className="lp lp3" d="M120 168 C148 152 164 122 164 86 C136 100 122 130 120 168 Z" />
-              <path className="lp lp1" d="M120 168 C102 132 102 84 120 44 C138 84 138 132 120 168 Z" />
-              <circle className="lp-core" cx="120" cy="150" r="7" />
-            </g>
-          </svg>
           <div className="water">
             <div className="water-glow" />
             <span className="ripple rp1" />
@@ -1648,16 +1631,14 @@ const CSS = `
 @keyframes mistDrift{0%{transform:translateX(-8%)}100%{transform:translateX(8%)}}
 
 .hero-scene{position:absolute;inset:0;pointer-events:none}
+.hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 64%;opacity:.92;background:#000}
+.hero-veil{position:absolute;inset:0;
+  background:linear-gradient(180deg,#000d 0%,#0008 20%,#0002 42%,#0003 68%,#000e 100%)}
 .mist{position:absolute;width:150%;left:-25%;height:180px;filter:blur(34px);opacity:.5}
 .m1{top:28%;background:radial-gradient(50% 60% at 50% 50%, #7fd8c81a, transparent 70%);
   animation:mistDrift 26s ease-in-out infinite alternate}
 .m2{top:58%;background:radial-gradient(50% 60% at 40% 50%, ${C.laiton}14, transparent 70%);
   animation:mistDrift 34s ease-in-out 4s infinite alternate-reverse}
-.lotus{position:absolute;left:50%;top:44%;width:272px;height:227px;margin-left:-136px;opacity:.46}
-.lotus-g{transform-origin:120px 168px;animation:lotusSway 7s ease-in-out infinite, lotusBreathe 5.2s ease-in-out infinite}
-.lp{fill:url(#lpet);stroke:#f5dfae55;stroke-width:1}
-.lp1{opacity:.95}.lp3{opacity:.7}.lp5{opacity:.45}
-.lp-core{fill:url(#lcore)}
 .water{position:absolute;left:0;right:0;bottom:0;height:96px;
   background:linear-gradient(to bottom, transparent, #03120dcc 55%, #020c08)}
 .water-glow{position:absolute;left:50%;bottom:6px;width:280px;height:56px;transform:translateX(-50%);
