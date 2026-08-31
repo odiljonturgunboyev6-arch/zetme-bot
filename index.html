@@ -574,8 +574,11 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
               <div key={i} className="prof-order">
                 <div className="prof-order-top">
                   <span className="prof-order-date">{dateOf(o.ts)}</span>
-                  {o.shopName && <span className="prof-order-shop"><Store size={10} /> {o.shopName}</span>}
+                  <span className={"po-status po-" + (o.status || "yangi")}>
+                    {({ yangi: "🆕 Yangi", tayyorlanmoqda: "📦 Tayyorlanmoqda", yetkazildi: "✅ Yetkazildi", bekor: "❌ Bekor" })[o.status || "yangi"]}
+                  </span>
                 </div>
+                {o.shopName && <div className="prof-order-shop" style={{ marginBottom: 5 }}><Store size={10} /> {o.shopName}</div>}
                 <div className="prof-order-items">
                   {(o.items || []).slice(0, 3).map((it, k) => (
                     <div key={k}>{it.qty} × {it.name}</div>
@@ -1624,6 +1627,11 @@ const CSS = `
 .prof-order-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px}
 .prof-order-date{font-size:11px;color:${C.inkDim}}
 .prof-order-shop{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:${C.laitonLo}}
+.po-status{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.po-yangi{background:#E7F3FE;color:#2B7FD6}
+.po-tayyorlanmoqda{background:#FBF3E2;color:#8a6a2f}
+.po-yetkazildi{background:#EAF3EC;color:${C.accent}}
+.po-bekor{background:#FBEFEA;color:${C.sale}}
 .prof-order-items{font-size:12px;color:${C.ink};line-height:1.55}
 .prof-order-total{margin-top:6px;font-weight:700;font-size:13px;color:${C.ink}}
 .prof-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}

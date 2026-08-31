@@ -1,8 +1,13 @@
-// Zetme AI — Sotuvchi buyurtmalar tarixi (analitika uchun)
-// POST /api/orders  { action:"list" }
-//   Kirish: sotuvchi headerlari (x-seller-login + x-seller-password)
-//           yoki super-admin (x-admin-password) — u holda body.sellerId (default "zetme")
-// Javob: { ok:true, orders:[{ts,total,payTotal,priceMode,totalQty,bonusApplied,items,customer}] }
+// Zetme AI — Sotuvchi buyurtmalari: tarix (analitika) + STATUS boshqaruvi
+// POST /api/orders  action bo'yicha:
+//   { action:"list" }
+//        -> { ok, orders:[{id,status,ts,total,payTotal,items,customer,...}] }
+//   { action:"setStatus", id, status }
+//        -> statusni o'zgartiradi: yangi | tayyorlanmoqda | yetkazildi | bekor
+//           mijozning myorders:<chatId> tarixida ham yangilanadi va
+//           mijozga Telegram orqali xabar yuboriladi (BOT_TOKEN bo'lsa)
+// Kirish: sotuvchi headerlari (x-seller-login + x-seller-password)
+//         yoki super-admin (x-admin-password) — u holda body.sellerId (default "zetme")
 // Buyurtmalar api/bot.js da mijoz tasdiqlagan paytda yoziladi (oxirgi 500 ta).
 
 import { kv } from "@vercel/kv";
@@ -38,9 +43,7 @@ export default async function handler(req, res) {
 
   try {
     const body = req.body || {};
-    if (String(body.action || "") !== "list") {
-      return res.status(400).json({ ok: false, error: "Noma'lum amal" });
-    }
+    const action = String(body.action || "");
 
     let sellerId = null;
     const seller = await resolveSeller(req);
@@ -48,8 +51,64 @@ export default async function handler(req, res) {
     else if (isAdmin(req)) sellerId = String(body.sellerId || "zetme");
     if (!sellerId) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
 
-    const orders = (await kv.get(`orders:${sellerId}`)) || [];
-    return res.status(200).json({ ok: true, orders });
+    if (action === "list") {
+      const orders = (await kv.get(`orders:${sellerId}`)) || [];
+      return res.status(200).json({ ok: true, orders });
+    }
+
+    if (action === "setStatus") {
+      const STATUSES = ["yangi", "tayyorlanmoqda", "yetkazildi", "bekor"];
+      const LABELS = {
+        yangi: "🆕 Yangi",
+        tayyorlanmoqda: "📦 Tayyorlanmoqda",
+        yetkazildi: "✅ Yetkazib berildi",
+        bekor: "❌ Bekor qilindi",
+      };
+      const id = String(body.id || "");
+      const status = String(body.status || "");
+      if (!id) return res.status(400).json({ ok: false, error: "Buyurtma ID si yo'q" });
+      if (!STATUSES.includes(status)) return res.status(400).json({ ok: false, error: "Noto'g'ri status" });
+
+      const okey = `orders:${sellerId}`;
+      const orders = (await kv.get(okey)) || [];
+      const idx = orders.findIndex((o) => o.id === id);
+      if (idx === -1) return res.status(404).json({ ok: false, error: "Buyurtma topilmadi (eski buyurtmalarda status boshqarilmaydi)" });
+
+      orders[idx].status = status;
+      orders[idx].statusTs = Date.now();
+      await kv.set(okey, orders);
+
+      // mijoz tarixida ham yangilaymiz
+      const chatId = orders[idx].customer && orders[idx].customer.chatId;
+      if (chatId) {
+        try {
+          const mkey = `myorders:${chatId}`;
+          const mine = (await kv.get(mkey)) || [];
+          const mi = mine.findIndex((o) => o.id === id);
+          if (mi !== -1) { mine[mi].status = status; mine[mi].statusTs = Date.now(); await kv.set(mkey, mine); }
+        } catch (e) { console.error("myorders status:", e); }
+
+        // mijozga Telegram xabar (xato bo'lsa ham status saqlangan bo'ladi)
+        try {
+          const BOT_TOKEN = process.env.BOT_TOKEN;
+          if (BOT_TOKEN) {
+            const shopName = orders[idx].shopName || (seller && seller.shopName) || "";
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: `Buyurtmangiz holati yangilandi\n\n#${id}${shopName ? ` · ${shopName} do'koni` : ""}\nYangi holat: ${LABELS[status]}`,
+              }),
+            });
+          }
+        } catch (e) { console.error("status tg:", e); }
+      }
+
+      return res.status(200).json({ ok: true, orders });
+    }
+
+    return res.status(400).json({ ok: false, error: "Noma'lum amal" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, error: "Server xatosi" });

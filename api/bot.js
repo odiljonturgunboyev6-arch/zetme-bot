@@ -112,7 +112,8 @@ export default async function handler(req, res) {
           return res.status(200).send("ok");
         }
 
-        await kv.set(`draft:${chatId}`, order, { ex: 3600 });
+        // orderId ni ham saqlaymiz — tasdiqlangach buyurtma tarixida id bo'ladi (status boshqaruvi uchun)
+        await kv.set(`draft:${chatId}`, { ...order, orderId }, { ex: 3600 });
 
         const profile = await kv.get(`customer:${chatId}`);
         if (profile && profile.name && profile.phone && profile.region) {
@@ -210,6 +211,8 @@ export default async function handler(req, res) {
           const okey = `orders:${draft.sellerId || "zetme"}`;
           const arr = (await kv.get(okey)) || [];
           arr.unshift({
+            id: draft.orderId || `x${Date.now().toString(36)}`,
+            status: "yangi",          // yangi -> tayyorlanmoqda -> yetkazildi / bekor
             ts: Date.now(),
             total: draft.total || 0,
             payTotal: draft.payTotal || draft.total || 0,
@@ -232,6 +235,8 @@ export default async function handler(req, res) {
           const mkey = `myorders:${chatId}`;
           const mine = (await kv.get(mkey)) || [];
           mine.unshift({
+            id: arr[0].id,
+            status: "yangi",
             ts: Date.now(),
             total: draft.total || 0,
             payTotal: draft.payTotal || draft.total || 0,

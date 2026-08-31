@@ -55,6 +55,30 @@
   .newprodbtn { width:100%; padding:14px; margin-bottom:16px; border:1.5px dashed var(--accent); border-radius:14px; background:#EAF3EC; color:var(--accent); font-size:15px; font-weight:700; font-family:inherit; cursor:pointer; }
   .newprodbtn:hover { background:#dfeee3; }
 
+  /* buyurtmalar boshqaruvi */
+  .ordfilters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .ordfilter { border:1px solid var(--mline); background:#fff; color:var(--inkDim); border-radius:20px; padding:6px 12px; font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; }
+  .ordfilter.active { background:var(--vert); border-color:var(--vert); color:var(--ivoire); }
+  .ordrow { background:var(--paper); border:1px solid var(--mline); border-radius:13px; padding:12px 13px; margin-bottom:10px; }
+  .ordrow.st-yangi { border-left:3px solid #2B7FD6; }
+  .ordrow.st-tayyorlanmoqda { border-left:3px solid var(--laiton); }
+  .ordrow.st-yetkazildi { border-left:3px solid var(--accent); }
+  .ordrow.st-bekor { border-left:3px solid var(--sale); opacity:.75; }
+  .ord-top { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:5px; }
+  .ord-id { font-size:11.5px; font-weight:700; color:var(--inkDim); }
+  .ord-date { font-size:11px; color:var(--inkDim); }
+  .ord-cust { font-size:13px; font-weight:600; margin-bottom:3px; }
+  .ord-cust span { font-weight:400; color:var(--inkDim); }
+  .ord-items { font-size:12px; color:var(--ink); line-height:1.5; margin-bottom:6px; }
+  .ord-total { font-weight:700; font-size:13px; margin-bottom:9px; }
+  .ord-statusrow { display:flex; gap:5px; flex-wrap:wrap; }
+  .ord-st { border:1px solid var(--mline); background:#fff; border-radius:16px; padding:5px 10px; font-size:11px; font-weight:600; font-family:inherit; cursor:pointer; color:var(--inkDim); }
+  .ord-st:disabled { cursor:default; }
+  .ord-st.on-yangi { background:#E7F3FE; border-color:#2B7FD6; color:#2B7FD6; }
+  .ord-st.on-tayyorlanmoqda { background:#FBF3E2; border-color:var(--laiton); color:#8a6a2f; }
+  .ord-st.on-yetkazildi { background:#EAF3EC; border-color:var(--accent); color:var(--accent); }
+  .ord-st.on-bekor { background:#FBEFEA; border-color:var(--sale); color:var(--sale); }
+
   /* analitika */
   .stat-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:14px; }
   .stat-tile { background:var(--paper); border:1px solid var(--mline); border-radius:12px; padding:12px; }
@@ -189,6 +213,13 @@
     <div class="card" data-pane="profil" id="statsCard">
       <h3>Sotuvlar va analitika <span class="badge" id="statsBadge"></span></h3>
       <div id="statsBody"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
+    </div>
+
+    <!-- PROFIL: buyurtmalar boshqaruvi -->
+    <div class="card" data-pane="profil" id="ordersCard">
+      <h3>Buyurtmalar <span class="badge" id="ordBadge"></span></h3>
+      <div class="ordfilters" id="ordFilters"></div>
+      <div id="ordList"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
     </div>
 
     <!-- SUPER-ADMIN: sotuvchilar boshqaruvi -->
@@ -444,9 +475,85 @@
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Xatolik");
-      renderAnalytics(data.orders || []);
+      ordersCache = data.orders || [];
+      renderAnalytics(ordersCache);
+      renderOrders();
     } catch (err) {
       el.innerHTML = `<p style="color:var(--inkDim);font-size:13px;">Analitikani yuklab bo'lmadi: ${escHtml(err.message)}</p>`;
+      document.getElementById("ordList").innerHTML = `<p style="color:var(--inkDim);font-size:13px;">Buyurtmalarni yuklab bo'lmadi</p>`;
+    }
+  }
+
+  // ===================== buyurtmalar boshqaruvi =====================
+  let ordersCache = [];
+  let ordFilter = "faol"; // faol | yangi | yetkazildi | bekor | all
+  const ST_LABEL = { yangi: "🆕 Yangi", tayyorlanmoqda: "📦 Tayyorlanmoqda", yetkazildi: "✅ Yetkazildi", bekor: "❌ Bekor" };
+  const stOf = o => o.status || "yangi";
+  function setOrdFilter(f) { ordFilter = f; renderOrders(); }
+  function ordDate(ts) {
+    const d = new Date(ts); const p = n => String(n).padStart(2, "0");
+    return `${p(d.getDate())}.${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+  function renderOrders() {
+    const yangiCount = ordersCache.filter(o => stOf(o) === "yangi").length;
+    document.getElementById("ordBadge").textContent = yangiCount ? `${yangiCount} ta yangi` : (ordersCache.length ? `${ordersCache.length} ta` : "");
+    const counts = {
+      faol: ordersCache.filter(o => stOf(o) === "yangi" || stOf(o) === "tayyorlanmoqda").length,
+      yangi: yangiCount,
+      yetkazildi: ordersCache.filter(o => stOf(o) === "yetkazildi").length,
+      bekor: ordersCache.filter(o => stOf(o) === "bekor").length,
+      all: ordersCache.length,
+    };
+    document.getElementById("ordFilters").innerHTML = [
+      ["faol", "Faol"], ["yangi", "Yangi"], ["yetkazildi", "Yetkazilgan"], ["bekor", "Bekor"], ["all", "Hammasi"],
+    ].map(([f, l]) => `<button class="ordfilter${ordFilter === f ? " active" : ""}" onclick="setOrdFilter('${f}')">${l} (${counts[f]})</button>`).join("");
+
+    const list = ordersCache.filter(o => {
+      if (ordFilter === "all") return true;
+      if (ordFilter === "faol") return stOf(o) === "yangi" || stOf(o) === "tayyorlanmoqda";
+      return stOf(o) === ordFilter;
+    });
+    const el = document.getElementById("ordList");
+    if (ordersCache.length === 0) {
+      el.innerHTML = `<p style="color:var(--inkDim);font-size:13px;line-height:1.6;">Hali buyurtma yo'q. Mijoz botda tasdiqlagan buyurtmalar shu yerga tushadi va statusini boshqarasiz.</p>`;
+      return;
+    }
+    if (list.length === 0) { el.innerHTML = `<p style="color:var(--inkDim);font-size:13px;">Bu bo'limda buyurtma yo'q.</p>`; return; }
+    el.innerHTML = list.map(o => {
+      const c = o.customer || {};
+      const items = (o.items || []).map(i => `${i.qty} × ${escHtml(i.name)}`).join("<br>");
+      const stBtns = ["yangi", "tayyorlanmoqda", "yetkazildi", "bekor"].map(s =>
+        `<button class="ord-st${stOf(o) === s ? " on-" + s : ""}" ${!o.id ? "disabled" : `onclick="setOrderStatus('${escAttr(o.id)}','${s}')"`}>${ST_LABEL[s]}</button>`
+      ).join("");
+      return `
+        <div class="ordrow st-${stOf(o)}">
+          <div class="ord-top">
+            <span class="ord-id">${o.id ? "#" + escHtml(o.id) : "—"}</span>
+            <span class="ord-date">${ordDate(o.ts)}</span>
+          </div>
+          <div class="ord-cust">${escHtml(c.name || "Mijoz")} <span>· ${escHtml(c.phone || "")}${c.region ? " · " + escHtml(c.region) : ""}</span></div>
+          <div class="ord-items">${items}</div>
+          <div class="ord-total">${fmtSum(o.payTotal || o.total || 0)}${o.priceMode === "optom" ? " · optom" : ""}</div>
+          <div class="ord-statusrow">${stBtns}</div>
+          ${!o.id ? `<div class="hint" style="margin-top:6px;">Eski buyurtma — statusi boshqarilmaydi</div>` : ""}
+        </div>`;
+    }).join("");
+  }
+  async function setOrderStatus(id, status) {
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ action: "setStatus", id, status }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Xatolik");
+      ordersCache = data.orders || [];
+      renderOrders();
+    } catch (err) {
+      const el = document.getElementById("ordList");
+      el.insertAdjacentHTML("afterbegin", `<div class="msg err" style="margin-bottom:10px;">${escHtml(err.message)}</div>`);
+      setTimeout(renderOrders, 3500);
     }
   }
   function renderAnalytics(orders) {
