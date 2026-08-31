@@ -67,7 +67,8 @@ export default async function handler(req, res) {
       }
       const profile = await kv.get(`customer:${chatId}`);
       const orders = (await kv.get(`myorders:${chatId}`)) || [];
-      return res.status(200).json({ ok: true, chatId: String(chatId), token, profile: publicProfile(chatId, profile), orders });
+      const vouchers = ((await kv.get(`vouchers:${chatId}`)) || []).filter((v) => !v.used);
+      return res.status(200).json({ ok: true, chatId: String(chatId), token, profile: publicProfile(chatId, profile), orders, vouchers });
     }
 
     /* ---------- token talab qiladigan amallar ---------- */
@@ -80,7 +81,64 @@ export default async function handler(req, res) {
     if (action === "me") {
       const profile = await kv.get(`customer:${chatId}`);
       const orders = (await kv.get(`myorders:${chatId}`)) || [];
-      return res.status(200).json({ ok: true, profile: publicProfile(chatId, profile), orders });
+      const vouchers = ((await kv.get(`vouchers:${chatId}`)) || []).filter((v) => !v.used);
+      return res.status(200).json({ ok: true, profile: publicProfile(chatId, profile), orders, vouchers });
+    }
+
+    /* ---------- mijoz buyurtmani bekor qiladi ----------
+       Faqat sotuvchi "Tayyorlanmoqda"ni bosishidan OLDIN (status "yangi" bo'lganda). */
+    if (action === "cancelOrder") {
+      const id = String(body.id || "");
+      if (!id) return res.status(400).json({ ok: false, error: "Buyurtma ID si yo'q" });
+
+      const mkey = `myorders:${chatId}`;
+      const mine = (await kv.get(mkey)) || [];
+      const mi = mine.findIndex((o) => o.id === id);
+      if (mi === -1) return res.status(404).json({ ok: false, error: "Buyurtma topilmadi" });
+      const sellerId = mine[mi].sellerId;
+      if (!sellerId) return res.status(400).json({ ok: false, error: "Bu buyurtmani saytdan bekor qilib bo'lmaydi" });
+
+      // haqiqiy holatni sotuvchi tomonidagi yozuvdan tekshiramiz
+      const okey = `orders:${sellerId}`;
+      const orders = (await kv.get(okey)) || [];
+      const oi = orders.findIndex((o) => o.id === id);
+      const realStatus = oi !== -1 ? (orders[oi].status || "yangi") : (mine[mi].status || "yangi");
+      if (realStatus !== "yangi") {
+        return res.status(400).json({ ok: false, error: "Sotuvchi buyurtmani tayyorlashni boshlagan — endi bekor qilib bo'lmaydi. Do'kon bilan bog'laning." });
+      }
+
+      const now = Date.now();
+      if (oi !== -1) {
+        orders[oi].status = "bekor";
+        orders[oi].statusTs = now;
+        orders[oi].cancelReason = "Mijoz o'zi bekor qildi";
+        orders[oi].cancelledBy = "mijoz";
+        await kv.set(okey, orders);
+      }
+      mine[mi].status = "bekor";
+      mine[mi].statusTs = now;
+      mine[mi].cancelReason = "O'zingiz bekor qildingiz";
+      mine[mi].cancelledBy = "mijoz";
+      await kv.set(mkey, mine);
+
+      // sotuvchiga xabar beramiz
+      try {
+        const BOT_TOKEN = process.env.BOT_TOKEN;
+        if (BOT_TOKEN) {
+          const sellers = (await kv.get("sellers")) || [];
+          const seller = sellers.find((s) => s.id === sellerId);
+          const target = (seller && String(seller.telegramChatId || "").trim()) || process.env.OWNER_CHAT_ID;
+          if (target) {
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chat_id: target, text: `❌ Mijoz buyurtmani bekor qildi\n\n#${id}${mine[mi].shopName ? ` · ${mine[mi].shopName}` : ""}\nSumma: ${Math.round(mine[mi].payTotal || 0).toLocaleString("uz-UZ").replace(/,/g, " ")} so'm` }),
+            });
+          }
+        }
+      } catch (e) { console.error("cancel tg:", e); }
+
+      return res.status(200).json({ ok: true, orders: mine });
     }
 
     if (action === "updateProfile") {

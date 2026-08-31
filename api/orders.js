@@ -69,6 +69,19 @@ export default async function handler(req, res) {
       if (!id) return res.status(400).json({ ok: false, error: "Buyurtma ID si yo'q" });
       if (!STATUSES.includes(status)) return res.status(400).json({ ok: false, error: "Noto'g'ri status" });
 
+      // BEKOR qilish qoidasi: sabab majburiy + mijozga 5-10% bonus vaucher (1 mln gacha qismiga)
+      let cancelReason = "", bonusPercent = 0;
+      if (status === "bekor") {
+        cancelReason = String(body.comment || "").trim().slice(0, 300);
+        if (cancelReason.length < 5) {
+          return res.status(400).json({ ok: false, error: "Bekor qilish sababini yozing (mijozga ko'rinadi, kamida 5 ta belgi)" });
+        }
+        bonusPercent = Math.round(Number(body.bonusPercent) || 5);
+        if (bonusPercent < 5 || bonusPercent > 10) {
+          return res.status(400).json({ ok: false, error: "Bonus 5% dan 10% gacha bo'lishi kerak" });
+        }
+      }
+
       const okey = `orders:${sellerId}`;
       const orders = (await kv.get(okey)) || [];
       const idx = orders.findIndex((o) => o.id === id);
@@ -76,16 +89,44 @@ export default async function handler(req, res) {
 
       orders[idx].status = status;
       orders[idx].statusTs = Date.now();
+      if (status === "bekor") {
+        orders[idx].cancelReason = cancelReason;
+        orders[idx].cancelledBy = "sotuvchi";
+        orders[idx].bonusPercent = bonusPercent;
+      }
       await kv.set(okey, orders);
 
+      // bekor bo'lsa mijozga bonus vaucher yozamiz (bitta buyurtma uchun faqat bir marta)
+      const custChatId = orders[idx].customer && orders[idx].customer.chatId;
+      if (status === "bekor" && custChatId && !orders[idx].bonusGiven) {
+        try {
+          const vkey = `vouchers:${custChatId}`;
+          const vlist = (await kv.get(vkey)) || [];
+          vlist.unshift({ sellerId, percent: bonusPercent, cap: 1000000, orderId: id, ts: Date.now(), used: false });
+          if (vlist.length > 20) vlist.length = 20;
+          await kv.set(vkey, vlist);
+          orders[idx].bonusGiven = true;
+          await kv.set(okey, orders);
+        } catch (e) { console.error("voucher berish:", e); }
+      }
+
       // mijoz tarixida ham yangilaymiz
-      const chatId = orders[idx].customer && orders[idx].customer.chatId;
+      const chatId = custChatId;
       if (chatId) {
         try {
           const mkey = `myorders:${chatId}`;
           const mine = (await kv.get(mkey)) || [];
           const mi = mine.findIndex((o) => o.id === id);
-          if (mi !== -1) { mine[mi].status = status; mine[mi].statusTs = Date.now(); await kv.set(mkey, mine); }
+          if (mi !== -1) {
+            mine[mi].status = status;
+            mine[mi].statusTs = Date.now();
+            if (status === "bekor") {
+              mine[mi].cancelReason = cancelReason;
+              mine[mi].cancelledBy = "sotuvchi";
+              mine[mi].bonusPercent = bonusPercent;
+            }
+            await kv.set(mkey, mine);
+          }
         } catch (e) { console.error("myorders status:", e); }
 
         // mijozga Telegram xabar (xato bo'lsa ham status saqlangan bo'ladi)
@@ -93,13 +134,13 @@ export default async function handler(req, res) {
           const BOT_TOKEN = process.env.BOT_TOKEN;
           if (BOT_TOKEN) {
             const shopName = orders[idx].shopName || (seller && seller.shopName) || "";
+            const text = status === "bekor"
+              ? `Buyurtmangiz bekor qilindi 😔\n\n#${id}${shopName ? ` · ${shopName} do'koni` : ""}\nSabab: ${cancelReason}\n\n🎁 Uzr sifatida keyingi buyurtmangizga ${bonusPercent}% chegirma taqdim etildi (buyurtmaning 1 mln so'mgacha qismiga). U keyingi buyurtmani tasdiqlaganingizda avtomatik qo'llanadi.`
+              : `Buyurtmangiz holati yangilandi\n\n#${id}${shopName ? ` · ${shopName} do'koni` : ""}\nYangi holat: ${LABELS[status]}`;
             await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chat_id: chatId,
-                text: `Buyurtmangiz holati yangilandi\n\n#${id}${shopName ? ` · ${shopName} do'koni` : ""}\nYangi holat: ${LABELS[status]}`,
-              }),
+              body: JSON.stringify({ chat_id: chatId, text }),
             });
           }
         } catch (e) { console.error("status tg:", e); }

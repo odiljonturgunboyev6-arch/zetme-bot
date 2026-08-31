@@ -78,6 +78,10 @@
   .ord-st.on-tayyorlanmoqda { background:#FBF3E2; border-color:var(--laiton); color:#8a6a2f; }
   .ord-st.on-yetkazildi { background:#EAF3EC; border-color:var(--accent); color:var(--accent); }
   .ord-st.on-bekor { background:#FBEFEA; border-color:var(--sale); color:var(--sale); }
+  .ord-cancelform { margin-top:10px; padding:12px; background:#fff; border:1px dashed var(--sale); border-radius:11px; }
+  .ord-cancelform textarea { width:100%; padding:9px 11px; border:1px solid var(--mline); border-radius:9px; font-size:13px; font-family:inherit; resize:vertical; }
+  .ord-bonusrow { display:flex; gap:6px; }
+  .ord-bekorinfo { font-size:12px; color:var(--sale); background:#FBEFEA; border-radius:8px; padding:7px 10px; margin-bottom:8px; line-height:1.5; }
 
   /* analitika */
   .stat-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:14px; }
@@ -522,9 +526,28 @@
     el.innerHTML = list.map(o => {
       const c = o.customer || {};
       const items = (o.items || []).map(i => `${i.qty} × ${escHtml(i.name)}`).join("<br>");
-      const stBtns = ["yangi", "tayyorlanmoqda", "yetkazildi", "bekor"].map(s =>
-        `<button class="ord-st${stOf(o) === s ? " on-" + s : ""}" ${!o.id ? "disabled" : `onclick="setOrderStatus('${escAttr(o.id)}','${s}')"`}>${ST_LABEL[s]}</button>`
-      ).join("");
+      const stBtns = ["yangi", "tayyorlanmoqda", "yetkazildi", "bekor"].map(s => {
+        const click = s === "bekor" ? `openCancelForm('${escAttr(o.id)}')` : `setOrderStatus('${escAttr(o.id)}','${s}')`;
+        return `<button class="ord-st${stOf(o) === s ? " on-" + s : ""}" ${!o.id ? "disabled" : `onclick="${click}"`}>${ST_LABEL[s]}</button>`;
+      }).join("");
+      const cancelForm = cancelFormId === o.id ? `
+        <div class="ord-cancelform">
+          <label style="margin:0 0 4px;">Bekor qilish sababi (mijozga yuboriladi)</label>
+          <textarea id="cancelReason" rows="2" placeholder="Masalan: bu rangdagi tuvak tugab qolgan ekan, uzr so'raymiz"></textarea>
+          <label style="margin:8px 0 4px;">Mijozga bonus — keyingi buyurtmasiga chegirma (1 mln so'mgacha qismiga)</label>
+          <div class="ord-bonusrow">
+            ${[5, 7, 10].map(p => `<button type="button" class="ordfilter${cancelBonus === p ? " active" : ""}" onclick="pickBonus(this,${p})">${p}%</button>`).join("")}
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="ord-st on-bekor" onclick="submitCancel('${escAttr(o.id)}')">❌ Bekor qilishni tasdiqlash</button>
+            <button class="ord-st" onclick="cancelFormId=null;renderOrders()">Ortga</button>
+          </div>
+          <div id="cancelErr"></div>
+        </div>` : "";
+      const bekorInfo = stOf(o) === "bekor" ? `
+        <div class="ord-bekorinfo">
+          ${o.cancelledBy === "mijoz" ? "❌ Mijoz o'zi bekor qilgan" : `❌ Sabab: ${escHtml(o.cancelReason || "—")}${o.bonusPercent ? ` · 🎁 mijozga ${o.bonusPercent}% bonus berildi` : ""}`}
+        </div>` : "";
       return `
         <div class="ordrow st-${stOf(o)}">
           <div class="ord-top">
@@ -533,11 +556,52 @@
           </div>
           <div class="ord-cust">${escHtml(c.name || "Mijoz")} <span>· ${escHtml(c.phone || "")}${c.region ? " · " + escHtml(c.region) : ""}</span></div>
           <div class="ord-items">${items}</div>
-          <div class="ord-total">${fmtSum(o.payTotal || o.total || 0)}${o.priceMode === "optom" ? " · optom" : ""}</div>
+          <div class="ord-total">${fmtSum(o.payTotal || o.total || 0)}${o.priceMode === "optom" ? " · optom" : ""}${o.voucherDiscount ? ` · 🎁 −${fmtSum(o.voucherDiscount)} chegirma qo'llangan` : ""}</div>
+          ${bekorInfo}
           <div class="ord-statusrow">${stBtns}</div>
+          ${cancelForm}
           ${!o.id ? `<div class="hint" style="margin-top:6px;">Eski buyurtma — statusi boshqarilmaydi</div>` : ""}
         </div>`;
     }).join("");
+  }
+  let cancelFormId = null;
+  let cancelBonus = 5;
+  let cancelDraft = "";
+  function pickBonus(btn, p) {
+    cancelBonus = p;
+    [...btn.parentElement.children].forEach(b => b.classList.toggle("active", b === btn));
+  }
+  function openCancelForm(id) {
+    const o = ordersCache.find(x => x.id === id);
+    if (o && stOf(o) === "bekor") return;   // allaqachon bekor
+    cancelDraft = "";
+    cancelFormId = id;
+    cancelBonus = 5;
+    renderOrders();
+    const ta = document.getElementById("cancelReason");
+    if (ta) { ta.value = cancelDraft; ta.oninput = () => { cancelDraft = ta.value; }; ta.focus(); }
+  }
+  async function submitCancel(id) {
+    const reason = (document.getElementById("cancelReason") || {}).value || "";
+    const errEl = document.getElementById("cancelErr");
+    if (reason.trim().length < 5) {
+      errEl.innerHTML = '<div class="msg err">Sababni yozing — mijoz nima uchun bekor bo\'lganini bilishi kerak</div>';
+      return;
+    }
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ action: "setStatus", id, status: "bekor", comment: reason.trim(), bonusPercent: cancelBonus }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Xatolik");
+      cancelFormId = null;
+      ordersCache = data.orders || [];
+      renderOrders();
+    } catch (err) {
+      errEl.innerHTML = `<div class="msg err">${escHtml(err.message)}</div>`;
+    }
   }
   async function setOrderStatus(id, status) {
     try {

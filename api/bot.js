@@ -38,6 +38,15 @@ const answerCallback = (id, text) => tg("answerCallbackQuery", { callback_query_
 
 // order = { items:[{name,price,qty}], totalQty, priceMode, total, bonus, payTotal,
 //           sellerId, shopName, sellerChatId } — marketplace: buyurtma bitta do'konga tegishli
+// Bekor kompensatsiyasi vaucheri: sotuvchi buyurtmani bekor qilganda beriladi
+// (api/orders.js). Keyingi buyurtma tasdiqlanganda shu yerda avtomatik qo'llanadi.
+async function unusedVoucher(chatId, sellerId) {
+  const list = (await kv.get(`vouchers:${chatId}`)) || [];
+  const idx = list.findIndex((v) => !v.used && v.sellerId === (sellerId || "zetme"));
+  return { list, idx, v: idx === -1 ? null : list[idx] };
+}
+const VOUCHER_CAP = 1000000; // chegirma buyurtmaning 1 mln so'mgacha qismiga qo'llanadi
+
 function orderSummaryText(order) {
   const lines = order.items.map((i) => `• ${escapeMd(i.name)} — ${i.qty} dona × ${fmt(i.price)}`).join("\n");
   let extra = "";
@@ -116,10 +125,16 @@ export default async function handler(req, res) {
         await kv.set(`draft:${chatId}`, { ...order, orderId }, { ex: 3600 });
 
         const profile = await kv.get(`customer:${chatId}`);
+        // bekor kompensatsiyasi bo'lsa oldindan aytamiz
+        let vNote = "";
+        try {
+          const { v } = await unusedVoucher(chatId, order.sellerId);
+          if (v) vNote = `\n\n🎁 Sizda ${v.percent}% chegirma bonusingiz bor — tasdiqlasangiz avtomatik qo'llanadi (buyurtmaning 1 mln so'mgacha qismiga).`;
+        } catch (e) {}
         if (profile && profile.name && profile.phone && profile.region) {
           await sendMessage(
             chatId,
-            `Buyurtmangiz:\n\n${orderSummaryText(order)}\n\n👤 ${escapeMd(profile.name)}\n📞 ${escapeMd(profile.phone)}\n📍 ${escapeMd(profile.region)}`,
+            `Buyurtmangiz:\n\n${orderSummaryText(order)}${vNote}\n\n👤 ${escapeMd(profile.name)}\n📞 ${escapeMd(profile.phone)}\n📍 ${escapeMd(profile.region)}`,
             { reply_markup: { inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "confirm" }]] } }
           );
         } else {
@@ -186,14 +201,31 @@ export default async function handler(req, res) {
         }
 
         await answerCallback(cq.id, "Qabul qilindi!");
+
+        // Bekor kompensatsiyasi vaucherini qo'llash (bo'lsa) — 1 mln gacha qismiga
+        let vDisc = 0, vPct = 0;
+        try {
+          const { list: vlist, idx: vidx } = await unusedVoucher(chatId, draft.sellerId);
+          if (vidx !== -1) {
+            vPct = Number(vlist[vidx].percent) || 5;
+            vDisc = Math.round((vPct / 100) * Math.min(Number(draft.total) || 0, VOUCHER_CAP));
+            vlist[vidx].used = true;
+            vlist[vidx].usedTs = Date.now();
+            vlist[vidx].usedOrderId = draft.orderId || "";
+            await kv.set(`vouchers:${chatId}`, vlist);
+          }
+        } catch (e) { console.error("voucher:", e); }
+        const finalPay = Math.max(0, (Number(draft.payTotal) || Number(draft.total) || 0) - vDisc);
+        const vLine = vDisc > 0 ? `\n🎁 *Chegirma bonusi (${vPct}%):* −${fmt(vDisc)}\n*Yakuniy to'lov:* ${fmt(finalPay)}` : "";
+
         await sendMessage(
           chatId,
-          "✅ Buyurtmangiz qabul qilindi!\n\n5 daqiqa ichida operatorimiz siz bilan bog'lanadi. Rahmat!"
+          `✅ Buyurtmangiz qabul qilindi!${vDisc > 0 ? `\n\n🎁 ${vPct}% chegirma bonusingiz qo'llandi: −${fmt(vDisc)}\nYakuniy to'lov: ${fmt(finalPay)}` : ""}\n\n5 daqiqa ichida operatorimiz siz bilan bog'lanadi. Rahmat!`
         );
 
         const uname = from.username ? `@${escapeMd(from.username)}` : "(username yo'q)";
         const orderText =
-          `🛒 *Yangi buyurtma — Zetme AI*\n\n${orderSummaryText(draft)}\n\n` +
+          `🛒 *Yangi buyurtma — Zetme AI*\n\n${orderSummaryText(draft)}${vLine}\n\n` +
           `👤 *Ism:* ${escapeMd(profile.name)}\n📞 *Telefon:* ${escapeMd(profile.phone)}\n📍 *Viloyat:* ${escapeMd(profile.region)}\n💬 *Telegram:* ${uname}`;
 
         // MARKETPLACE: buyurtma o'sha do'kon egasining Telegramiga boradi,
@@ -215,7 +247,8 @@ export default async function handler(req, res) {
             status: "yangi",          // yangi -> tayyorlanmoqda -> yetkazildi / bekor
             ts: Date.now(),
             total: draft.total || 0,
-            payTotal: draft.payTotal || draft.total || 0,
+            payTotal: finalPay,
+            voucherDiscount: vDisc, voucherPercent: vPct,
             priceMode: draft.priceMode || "chakana",
             totalQty: draft.totalQty || 0,
             bonusApplied: !!draft.bonus,
@@ -238,8 +271,10 @@ export default async function handler(req, res) {
             id: arr[0].id,
             status: "yangi",
             ts: Date.now(),
+            sellerId: draft.sellerId || "zetme",
             total: draft.total || 0,
-            payTotal: draft.payTotal || draft.total || 0,
+            payTotal: finalPay,
+            voucherDiscount: vDisc, voucherPercent: vPct,
             shopName: draft.shopName || "",
             totalQty: draft.totalQty || 0,
             items: (draft.items || []).map((i) => ({ name: i.name, price: i.price, qty: i.qty })),

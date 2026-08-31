@@ -452,7 +452,17 @@ function TelegramRedirect({ orderId, itemCount, payTotal, shopName, onBack }) {
 
 /* ============================== Profile screen ============================== */
 function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBuyTokens, onBuyBadge,
-  cust, orders, linked, onLink, onSaveName, onPhoto }) {
+  cust, orders, linked, vouchers, onLink, onSaveName, onPhoto, onCancelOrder }) {
+  const [cancelingId, setCancelingId] = useState(null); // "tasdiqlaysizmi?" bosqichi
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelErr, setCancelErr] = useState("");
+  async function doCancelOrder(id) {
+    setCancelBusy(true); setCancelErr("");
+    const err = await onCancelOrder(id);
+    setCancelBusy(false);
+    setCancelingId(null);
+    if (err) setCancelErr(err);
+  }
   const tier = tierForTokens(tokens, badgeOwned);
   const nextTier = TIERS_BADGE.find((t) => t.min > tokens);
   const photoRef = React.useRef(null);
@@ -566,29 +576,69 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
               <Send size={13} /> Botni ochish
             </a>
           </div>
-        ) : orders.length === 0 ? (
-          <div className="prof-empty">Hali buyurtma yo'q. Do'konlardan xarid qilganingizda shu yerda ko'rinadi.</div>
         ) : (
-          <div className="prof-orders">
-            {orders.map((o, i) => (
-              <div key={i} className="prof-order">
-                <div className="prof-order-top">
-                  <span className="prof-order-date">{dateOf(o.ts)}</span>
-                  <span className={"po-status po-" + (o.status || "yangi")}>
-                    {({ yangi: "🆕 Yangi", tayyorlanmoqda: "📦 Tayyorlanmoqda", yetkazildi: "✅ Yetkazildi", bekor: "❌ Bekor" })[o.status || "yangi"]}
-                  </span>
-                </div>
-                {o.shopName && <div className="prof-order-shop" style={{ marginBottom: 5 }}><Store size={10} /> {o.shopName}</div>}
-                <div className="prof-order-items">
-                  {(o.items || []).slice(0, 3).map((it, k) => (
-                    <div key={k}>{it.qty} × {it.name}</div>
-                  ))}
-                  {(o.items || []).length > 3 && <div>… yana {(o.items || []).length - 3} ta</div>}
-                </div>
-                <div className="prof-order-total">{fmt(o.payTotal || o.total || 0)}</div>
+          <>
+            {vouchers && vouchers.length > 0 && (
+              <div className="prof-vouchers">
+                {vouchers.map((v, i) => (
+                  <div key={i} className="prof-voucher">
+                    🎁 <b>{v.percent}% chegirma</b>{v.shopName ? ` — ${v.shopName} do'konidan` : ""} keyingi buyurtmangizga
+                    (1 mln so'mgacha qismiga). Botda tasdiqlaganingizda avtomatik qo'llanadi.
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+            {cancelErr && <div className="prof-err" style={{ marginBottom: 8 }}>{cancelErr}</div>}
+            {orders.length === 0 ? (
+              <div className="prof-empty">Hali buyurtma yo'q. Do'konlardan xarid qilganingizda shu yerda ko'rinadi.</div>
+            ) : (
+              <div className="prof-orders">
+                {orders.map((o, i) => (
+                  <div key={i} className="prof-order">
+                    <div className="prof-order-top">
+                      <span className="prof-order-date">{dateOf(o.ts)}</span>
+                      <span className={"po-status po-" + (o.status || "yangi")}>
+                        {({ yangi: "🆕 Yangi", tayyorlanmoqda: "📦 Tayyorlanmoqda", yetkazildi: "✅ Yetkazildi", bekor: "❌ Bekor" })[o.status || "yangi"]}
+                      </span>
+                    </div>
+                    {o.shopName && <div className="prof-order-shop" style={{ marginBottom: 5 }}><Store size={10} /> {o.shopName}</div>}
+                    <div className="prof-order-items">
+                      {(o.items || []).slice(0, 3).map((it, k) => (
+                        <div key={k}>{it.qty} × {it.name}</div>
+                      ))}
+                      {(o.items || []).length > 3 && <div>… yana {(o.items || []).length - 3} ta</div>}
+                    </div>
+                    <div className="prof-order-total">
+                      {fmt(o.payTotal || o.total || 0)}
+                      {o.voucherDiscount > 0 && <span className="po-vdisc"> · 🎁 −{fmt(o.voucherDiscount)} chegirma</span>}
+                    </div>
+
+                    {(o.status || "yangi") === "bekor" && (
+                      <div className="po-cancelinfo">
+                        {o.cancelledBy === "mijoz"
+                          ? "Bu buyurtmani o'zingiz bekor qilgansiz."
+                          : <>Sabab: {o.cancelReason || "ko'rsatilmagan"}{o.bonusPercent ? <><br />🎁 Uzr sifatida keyingi buyurtmangizga <b>{o.bonusPercent}% chegirma</b> berildi.</> : null}</>}
+                      </div>
+                    )}
+
+                    {(o.status || "yangi") === "yangi" && o.id && o.sellerId && (
+                      cancelingId === o.id ? (
+                        <div className="po-cancelask">
+                          <span>Rostdan bekor qilasizmi?</span>
+                          <button className="po-cbtn po-cyes" disabled={cancelBusy} onClick={() => doCancelOrder(o.id)}>{cancelBusy ? "…" : "Ha, bekor qilish"}</button>
+                          <button className="po-cbtn" onClick={() => setCancelingId(null)}>Yo'q</button>
+                        </div>
+                      ) : (
+                        <button className="po-cancelbtn" onClick={() => { setCancelErr(""); setCancelingId(o.id); }}>
+                          Bekor qilish
+                        </button>
+                      )
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         <div className="prof-tokencard">
@@ -680,6 +730,7 @@ function App() {
   const [custAuth, setCustAuth] = useState(null);       // { chatId, token }
   const [custProfile, setCustProfile] = useState(null); // { firstName, lastName, phone, photo, ... }
   const [custOrders, setCustOrders] = useState([]);
+  const [custVouchers, setCustVouchers] = useState([]); // bekor kompensatsiyasi bonuslari
   const [tokens, setTokens] = useState(2);
   const [badgeOwned, setBadgeOwned] = useState(false);
   const [generations, setGenerations] = useState([]);
@@ -713,8 +764,8 @@ function App() {
     if (!custAuth) return;
     customerApi({ action: "me", chatId: custAuth.chatId, token: custAuth.token })
       .then((d) => {
-        if (d.ok) { setCustProfile(d.profile); setCustOrders(d.orders || []); }
-        else { setCustAuth(null); setCustProfile(null); setCustOrders([]); storageSet("zetme_cust_auth", ""); }
+        if (d.ok) { setCustProfile(d.profile); setCustOrders(d.orders || []); setCustVouchers(d.vouchers || []); }
+        else { setCustAuth(null); setCustProfile(null); setCustOrders([]); setCustVouchers([]); storageSet("zetme_cust_auth", ""); }
       })
       .catch(() => {});
   }, [custAuth && custAuth.chatId]);
@@ -726,7 +777,17 @@ function App() {
     setCustAuth(auth);
     setCustProfile(d.profile);
     setCustOrders(d.orders || []);
+    setCustVouchers(d.vouchers || []);
     storageSet("zetme_cust_auth", JSON.stringify(auth));
+    return null;
+  }
+
+  // Mijoz buyurtmani bekor qiladi — faqat status "yangi" bo'lganda (server tekshiradi)
+  async function cancelCustOrder(id) {
+    if (!custAuth) return "Avval Telegram bilan ulang";
+    const d = await customerApi({ action: "cancelOrder", ...custAuth, id });
+    if (!d.ok) return d.error || "Xatolik";
+    setCustOrders(d.orders || []);
     return null;
   }
 
@@ -1283,7 +1344,8 @@ function App() {
         <ProfileScreen onClose={() => setProfileOpen(false)} profile={profile} tokens={tokens}
           badgeOwned={badgeOwned} generations={generations} onBuyTokens={buyTokens} onBuyBadge={buyBadge}
           cust={custProfile} orders={custOrders} linked={!!custAuth}
-          onLink={linkCustomer} onSaveName={saveCustName} onPhoto={setCustPhoto} />
+          vouchers={custVouchers.map((v) => ({ ...v, shopName: (shops.find((s) => s.id === v.sellerId) || {}).shopName || "" }))}
+          onLink={linkCustomer} onSaveName={saveCustName} onPhoto={setCustPhoto} onCancelOrder={cancelCustOrder} />
       )}
     </div>
   );
@@ -1632,6 +1694,16 @@ const CSS = `
 .po-tayyorlanmoqda{background:#FBF3E2;color:#8a6a2f}
 .po-yetkazildi{background:#EAF3EC;color:${C.accent}}
 .po-bekor{background:#FBEFEA;color:${C.sale}}
+.prof-vouchers{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.prof-voucher{background:#FBF3E2;border:1px solid ${C.laiton}55;border-radius:12px;padding:10px 13px;font-size:12.5px;line-height:1.55;color:#6d5426}
+.po-vdisc{font-weight:600;font-size:11.5px;color:${C.laitonLo}}
+.po-cancelinfo{margin-top:7px;font-size:12px;line-height:1.55;color:${C.sale};background:#FBEFEA;border-radius:9px;padding:8px 11px}
+.po-cancelbtn{margin-top:8px;background:transparent;border:1px solid ${C.mline};color:${C.inkDim};border-radius:16px;
+  padding:6px 14px;font-size:11.5px;font-weight:600;font-family:inherit;cursor:pointer}
+.po-cancelbtn:hover{border-color:${C.sale};color:${C.sale}}
+.po-cancelask{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:${C.inkDim}}
+.po-cbtn{border:1px solid ${C.mline};background:#fff;border-radius:16px;padding:6px 12px;font-size:11.5px;font-weight:600;font-family:inherit;cursor:pointer;color:${C.inkDim}}
+.po-cyes{background:#FBEFEA;border-color:${C.sale};color:${C.sale}}
 .prof-order-items{font-size:12px;color:${C.ink};line-height:1.55}
 .prof-order-total{margin-top:6px;font-weight:700;font-size:13px;color:${C.ink}}
 .prof-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
