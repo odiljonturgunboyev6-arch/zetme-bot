@@ -73,6 +73,20 @@ const C = {
 const FONT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
 const FONT_BODY = "'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif";
 
+/* Studiya fonida suzib yuruvchi barg/gulbarg zarralari (deterministik) */
+const PETALS = [
+  { l: 6,  d: 16, dl: 0,   s: 10, o: .35, k: 0 },
+  { l: 16, d: 21, dl: 3,   s: 14, o: .25, k: 1 },
+  { l: 26, d: 18, dl: 7,   s: 8,  o: .30, k: 2 },
+  { l: 37, d: 24, dl: 1,   s: 12, o: .22, k: 0 },
+  { l: 48, d: 17, dl: 9,   s: 9,  o: .33, k: 1 },
+  { l: 58, d: 22, dl: 4,   s: 13, o: .24, k: 2 },
+  { l: 68, d: 19, dl: 11,  s: 10, o: .30, k: 0 },
+  { l: 77, d: 25, dl: 6,   s: 15, o: .20, k: 1 },
+  { l: 86, d: 18, dl: 2,   s: 9,  o: .32, k: 2 },
+  { l: 93, d: 23, dl: 8,   s: 11, o: .26, k: 0 },
+];
+
 const LOGO_STACK = "https://d8j0ntlcm91z4.cloudfront.net/user_370qfkcxfpKcDA0sH662HyZQBGj/hf_20260822_075921_266218b5-e18b-41f0-9412-33c7dfe35eed.png";
 
 // Same origin as this page (site + admin + api all live in one Vercel project).
@@ -1209,6 +1223,28 @@ function App() {
       {/* ===================== TOP: premium AI hero + studio ===================== */}
       <section className="hero">
         <div className="hero-grain" />
+        <div className="hero-glow hg1" />
+        <div className="hero-glow hg2" />
+        <div className="hero-petals" aria-hidden="true">
+          {PETALS.map((pt, i) => (
+            <span key={i} className={"petal pk" + pt.k}
+              style={{ left: pt.l + "%", width: pt.s, height: pt.s, opacity: pt.o,
+                animationDuration: pt.d + "s", animationDelay: pt.dl + "s" }} />
+          ))}
+        </div>
+        {/* orqa fonda chizilib paydo bo'ladigan botanik chizma */}
+        <svg className="hero-art" viewBox="0 0 200 220" fill="none" aria-hidden="true">
+          <path className="ha ha1" d="M60 160 L140 160 L128 214 L72 214 Z" />
+          <path className="ha ha2" d="M100 160 C100 130 100 110 100 84" />
+          <path className="ha ha3" d="M100 122 C78 118 64 102 62 82 C84 84 98 100 100 122 Z" />
+          <path className="ha ha4" d="M100 108 C122 104 136 88 138 68 C116 70 102 86 100 108 Z" />
+          <circle className="ha ha5" cx="100" cy="62" r="9" />
+          <circle className="ha ha5" cx="100" cy="38" r="9" />
+          <circle className="ha ha5" cx="78" cy="50" r="9" />
+          <circle className="ha ha5" cx="122" cy="50" r="9" />
+          <circle className="ha ha5" cx="89" cy="72" r="9" />
+          <circle className="ha ha5" cx="111" cy="72" r="9" />
+        </svg>
         <header className="topbar">
           <img src={LOGO_STACK} alt="Zetme AI" className="logo" />
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1236,16 +1272,20 @@ function App() {
           </div>
         </header>
 
-        <p className="eyebrow">AI botanik studiya</p>
-        <h1 className="htitle">Gulingizni <em>tuvakda</em> ko'ring</h1>
+        <p className="eyebrow rv rv1">AI botanik studiya</p>
+        <h1 className="htitle rv rv2">Gulingizni <em>tuvakda</em> ko'ring</h1>
+        <div className="h-ornament rv rv3" aria-hidden="true">
+          <span className="h-line" /><Flower2 size={11} color={C.laiton} /><span className="h-line" />
+        </div>
 
-        <div className="genrow">
+        <div className="genrow rv rv4">
           <GenSlot label="Gul rasmi" icon={Flower2} accent={C.bloom} image={flower} onSetImage={setFlower} />
           <div className="plus-sep"><Plus size={16} color={C.laiton} /></div>
           <GenSlot label="Tuvak rasmi" icon={Sprout} accent={C.laiton} image={pot} onSetImage={setPot} />
         </div>
 
-        <button className="gen-cta" disabled={!canGenerate || genLoading} onClick={generate}>
+        <button className="gen-cta rv rv5" disabled={!canGenerate || genLoading} onClick={generate}>
+          <span className="cta-shine" aria-hidden="true" />
           <Sparkles size={17} /> {genLoading ? "Yaratilmoqda…" : "Generatsiya qilish"}
         </button>
 
@@ -1255,6 +1295,12 @@ function App() {
             <span>Tayyor! Natija va moslik tahlili shu yerda ko'rinadi.</span>
           </div>
         )}
+
+        <button className="scrollhint rv rv6" aria-label="Do'konlarga o'tish"
+          onClick={() => { const el = document.getElementById("shops"); if (el) el.scrollIntoView({ behavior: "smooth" }); }}>
+          <span>Do'konlarni ko'rish</span>
+          <span className="sh-chev"><ChevronRight size={15} /></span>
+        </button>
       </section>
 
       {/* ===================== STUDIYA: do'konlar devori ===================== */}
@@ -1535,10 +1581,42 @@ const CSS = `
 *{box-sizing:border-box}
 .root{font-family:${FONT_BODY};background:${C.paper};min-height:100vh;padding-bottom:74px}
 
-/* ---------- HERO / STUDIO ---------- */
+/* ---------- HERO / STUDIO — premium vayb ---------- */
+@keyframes rvIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes hgPulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:.95;transform:scale(1.12)}}
+@keyframes petalFloat{
+  0%{transform:translateY(0) rotate(0deg)}
+  50%{transform:translateY(-52vh) translateX(14px) rotate(160deg)}
+  100%{transform:translateY(-104vh) translateX(-8px) rotate(320deg)}}
+@keyframes emShimmer{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+@keyframes artDraw{to{stroke-dashoffset:0}}
+@keyframes ctaSweep{0%{transform:translateX(-160%) rotate(16deg)}55%,100%{transform:translateX(260%) rotate(16deg)}}
+@keyframes chevBounce{0%,100%{transform:rotate(90deg) translateX(0)}50%{transform:rotate(90deg) translateX(5px)}}
+@keyframes slotBreathe{0%,100%{border-color:${C.line}}50%{border-color:${C.laitonLo}88}}
+@keyframes icFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+.rv{animation:rvIn .8s cubic-bezier(.22,1,.36,1) both}
+.rv1{animation-delay:.05s}.rv2{animation-delay:.16s}.rv3{animation-delay:.3s}
+.rv4{animation-delay:.42s}.rv5{animation-delay:.56s}.rv6{animation-delay:.75s}
+
 .hero{position:relative;background:radial-gradient(120% 100% at 50% 0%, ${C.vert}, ${C.noir});color:${C.ivoire};
-  padding:16px 18px 26px;overflow:hidden}
+  padding:16px 18px 30px;overflow:hidden}
 .hero-grain{position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%, #ffffff08, transparent 60%)}
+.hero-glow{position:absolute;border-radius:50%;pointer-events:none;filter:blur(6px)}
+.hg1{top:-120px;left:50%;margin-left:-210px;width:420px;height:300px;
+  background:radial-gradient(50% 50% at 50% 50%, ${C.laiton}26, transparent 70%);animation:hgPulse 8s ease-in-out infinite}
+.hg2{bottom:-140px;right:-120px;width:380px;height:320px;
+  background:radial-gradient(50% 50% at 50% 50%, ${C.accent}30, transparent 70%);animation:hgPulse 11s ease-in-out 2s infinite}
+.hero-petals{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.petal{position:absolute;bottom:-24px;display:block;animation:petalFloat linear infinite}
+.pk0{background:${C.laiton};border-radius:70% 0 70% 0}
+.pk1{background:${C.bloom};border-radius:50% 50% 50% 0}
+.pk2{background:${C.laitonHi};border-radius:70% 0 70% 0;transform:rotate(45deg)}
+.hero-art{position:absolute;left:50%;top:54%;width:250px;height:275px;margin-left:-125px;pointer-events:none;
+  stroke:${C.ivoire};opacity:.07}
+.ha{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:600;stroke-dashoffset:600;animation:artDraw 3.5s ease .6s forwards}
+.ha5{stroke-dasharray:60;stroke-dashoffset:60;animation-duration:1.6s;animation-delay:2.2s}
 .topbar{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .logo{height:26px;width:auto}
 .lang-wrap{position:relative}
@@ -1557,16 +1635,27 @@ const CSS = `
 .lang-item:not(:disabled):hover{background:#ffffff10}
 .soon{font-size:10px;color:${C.laiton}}
 
-.eyebrow{position:relative;z-index:2;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:${C.laiton};text-align:center;margin:4px 0}
-.htitle{position:relative;z-index:2;font-family:${FONT_DISPLAY};font-weight:500;text-align:center;font-size:clamp(28px,7vw,38px);
-  margin:0 0 18px;line-height:1.08}
-.htitle em{font-style:italic;color:${C.laitonHi}}
+.eyebrow{position:relative;z-index:2;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:${C.laiton};text-align:center;margin:10px 0 6px}
+.htitle{position:relative;z-index:2;font-family:${FONT_DISPLAY};font-weight:500;text-align:center;font-size:clamp(30px,7.6vw,42px);
+  margin:0 0 10px;line-height:1.08;text-shadow:0 2px 24px #0006}
+.htitle em{font-style:italic;color:${C.laitonHi};
+  background:linear-gradient(90deg,${C.laiton},${C.laitonHi} 30%,#fff6dc 50%,${C.laitonHi} 70%,${C.laiton});
+  background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:emShimmer 5s linear infinite}
+.h-ornament{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 20px}
+.h-line{display:block;width:52px;height:1px;background:linear-gradient(90deg,transparent,${C.laitonLo});}
+.h-ornament .h-line:last-child{background:linear-gradient(90deg,${C.laitonLo},transparent)}
 
 .genrow{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px}
 .plus-sep{width:26px;height:26px;border-radius:20px;background:#ffffff10;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .genslot{width:150px}
-.genslot-box{position:relative;height:150px;border:1.5px dashed ${C.line};border-radius:16px;background:#0c261e;
-  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.genslot-box{position:relative;height:150px;border:1.5px dashed ${C.line};border-radius:18px;
+  background:linear-gradient(160deg,#ffffff0a,#0c261ecc);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  box-shadow:inset 0 1px 0 #ffffff10, 0 10px 30px #0005;
+  animation:slotBreathe 5s ease-in-out infinite;transition:transform .3s,border-color .3s}
+.genslot-box:hover{transform:translateY(-3px);border-color:${C.laitonLo}}
+.genslot-empty svg{animation:icFloat 3.4s ease-in-out infinite}
 .genslot-empty{display:flex;flex-direction:column;align-items:center;gap:8px;color:${C.ivoireDim};font-size:12px;text-align:center;padding:0 8px}
 .genslot-fill{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;text-align:center;padding:0 8px;font-weight:600}
 .genslot-img{width:100%;height:100%;object-fit:cover}
@@ -1578,10 +1667,19 @@ const CSS = `
 .src-item:hover{background:#ffffff0d}
 .src-ic{width:32px;height:32px;border-radius:10px;border:1px solid;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
-.gen-cta{position:relative;z-index:2;display:flex;margin:0 auto;align-items:center;gap:9px;
+.gen-cta{position:relative;z-index:2;display:flex;margin:0 auto;align-items:center;gap:9px;overflow:hidden;
   background:linear-gradient(120deg,${C.laitonHi},${C.laiton});color:${C.noir};border:none;border-radius:40px;
-  padding:13px 26px;font-weight:600;font-size:14.5px;font-family:${FONT_BODY};cursor:pointer}
-.gen-cta:disabled{opacity:.4;cursor:not-allowed}
+  padding:14px 30px;font-weight:600;font-size:14.5px;font-family:${FONT_BODY};cursor:pointer;
+  box-shadow:0 10px 28px ${C.laiton}44;transition:transform .25s,box-shadow .25s}
+.gen-cta:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 14px 34px ${C.laiton}5c}
+.gen-cta:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.cta-shine{position:absolute;top:-60%;left:0;width:34%;height:220%;pointer-events:none;
+  background:linear-gradient(90deg,transparent,#ffffff66,transparent);animation:ctaSweep 4.5s ease-in-out 1.4s infinite}
+.scrollhint{position:relative;z-index:2;display:flex;align-items:center;gap:7px;margin:22px auto 0;
+  background:transparent;border:none;color:${C.ivoireDim};font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;
+  font-family:${FONT_BODY};cursor:pointer}
+.scrollhint:hover{color:${C.laitonHi}}
+.sh-chev{display:inline-flex;animation:chevBounce 1.8s ease-in-out infinite}
 .gen-result{position:relative;z-index:2;display:flex;align-items:center;gap:8px;justify-content:center;margin-top:14px;
   font-size:12.5px;color:${C.ivoireDim}}
 
@@ -1657,6 +1755,8 @@ const CSS = `
 .ab-stat-sep{width:1px;height:28px;background:${C.line}}
 
 @media (prefers-reduced-motion: reduce){
+  .rv,.hero-glow,.petal,.htitle em,.ha,.cta-shine,.sh-chev,.genslot-box,.genslot-empty svg{animation:none!important}
+  .rv{opacity:1;transform:none}
   .sw-tile,.ab-card,.sw-eyebrow,.sw-title,.sw-sub,.ab-title,.ab-lead,.ab-stats,.sw-glow{animation:none!important}
   .sw-tile:hover .sw-shine{animation:none}
   .sw-tile,.ab-card{opacity:1;transform:none}
