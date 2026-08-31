@@ -70,6 +70,18 @@ export default async function handler(req, res) {
       const chatId = msg.chat.id;
       const text = (msg.text || "").trim();
 
+      // --- /kod: saytdagi profilni Telegram hisobiga ulash uchun 6 xonali kod ---
+      // Sayt api/customer.js action:"link" bilan shu kodni chatId ga aylantiradi.
+      if (text === "/kod" || text === "/code") {
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+        await kv.set(`link:${code}`, String(chatId), { ex: 600 });
+        await sendMessage(
+          chatId,
+          `Saytdagi profilingizni ulash kodi:\n\n\`${code}\`\n\nUni saytdagi Profil bo'limiga kiriting. Kod 10 daqiqa amal qiladi.`
+        );
+        return res.status(200).send("ok");
+      }
+
       // --- /myid: sotuvchilar o'z Chat ID sini olishi uchun (admin panel profiliga yoziladi) ---
       if (text === "/myid") {
         await sendMessage(
@@ -215,6 +227,20 @@ export default async function handler(req, res) {
           });
           if (arr.length > 500) arr.length = 500;
           await kv.set(okey, arr);
+
+          // mijozning o'z tarixi (saytdagi profil sahifasi uchun)
+          const mkey = `myorders:${chatId}`;
+          const mine = (await kv.get(mkey)) || [];
+          mine.unshift({
+            ts: Date.now(),
+            total: draft.total || 0,
+            payTotal: draft.payTotal || draft.total || 0,
+            shopName: draft.shopName || "",
+            totalQty: draft.totalQty || 0,
+            items: (draft.items || []).map((i) => ({ name: i.name, price: i.price, qty: i.qty })),
+          });
+          if (mine.length > 100) mine.length = 100;
+          await kv.set(mkey, mine);
         } catch (e) { console.error("order log:", e); }
 
         await kv.del(`draft:${chatId}`);
