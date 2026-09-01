@@ -2360,9 +2360,12 @@ const buildCSS = () => `
   border-radius:20px;min-width:15px;height:15px;display:flex;align-items:center;justify-content:center;padding:0 3px}
 
 /* ---------- overlay shared ---------- */
-.ov{position:fixed;inset:0;background:#0006;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+/* Oddiy modallar (mahsulot, checkout, muvaffaqiyat) hammasining USTIDA turadi —
+   pastki navigatsiyani ham to'liq yopadi, xuddi avvalgidek. */
+.ov{position:fixed;inset:0;background:#0006;z-index:70;display:flex;align-items:flex-end;justify-content:center}
 /* to'liq fullscreen oynalar (Savat/Profil) — orqa fonda hech narsa ko'rinmaydi,
-   pastki navigatsiya esa navActive orqali "qaysi oyna faol" ekanini bo'yab ko'rsatib turadi */
+   lekin pastki navigatsiya ULARDAN USTIDA qoladi, shunda navActive orqali
+   "qaysi oyna faol" ekanini bo'yab ko'rsatib, boshqa oynaga o'tish imkonini beradi */
 .ov-full{background:${C.paper};align-items:stretch;justify-content:stretch;bottom:64px;z-index:40}
 .pm-close{position:absolute;top:12px;right:12px;background:${C.paper};border:1px solid ${C.mline};border-radius:20px;
   width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
