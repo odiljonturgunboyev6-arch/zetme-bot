@@ -143,8 +143,9 @@ const STR = {
     pmStudioGul: "Bu gulni tuvakka AI bilan moslab ko'rish", pmStudioTuvak: "Shu tuvakka gulni AI bilan moslab ko'rish",
     cartTitle: "Savat",
     modeOptomCalc: "🏭 Optom narxda hisoblanmoqda", modeChakCalc: "🛍️ Chakana narxda hisoblanmoqda",
-    cartFrom1: "Buyurtma", cartFrom2: "do'konidan · bitta buyurtma = bitta do'kon",
     cartEmpty: "Savat bo'sh. Tuvaklar bo'limidan mahsulot qo'shing.",
+    cartGroupN: (n) => n + " dona", cartGrandTitle: "Umumiy hisob",
+    cartGrandCount: (n) => "Jami " + n + " dona mahsulot",
     teaser: (s) => "🎁 Savatingizni to'ldiring — " + s + "lik chegaradan o'tsangiz, sirli sovg'a kutmoqda!",
     bonusGift: "🎁 Bu buyurtmaga tuvak-sovg'a qo'shiladi (turi buyurtma bilan birga aniqlanadi)",
     total: "Jami", payTotal: "To'lov summasi",
@@ -159,10 +160,7 @@ const STR = {
     osTitle: "Buyurtma qabul qilindi!", shopSuffix: " do'koni",
     osVoucher: (p, s) => "🎁 " + p + "% chegirma bonusingiz qo'llandi: −" + s,
     osInfo: "Sotuvchi tez orada siz bilan bog'lanadi. Buyurtma holatini (tayyorlanmoqda, yuborildi) Profil bo'limida kuzatib borasiz.",
-    osTrack: "Profilda kuzatish", close: "Yopish",
-    confT: "Savatda boshqa do'kon mahsuloti bor",
-    confB1: "Savatingizda hozir", confB2: " do'konining mahsulotlari turibdi. Bitta buyurtmada faqat bitta do'kondan xarid qilinadi — avval joriy buyurtmani yakunlang, yoki savatni tozalab", confB3: " do'konidan boshlang.",
-    confFinish: "Joriy buyurtmani yakunlash", confClear1: "Savatni tozalash va", confClear2: "dan boshlash", cancel: "Bekor qilish",
+    osTrack: "Profilda kuzatish", close: "Yopish", cancel: "Bekor qilish",
     stYangi: "🆕 Yangi", stTayyor: "📦 Tayyorlanmoqda", stYubor: "🚚 Yuborildi", stYetk: "✅ Yetkazildi", stQabul: "✅ Qabul qilindi", stBekor: "❌ Bekor",
     guest: "Mehmon", edit: "✎ tahrirlash", fName: "Ism", lName: "Familiya", save: "Saqlash",
     noPhone: "Telefon kiritilmagan", tgLinked: " · Telegram orqali ulangan",
@@ -236,8 +234,9 @@ const STR = {
     pmStudioGul: "Примерить этот цветок к горшку с ИИ", pmStudioTuvak: "Примерить цветок к этому горшку с ИИ",
     cartTitle: "Корзина",
     modeOptomCalc: "🏭 Расчёт по оптовой цене", modeChakCalc: "🛍️ Расчёт по розничной цене",
-    cartFrom1: "Заказ из магазина", cartFrom2: "· один заказ = один магазин",
     cartEmpty: "Корзина пуста. Добавьте товары из раздела горшков.",
+    cartGroupN: (n) => n + " шт.", cartGrandTitle: "Общий итог",
+    cartGrandCount: (n) => "Всего " + n + " шт. товара",
     teaser: (s) => "🎁 Пополните корзину — перейдёте порог " + s + ", и вас ждёт тайный подарок!",
     bonusGift: "🎁 К этому заказу добавится горшок в подарок (модель определится вместе с заказом)",
     total: "Итого", payTotal: "К оплате",
@@ -607,19 +606,10 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
 }
 
 /* ============================== Cart drawer ============================== */
-function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, checkoutError }) {
-  const total = items.reduce((s, i) => s + priceOf(i, priceMode) * i.qty, 0);
-  const minRequired = priceMode === "optom" ? OPT_MIN_ORDER : MIN_ORDER;
-  const remaining = minRequired - total;
-  const meetsMin = total >= minRequired;
-  // MARKETPLACE: bonus/sovg'a faqat shu do'kon bonusni yoqqan bo'lsa ko'rsatiladi
-  // (server ham xuddi shunday hisoblaydi — api/checkout.js)
-  const cartShop = items[0] || null;
-  const bonusOn = cartShop ? cartShop.bonusEnabled !== false : true;
-  const bonus = bonusOn ? bonusFor(total) : null;
-  const payTotal = bonus && bonus.money ? total - bonus.money : total;
-  const showTeaser = bonusOn && total >= TEASER_MIN && total < TEASER_MAX;
-
+/* Savat endi BIR NECHTA do'kon mahsulotlarini birga tuta oladi — har bir
+   sotuvchi o'z alohida "guruh"ida turadi (o'z ro'yxati, o'z jami summasi,
+   o'z "Buyurtma berish" tugmasi bilan), pastda esa umumiy hisob-kitob. */
+function CartDrawer({ groups, cartCount, cartPayTotal, priceMode, onClose, onQty, onCheckout }) {
   return (
     <div className="ov ov-full" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="cart">
@@ -629,74 +619,108 @@ function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, ch
         </div>
 
         <div className="cart-modebadge">{priceMode === "optom" ? tr("modeOptomCalc") : tr("modeChakCalc")}</div>
-        {cartShop && (
-          <div className="cart-shopline"><Store size={13} /> {tr("cartFrom1")} <b>{cartShop.shopName}</b> {tr("cartFrom2")}</div>
-        )}
 
-        {items.length === 0 ? (
+        {groups.length === 0 ? (
           <div className="cart-empty">{tr("cartEmpty")}</div>
         ) : (
           <>
-            <div className="cart-list">
-              {items.map((it) => (
-                <div key={it.key} className="cart-row">
-                  <div className="cart-emoji">{it.image ? <img src={it.image} alt="" /> : "🪴"}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13.5 }}>{it.name}</div>
-                    <div style={{ fontSize: 12, color: C.inkDim }}>{it.litr} {unitOf(it.unit).short} · {fmt(priceOf(it, priceMode))}</div>
-                  </div>
-                  <div className="qty-mini">
-                    <button onClick={() => onQty(it.key, -1)}><Minus size={13} /></button>
-                    <span>{it.qty}</span>
-                    <button onClick={() => onQty(it.key, 1)}><Plus size={13} /></button>
-                  </div>
+            {groups.map((g, gi) => (
+              <CartShopGroup key={g.sellerId} group={g} priceMode={priceMode} onQty={onQty} onCheckout={onCheckout} index={gi} />
+            ))}
+
+            {groups.length > 1 && (
+              <div className="cart-grand">
+                <div className="cart-grand-title">{tr("cartGrandTitle")}</div>
+                <div className="cart-grand-rows">
+                  {groups.map((g) => (
+                    <div key={g.sellerId} className="cart-grand-row">
+                      <span>{g.shopName}</span>
+                      <b>{fmt(g.payTotal)}</b>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            {showTeaser && (
-              <div className="cart-teaser">{tr("teaser", fmt(TEASER_MAX))}</div>
-            )}
-            {bonus && bonus.gift && (
-              <div className="cart-bonus">{tr("bonusGift")}</div>
-            )}
-            {bonus && bonus.money > 0 && (
-              <div className="cart-bonus">
-                💰 Bonus: −{fmt(bonus.money)}{bonus.tokin ? ` + ${bonus.tokin} tokin` : ""} — avtomatik ayirildi
-              </div>
-            )}
-
-            <div className="cart-totals">
-              <div className="cart-total"><span>{tr("total")}</span><b>{fmt(total)}</b></div>
-              {payTotal !== total && (
-                <div className="cart-paytotal"><span>{tr("payTotal")}</span><b>{fmt(payTotal)}</b></div>
-              )}
-            </div>
-
-            {!meetsMin ? (
-              <div className="cart-minwarn">
-                <Lock size={14} />
-                <div>
-                  <div style={{ fontWeight: 600 }}>
-                    {priceMode === "optom" ? tr("minOptom") : tr("minOrder")} — {fmt(minRequired)}
-                  </div>
-                  <div style={{ fontSize: 11.5, marginTop: 2 }}>
-                    {tr("addMore", fmt(remaining))}
-                    {priceMode === "optom" && tr("orChakana")}
-                  </div>
+                <div className="cart-grand-total">
+                  <span>{tr("cartGrandCount", cartCount)}</span>
+                  <b>{fmt(cartPayTotal)}</b>
                 </div>
               </div>
-            ) : (
-              <>
-                <button className="pm-add" disabled={checking} onClick={onCheckout}>
-                  <Send size={15} /> {checking ? tr("sending") : tr("placeOrder")}
-                </button>
-                {checkoutError && <div className="cart-err">{checkoutError}</div>}
-              </>
             )}
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/* Bitta sotuvchining savat bloki: ro'yxat, bonus, jami va o'z buyurtma tugmasi */
+function CartShopGroup({ group, priceMode, onQty, onCheckout, index }) {
+  const { sellerId, shopName, items, total, bonus, payTotal, qty } = group;
+  const minRequired = priceMode === "optom" ? OPT_MIN_ORDER : MIN_ORDER;
+  const remaining = minRequired - total;
+  const meetsMin = total >= minRequired;
+  const showTeaser = group.bonusEnabled && total >= TEASER_MIN && total < TEASER_MAX;
+
+  return (
+    <div className="cart-group" style={{ animationDelay: `${index * 70}ms` }}>
+      <div className="cart-group-head">
+        <div className="cart-group-shop"><Store size={13} color={C.laitonLo} /> <b>{shopName}</b></div>
+        <span className="cart-group-count">{tr("cartGroupN", qty)}</span>
+      </div>
+
+      <div className="cart-list">
+        {items.map((it) => (
+          <div key={it.key} className="cart-row">
+            <div className="cart-emoji">{it.image ? <img src={it.image} alt="" /> : "🪴"}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 13.5 }}>{it.name}</div>
+              <div style={{ fontSize: 12, color: C.inkDim }}>{it.litr} {unitOf(it.unit).short} · {fmt(priceOf(it, priceMode))}</div>
+            </div>
+            <div className="qty-mini">
+              <button onClick={() => onQty(it.key, -1)}><Minus size={13} /></button>
+              <span>{it.qty}</span>
+              <button onClick={() => onQty(it.key, 1)}><Plus size={13} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {showTeaser && (
+        <div className="cart-teaser">{tr("teaser", fmt(TEASER_MAX))}</div>
+      )}
+      {bonus && bonus.gift && (
+        <div className="cart-bonus">{tr("bonusGift")}</div>
+      )}
+      {bonus && bonus.money > 0 && (
+        <div className="cart-bonus">
+          💰 Bonus: −{fmt(bonus.money)}{bonus.tokin ? ` + ${bonus.tokin} tokin` : ""} — avtomatik ayirildi
+        </div>
+      )}
+
+      <div className="cart-totals">
+        <div className="cart-total"><span>{tr("total")}</span><b>{fmt(total)}</b></div>
+        {payTotal !== total && (
+          <div className="cart-paytotal"><span>{tr("payTotal")}</span><b>{fmt(payTotal)}</b></div>
+        )}
+      </div>
+
+      {!meetsMin ? (
+        <div className="cart-minwarn">
+          <Lock size={14} />
+          <div>
+            <div style={{ fontWeight: 600 }}>
+              {priceMode === "optom" ? tr("minOptom") : tr("minOrder")} — {fmt(minRequired)}
+            </div>
+            <div style={{ fontSize: 11.5, marginTop: 2 }}>
+              {tr("addMore", fmt(remaining))}
+              {priceMode === "optom" && tr("orChakana")}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <button className="pm-add cart-group-btn" onClick={() => onCheckout(sellerId)}>
+          <Send size={15} /> {tr("placeOrder")} — {shopName}
+        </button>
+      )}
     </div>
   );
 }
@@ -1108,14 +1132,12 @@ function App() {
 
   const [activeProduct, setActiveProduct] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
-  const [cart, setCart] = useState([]);
-  // boshqa do'kondan mahsulot qo'shilmoqchi bo'lganda chiqadigan ogohlantirish:
-  // { fam, variant, qty, currentShop, newShop } | null
-  const [shopConflict, setShopConflict] = useState(null);
+  const [cart, setCart] = useState([]); // bir nechta do'kon mahsulotlari birga turishi mumkin
   const [checking, setChecking] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
   const [order, setOrder] = useState(null); // { orderId, payTotal, shopName, voucherDiscount, voucherPercent }
   const [checkoutFormOpen, setCheckoutFormOpen] = useState(false);
+  const [checkoutSellerId, setCheckoutSellerId] = useState(null); // qaysi do'kon uchun buyurtma formasi ochilgan
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [profile, setProfile] = useState({ name: "", phone: "" });
@@ -1405,8 +1427,10 @@ function App() {
     storageSet("zetme_badge", "1");
   }
 
-  // MARKETPLACE: savatda faqat BITTA do'kon mahsulotlari bo'la oladi.
-  // Boshqa do'kondan qo'shilsa — ogohlantirish chiqadi (server ham buni majburlaydi).
+  // MARKETPLACE: savatda BIR NECHTA do'kon mahsulotlari bo'lishi mumkin —
+  // har biri Savat oynasida alohida guruh sifatida ko'rsatiladi, har birining
+  // o'z "Buyurtma berish" tugmasi bor (checkout esa har doim bitta sotuvchiga
+  // tegishli qatorlarnigina yuboradi — buni server ham talab qiladi).
   function doAddToCart(fam, variant, qty) {
     const key = `${fam.id}_${variant.id}`;
     setCart((c) => {
@@ -1424,33 +1448,7 @@ function App() {
     });
   }
   function addToCart(fam, variant, qty) {
-    const newSellerId = fam.sellerId || "zetme";
-    if (cart.length > 0 && cart[0].sellerId !== newSellerId) {
-      setShopConflict({
-        fam, variant, qty,
-        currentShop: cart[0].shopName,
-        newShop: fam.shopName || "Tuvaklar",
-      });
-      return;
-    }
     doAddToCart(fam, variant, qty);
-  }
-  function resolveShopConflict(clearAndAdd) {
-    if (clearAndAdd && shopConflict) {
-      setCart([]);
-      // savat tozalangach yangi mahsulotni qo'shamiz
-      const { fam, variant, qty } = shopConflict;
-      setCart([{
-        key: `${fam.id}_${variant.id}`, id: fam.id, variantId: variant.id,
-        name: variant.name || fam.name, litr: variant.litr, unit: fam.unit || "litr",
-        price: Number(variant.price), optPrice: Number(variant.optPrice),
-        image: variantImg(variant), qty,
-        sellerId: fam.sellerId || "zetme",
-        shopName: fam.shopName || "Tuvaklar",
-        bonusEnabled: fam.bonusEnabled !== false,
-      }]);
-    }
-    setShopConflict(null);
   }
   function openShop(p) {
     setShopFilter({ id: p.sellerId || "zetme", name: p.shopName || "Tuvaklar" });
@@ -1466,8 +1464,11 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // "Buyurtma berish" bosilganda forma ochiladi (Telegram kerak emas)
-  function checkout() {
+  // "Buyurtma berish" bosilganda forma ochiladi (Telegram kerak emas).
+  // Savatda bir nechta do'kon bo'lishi mumkin — shuning uchun QAYSI sotuvchi
+  // uchun buyurtma berilayotgani aniq belgilanadi (sellerId).
+  function checkout(sellerId) {
+    setCheckoutSellerId(sellerId);
     setCartOpen(false);
     setCheckoutError(null);
     setCheckoutFormOpen(true);
@@ -1477,12 +1478,13 @@ function App() {
     setChecking(true);
     setCheckoutError(null);
     try {
+      const sellerItems = cart.filter((i) => i.sellerId === checkoutSellerId);
       const res = await fetch(`${API_BASE}/api/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           priceMode,
-          items: cart.map((i) => ({ id: i.id, variantId: i.variantId, qty: i.qty })),
+          items: sellerItems.map((i) => ({ id: i.id, variantId: i.variantId, qty: i.qty })),
           customer: customerData,
           auth: custAuth || undefined,
         }),
@@ -1501,8 +1503,11 @@ function App() {
         orderId: data.orderId, payTotal: data.payTotal, shopName: data.shopName,
         voucherDiscount: data.voucherDiscount || 0, voucherPercent: data.voucherPercent || 0,
       });
-      setCart([]);
+      // faqat SHU sotuvchining qatorlari savatdan olib tashlanadi — boshqa
+      // do'konlardan qo'shilgan mahsulotlar savatda saqlanib qoladi
+      setCart((c) => c.filter((i) => i.sellerId !== checkoutSellerId));
       setCheckoutFormOpen(false);
+      setCheckoutSellerId(null);
     } catch (err) {
       setCheckoutError(err.message);
     } finally {
@@ -1512,6 +1517,27 @@ function App() {
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
   const cartPayTotal = cart.reduce((s, i) => s + priceOf(i, priceMode) * i.qty, 0);
+
+  // Savatni sotuvchi bo'yicha guruhlaymiz — har bir do'kon o'z bloki,
+  // o'z summasi va o'z "Buyurtma berish" tugmasi bilan ko'rinadi.
+  const cartGroups = useMemo(() => {
+    const map = new Map();
+    cart.forEach((it) => {
+      if (!map.has(it.sellerId)) {
+        map.set(it.sellerId, { sellerId: it.sellerId, shopName: it.shopName, items: [], bonusEnabled: it.bonusEnabled !== false });
+      }
+      map.get(it.sellerId).items.push(it);
+    });
+    return Array.from(map.values()).map((g) => {
+      const total = g.items.reduce((s, i) => s + priceOf(i, priceMode) * i.qty, 0);
+      const qty = g.items.reduce((s, i) => s + i.qty, 0);
+      const bonus = g.bonusEnabled ? bonusFor(total) : null;
+      const payTotal = bonus && bonus.money ? total - bonus.money : total;
+      return { ...g, total, qty, bonus, payTotal };
+    });
+  }, [cart, priceMode]);
+
+  const checkoutGroup = cartGroups.find((g) => g.sellerId === checkoutSellerId) || null;
   const tier = tierForTokens(tokens, badgeOwned);
 
   return (
@@ -1921,7 +1947,9 @@ function App() {
       )}
       {cartOpen && (
         <CartDrawer
-          items={cart}
+          groups={cartGroups}
+          cartCount={cartCount}
+          cartPayTotal={cartPayTotal}
           priceMode={priceMode}
           onClose={() => setCartOpen(false)}
           onQty={changeQty}
@@ -1930,20 +1958,20 @@ function App() {
           checkoutError={checkoutError}
         />
       )}
-      {checkoutFormOpen && (
+      {checkoutFormOpen && checkoutGroup && (
         <CheckoutForm
           initial={{
             name: (custProfile && (custProfile.firstName || custProfile.name)) || profile.name || "",
             phone: (custProfile && custProfile.phone) || profile.phone || "",
             region: (custProfile && custProfile.region) || profile.region || "",
           }}
-          itemCount={cart.length}
-          payTotal={cartPayTotal}
-          shopName={cart[0] ? cart[0].shopName : ""}
+          itemCount={checkoutGroup.items.length}
+          payTotal={checkoutGroup.payTotal}
+          shopName={checkoutGroup.shopName}
           busy={checking}
           error={checkoutError}
           onSubmit={placeOrder}
-          onClose={() => setCheckoutFormOpen(false)}
+          onClose={() => { setCheckoutFormOpen(false); setCheckoutSellerId(null); }}
         />
       )}
       {order && (
@@ -1956,24 +1984,6 @@ function App() {
           onClose={() => setOrder(null)}
           onOpenProfile={() => { setOrder(null); setProfileOpen(true); }}
         />
-      )}
-      {shopConflict && (
-        <div className="ov" onClick={(e) => e.target === e.currentTarget && resolveShopConflict(false)}>
-          <div className="conflict">
-            <div className="conflict-ic"><Store size={22} color={C.laitonLo} /></div>
-            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 20, margin: "0 0 6px" }}>{tr("confT")}</h3>
-            <p style={{ fontSize: 13.5, color: C.inkDim, margin: "0 0 16px", lineHeight: 1.55 }}>
-              {tr("confB1")} <b>{shopConflict.currentShop}</b>{tr("confB2")} <b>{shopConflict.newShop}</b>{tr("confB3")}
-            </p>
-            <button className="pm-add" onClick={() => { resolveShopConflict(false); setCartOpen(true); }}>
-              <ShoppingBag size={15} /> {tr("confFinish")} ({shopConflict.currentShop})
-            </button>
-            <button className="conflict-clear" onClick={() => resolveShopConflict(true)}>
-              {tr("confClear1")} {shopConflict.newShop} {tr("confClear2")}
-            </button>
-            <button className="conflict-cancel" onClick={() => resolveShopConflict(false)}>{tr("cancel")}</button>
-          </div>
-        </div>
       )}
       {profileOpen && (
         <ProfileScreen onClose={() => setProfileOpen(false)} profile={profile} tokens={tokens}
@@ -2401,6 +2411,24 @@ const buildCSS = () => `
 .cart-shopline{display:flex;align-items:center;gap:7px;font-size:12px;color:${C.laitonLo};background:#FCF3E2;
   border-radius:10px;padding:8px 10px;margin-bottom:14px}
 .cart-shopline b{font-weight:700}
+
+/* savat: har sotuvchi uchun alohida premium blok */
+.cart-group{border:1px solid ${C.mline};border-radius:18px;padding:16px 15px 15px;margin-bottom:16px;
+  background:linear-gradient(160deg,${C.paper},${C.card});animation:swFade .4s ease both}
+.cart-group-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;
+  padding-bottom:11px;border-bottom:1px solid ${C.mline}}
+.cart-group-shop{display:flex;align-items:center;gap:6px;font-size:13.5px;color:${C.ink}}
+.cart-group-count{font-size:11px;color:${C.inkDim};font-weight:600;background:${C.mline}55;border-radius:20px;padding:3px 9px}
+.cart-group-btn{margin-top:4px}
+.cart-grand{border:1.5px solid ${C.laiton}55;border-radius:18px;padding:16px 16px 15px;margin-top:6px;
+  background:linear-gradient(160deg,${C.laiton}14,transparent)}
+.cart-grand-title{font-family:${FONT_DISPLAY};font-size:15.5px;color:${C.ink};margin-bottom:10px}
+.cart-grand-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.cart-grand-row{display:flex;justify-content:space-between;font-size:12.5px;color:${C.inkDim}}
+.cart-grand-row b{color:${C.ink};font-weight:600}
+.cart-grand-total{display:flex;justify-content:space-between;align-items:center;border-top:1px dashed ${C.laiton}66;
+  padding-top:11px;font-size:15px;font-weight:700;color:${C.ink}}
+.cart-grand-total b{color:${C.laitonHi};font-size:18px}
 
 /* do'kon to'qnashuvi ogohlantirishi */
 .conflict{position:relative;background:${C.card};width:100%;max-width:440px;border-radius:20px 20px 0 0;
