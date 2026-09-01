@@ -46,7 +46,7 @@ function sum(o) {
 // Sotuvchiga Telegram xabar (telegramChatId bo'lmasa super-adminga)
 async function notifySeller(sellerId, text) {
   try {
-    const BOT_TOKEN = process.env.BOT_TOKEN;
+    const BOT_TOKEN = (process.env.BOT_TOKEN || "").trim();
     if (!BOT_TOKEN) return;
     const sellers = (await kv.get("sellers")) || [];
     const seller = sellers.find((s) => s.id === sellerId);
@@ -194,7 +194,7 @@ export default async function handler(req, res) {
 
       // sotuvchiga xabar beramiz
       try {
-        const BOT_TOKEN = process.env.BOT_TOKEN;
+        const BOT_TOKEN = (process.env.BOT_TOKEN || "").trim();
         if (BOT_TOKEN) {
           const sellers = (await kv.get("sellers")) || [];
           const seller = sellers.find((s) => s.id === sellerId);

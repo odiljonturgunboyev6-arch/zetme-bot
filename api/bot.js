@@ -5,10 +5,11 @@
 
 import { kv } from "@vercel/kv";
 
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const OWNER_CHAT_ID = process.env.OWNER_CHAT_ID;
 // .trim() — Vercel ENV maydoniga nusxa olishda ba'zan ko'rinmas bo'shliq/newline
-// qo'shilib qolishi mumkin; shu solishtirish shunga chidamli bo'lsin.
+// qo'shilib qolishi mumkin (BOT_TOKEN'da aynan shu muammo aniqlangan edi —
+// Telegram API "Not Found" xatosini qaytargan edi).
+const BOT_TOKEN = (process.env.BOT_TOKEN || "").trim();
+const OWNER_CHAT_ID = process.env.OWNER_CHAT_ID;
 const TG_WEBHOOK_SECRET = (process.env.TG_WEBHOOK_SECRET || "").trim();
 const API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 

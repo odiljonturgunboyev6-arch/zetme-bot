@@ -22,7 +22,9 @@ const MIN_ORDER = 200000;       // chakana
 const OPT_MIN_ORDER = 5000000;  // optom
 const MAIN_SELLER_ID = "zetme";
 const VOUCHER_CAP = 1000000;
-const BOT_TOKEN = process.env.BOT_TOKEN;
+// .trim() — Vercel ENV maydoniga nusxa olishda ba'zan ko'rinmas bo'shliq/newline
+// qo'shilib qolishi mumkin (BOT_TOKEN'da aynan shu muammo aniqlangan edi).
+const BOT_TOKEN = (process.env.BOT_TOKEN || "").trim();
 const OWNER_CHAT_ID = process.env.OWNER_CHAT_ID;
 
 const BONUS_TIERS = [

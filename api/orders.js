@@ -145,7 +145,7 @@ export default async function handler(req, res) {
         // mijozga Telegram xabar — faqat Telegram orqali ulangan mijozlarga
         // ("w..." bilan boshlanadigan sayt hisoblari TG olmaydi, ular saytdagi profilda ko'radi)
         try {
-          const BOT_TOKEN = process.env.BOT_TOKEN;
+          const BOT_TOKEN = (process.env.BOT_TOKEN || "").trim();
           if (BOT_TOKEN && /^\d+$/.test(String(chatId))) {
             const shopName = orders[idx].shopName || (seller && seller.shopName) || "";
             const text = status === "bekor"
@@ -185,7 +185,7 @@ export default async function handler(req, res) {
           if (mi !== -1) { mine[mi].paymentStatus = "tolangan"; mine[mi].paymentConfirmTs = Date.now(); await kv.set(mkey, mine); }
         } catch (e) { console.error("pay myorders:", e); }
         try {
-          const BOT_TOKEN = process.env.BOT_TOKEN;
+          const BOT_TOKEN = (process.env.BOT_TOKEN || "").trim();
           if (BOT_TOKEN && /^\d+$/.test(String(chatId))) {
             await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
               method: "POST",
