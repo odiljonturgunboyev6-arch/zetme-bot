@@ -77,8 +77,16 @@ const FONT_BODY = "'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif";
    Kinematik hero har doim tungi (qora) qoladi — bu studiya imzosi.
    Tun rejimi saytning "market" qismini ham to'q rangga o'tkazadi. */
 const THEMES = {
-  day:   { paper: "#F5F6F3", card: "#FFFFFF", ink: "#16211B", inkDim: "#69756D", mline: "#E4E7E1", accent: "#2F6B4F", price: "#16211B", sale: "#C6472E" },
-  night: { paper: "#0C1712", card: "#132119", ink: "#EDE9DC", inkDim: "#95A29A", mline: "#233529", accent: "#7FBF9E", price: "#F1ECDF", sale: "#E57A5F" },
+  day: {
+    paper: "#F3F6EF", card: "#FFFFFF", ink: "#16211B", inkDim: "#69756D", mline: "#E4E7E1",
+    accent: "#2F6B4F", accent2: "#1B4A34", accentSoft: "#E2F0E6", accentGlow: "#2F6B4F2E",
+    price: "#16211B", sale: "#C6472E",
+  },
+  night: {
+    paper: "#081310", card: "#0F1D17", ink: "#EDE9DC", inkDim: "#8FA398", mline: "#1E3227",
+    accent: "#8FE3B8", accent2: "#4FBE8C", accentSoft: "#15291F", accentGlow: "#8FE3B855",
+    price: "#F1ECDF", sale: "#E88B6B",
+  },
 };
 let THEME = "day";
 try { if (localStorage.getItem("zetme_theme") === "night") THEME = "night"; } catch (e) {}
@@ -92,6 +100,7 @@ const STR = {
     slotFlower: "Gul rasmi", slotPot: "Tuvak rasmi",
     generating: "Yaratilmoqda…", generate: "Generatsiya qilish",
     genDone: "Tayyor! Natija va moslik tahlili shu yerda ko'rinadi.",
+    aiSoon: "AI montaj studiyasi tez orada — hozircha do'konlarimizni ko'ring",
     seeShops: "Do'konlarni ko'rish",
     srcCatalog: "Katalogdan tanlash", srcCatalogS: "Tuvaklar bo'limidan",
     srcGallery: "Galereyadan yuklash", srcGalleryS: "Telefondagi rasm",
@@ -100,10 +109,14 @@ const STR = {
     partners: "Bizning hamkorlar", shopsTitle: "Do'konlar",
     shopsSub: (n) => n + " ta tasdiqlangan do'kon · rasmga bosing",
     shopsSoon: "Do'konlar tez orada", noActiveShop: "Hozircha faol do'kon yo'q",
-    hiwEyebrow: "Qanday ishlaydi", hiwTitle: "Uch qadam — bitta kadr",
-    hiw1t: "Gulni yuklang", hiw1d: "Sevimli gulingiz rasmini oling yoki galereyadan tanlang.",
-    hiw2t: "Tuvakni tanlang", hiw2d: "O'z tuvagingizni yuklang yoki katalogdagi tuvaklardan birini tanlang.",
-    hiw3t: "AI birlashtiradi", hiw3d: "Bir necha soniyada gul tuvakda qanday ko'rinishini va moslik bahosini ko'rasiz.",
+    hiwEyebrow: "Ma'lumot", hiwTitle: "Zetme qanday ishlaydi",
+    hiwLead: "Zetme — gul va tuvak sotuvchilarini xaridorlar bilan bog'laydigan platforma. Turli do'konlardagi mahsulotlarni bitta joydan qulay tanlab, buyurtma qilasiz.",
+    hiw1t: "Do'kon va mahsulot tanlang", hiw1d: "Studiya bo'limidan tasdiqlangan do'konni yoki Mahsulotlar bo'limidan kerakli tuvak/gulni to'g'ridan-to'g'ri tanlang.",
+    hiw2t: "Savatga qo'shing", hiw2d: "Yoqqan mahsulotlarni savatga qo'shing — istagan miqdorda, hatto turli do'konlardan bir vaqtda.",
+    hiw3t: "Ma'lumotlaringizni kiriting", hiw3d: "Ism, telefon va manzilingizni yozing — keyingi safar qayta kiritish shart emas, eslab qolinadi.",
+    hiw4t: "Sotuvchi bog'lanadi", hiw4d: "Buyurtma to'g'ridan-to'g'ri do'konga tushadi, sotuvchi tez orada siz bilan bog'lanib yetkazib beradi.",
+    rulesT: "Zetme kim va nima uchun javobgar",
+    rulesD: "Zetme — sotuvchi va xaridorni bog'laydigan platforma, o'zi mahsulot sotmaydi. Mahsulot sifati, narxi va yetkazib berish muddati uchun tegishli do'kon (sotuvchi) javobgar. Har bir sotuvchi ro'yxatdan o'tishda tekshiriladi, lekin savdoning o'zi bevosita siz va sotuvchi o'rtasida amalga oshadi. Savol yoki muammo bo'lsa — avval sotuvchi bilan bog'laning; hal bo'lmasa, Zetme administratsiyasiga murojaat qiling.",
     inspEyebrow: "Ilhom galereyasi", inspTitle: "AI ko'zi bilan", inspSub: "Studiyada yaratilgan kadrlar — sizniki ham shunday chiqadi",
     inspBadge: "AI bilan yaratilgan",
     insp1: "Oltin barg tuvak · ranunculus", insp2: "Oltin barg tuvak · orxideya", insp3: "Sopol tuvak · ranunculus",
@@ -180,6 +193,7 @@ const STR = {
     slotFlower: "Фото цветка", slotPot: "Фото горшка",
     generating: "Создаётся…", generate: "Сгенерировать",
     genDone: "Готово! Результат и анализ сочетания появятся здесь.",
+    aiSoon: "AI-студия монтажа скоро — а пока загляните в наши магазины",
     seeShops: "Смотреть магазины",
     srcCatalog: "Выбрать из каталога", srcCatalogS: "Из раздела горшков",
     srcGallery: "Загрузить из галереи", srcGalleryS: "Фото с телефона",
@@ -188,10 +202,14 @@ const STR = {
     partners: "Наши партнёры", shopsTitle: "Магазины",
     shopsSub: (n) => n + " " + plural(n, "проверенный магазин", "проверенных магазина", "проверенных магазинов") + " · нажмите на фото",
     shopsSoon: "Магазины скоро появятся", noActiveShop: "Пока нет активных магазинов",
-    hiwEyebrow: "Как это работает", hiwTitle: "Три шага — один кадр",
-    hiw1t: "Загрузите цветок", hiw1d: "Сфотографируйте любимый цветок или выберите из галереи.",
-    hiw2t: "Выберите горшок", hiw2d: "Загрузите свой горшок или выберите один из каталога.",
-    hiw3t: "ИИ объединит", hiw3d: "Через несколько секунд увидите цветок в горшке и оценку сочетания.",
+    hiwEyebrow: "Информация", hiwTitle: "Как работает Zetme",
+    hiwLead: "Zetme — платформа, которая связывает продавцов цветов и горшков с покупателями. Вы удобно выбираете товары из разных магазинов в одном месте и оформляете заказ.",
+    hiw1t: "Выберите магазин и товар", hiw1d: "В разделе Студия выберите проверенный магазин или сразу товар в разделе Товары.",
+    hiw2t: "Добавьте в корзину", hiw2d: "Добавляйте понравившиеся товары в корзину — в любом количестве, даже из разных магазинов сразу.",
+    hiw3t: "Укажите данные", hiw3d: "Впишите имя, телефон и адрес — в следующий раз вводить заново не нужно, всё запомнится.",
+    hiw4t: "Продавец свяжется с вами", hiw4d: "Заказ сразу попадает в магазин, продавец вскоре свяжется с вами и доставит заказ.",
+    rulesT: "Кто и за что отвечает на Zetme",
+    rulesD: "Zetme — это платформа, соединяющая продавца и покупателя, сама она товары не продаёт. За качество, цену и сроки доставки товара отвечает магазин (продавец). Каждый продавец проверяется при регистрации, но сама сделка происходит напрямую между вами и продавцом. Если есть вопрос или проблема — сначала обратитесь к продавцу; если не решится — напишите администрации Zetme.",
     inspEyebrow: "Галерея вдохновения", inspTitle: "Глазами ИИ", inspSub: "Кадры, созданные в студии — ваш получится таким же",
     inspBadge: "Создано с ИИ",
     insp1: "Золотое кашпо · ранункулюс", insp2: "Золотое кашпо · орхидея", insp3: "Керамическое кашпо · ранункулюс",
@@ -315,6 +333,10 @@ const BOT_USERNAME = "zetmeai_bot";
 const MIN_ORDER = 200000;       // chakana (retail) uchun minimal buyurtma
 const OPT_MIN_ORDER = 5000000;  // optom (wholesale) narxda xarid qilish uchun minimal savat
 
+// AI generatsiya (gul+tuvak montaj) bo'limi hozircha o'chirilgan — o'rniga animatsiyali
+// Z-logo turadi. Tayyor bo'lganda shu flagni true qilish kifoya, hech narsa o'chirilmagan.
+const AI_STUDIO_ENABLED = false;
+
 /* ============================== Helpers ============================== */
 function fmt(n) {
   return Math.round(n).toLocaleString("uz-UZ").replace(/,/g, " ") + " so'm";
@@ -432,6 +454,25 @@ function SourceMenu({ accent, onPick }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/* ============================== Zetme mono-logo (Z + animatsiyali "zetme" so'zi) ==============================
+   Haqiqiy logotip belgisi: tilla rangli "Z" doim ko'rinib turadi (burchakka
+   qisilmagan), "zetme" so'zi esa harf-baharf kirib-chiqib turadi (nafis, davomiy
+   halqa animatsiya). size="sm" — topbar uchun, size="lg" — hero markazi uchun. */
+function ZetmeMark({ size = "sm" }) {
+  const word = "zetme";
+  return (
+    <div className={"zmark zmark-" + size} aria-label="Zetme AI">
+      <span className="zmark-glow" aria-hidden="true" />
+      <span className="zmark-z">Z</span>
+      <span className="zmark-word" aria-hidden="true">
+        {word.split("").map((ch, i) => (
+          <em key={i} style={{ animationDelay: `${i * 90}ms` }}>{ch}</em>
+        ))}
+      </span>
     </div>
   );
 }
@@ -554,9 +595,11 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
           <button className="pm-add" onClick={() => { onAdd(p, v, qty); onClose(); }}>
             <ShoppingBag size={16} /> {tr("addCart")}{fmt(unitPrice * qty)}
           </button>
-          <button className="pm-studio" onClick={() => { onSendToStudio(p, v); onClose(); }}>
-            <Sparkles size={15} /> {p.category === "gul" ? tr("pmStudioGul") : tr("pmStudioTuvak")}
-          </button>
+          {AI_STUDIO_ENABLED && (
+            <button className="pm-studio" onClick={() => { onSendToStudio(p, v); onClose(); }}>
+              <Sparkles size={15} /> {p.category === "gul" ? tr("pmStudioGul") : tr("pmStudioTuvak")}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1498,7 +1541,7 @@ function App() {
           <span className="fire ff4" /><span className="fire ff5" /><span className="fire ff6" />
         </div>
         <header className="topbar">
-          <img src={LOGO_STACK} alt="Zetme AI" className="logo" />
+          <ZetmeMark size="sm" />
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <button className="prof-entry" onClick={() => setProfileOpen(true)}>
               <span className="prof-entry-ring" style={{ borderColor: tier.ring }}>
@@ -1553,21 +1596,34 @@ function App() {
           <span className="h-line" /><Flower2 size={11} color={C.laiton} /><span className="h-line" />
         </div>
 
-        <div className="genrow rv rv4">
-          <GenSlot label={tr("slotFlower")} icon={Flower2} accent={C.bloom} image={flower} onSetImage={setFlower} />
-          <div className="plus-sep"><Plus size={16} color={C.laiton} /></div>
-          <GenSlot label={tr("slotPot")} icon={Sprout} accent={C.laiton} image={pot} onSetImage={setPot} />
-        </div>
+        {AI_STUDIO_ENABLED ? (
+          <React.Fragment>
+            <div className="genrow rv rv4">
+              <GenSlot label={tr("slotFlower")} icon={Flower2} accent={C.bloom} image={flower} onSetImage={setFlower} />
+              <div className="plus-sep"><Plus size={16} color={C.laiton} /></div>
+              <GenSlot label={tr("slotPot")} icon={Sprout} accent={C.laiton} image={pot} onSetImage={setPot} />
+            </div>
 
-        <button className="gen-cta rv rv5" disabled={!canGenerate || genLoading} onClick={generate}>
-          <span className="cta-shine" aria-hidden="true" />
-          <Sparkles size={17} /> {genLoading ? tr("generating") : tr("generate")}
-        </button>
+            <button className="gen-cta rv rv5" disabled={!canGenerate || genLoading} onClick={generate}>
+              <span className="cta-shine" aria-hidden="true" />
+              <Sparkles size={17} /> {genLoading ? tr("generating") : tr("generate")}
+            </button>
 
-        {genDone && !genLoading && (
-          <div className="gen-result">
-            <Sparkles size={15} color={C.laiton} />
-            <span>{tr("genDone")}</span>
+            {genDone && !genLoading && (
+              <div className="gen-result">
+                <Sparkles size={15} color={C.laiton} />
+                <span>{tr("genDone")}</span>
+              </div>
+            )}
+          </React.Fragment>
+        ) : (
+          /* AI montaj hozircha o'chirilgan — o'rniga nafis, davomiy animatsiyali
+             Zetme markasi turadi (tez orada qaytadi degan kayfiyatda). */
+          <div className="hero-center rv rv4" aria-hidden="false">
+            <div className="hc-ring hc-r1" />
+            <div className="hc-ring hc-r2" />
+            <ZetmeMark size="lg" />
+            <p className="hc-soon">{tr("aiSoon")}</p>
           </div>
         )}
 
@@ -1615,16 +1671,18 @@ function App() {
         </div>
       </section>
 
-      {/* ===================== STUDIYA: Qanday ishlaydi ===================== */}
-      <section className="hiw">
+      {/* ===================== MA'LUMOTLAR: sayt haqida, buyurtma qo'llanmasi, qoidalar ===================== */}
+      <section className="hiw" id="info">
         <div className="hiw-inner">
           <p className="sw-eyebrow">{tr("hiwEyebrow")}</p>
           <h2 className="ab-title">{tr("hiwTitle")}</h2>
-          <div className="hiw-row">
+          <p className="hiw-lead">{tr("hiwLead")}</p>
+          <div className="hiw-row hiw-row4">
             {[
-              { ic: Flower2,  t: tr("hiw1t"), d: tr("hiw1d") },
-              { ic: Sprout,   t: tr("hiw2t"), d: tr("hiw2d") },
-              { ic: Sparkles, t: tr("hiw3t"), d: tr("hiw3d") },
+              { ic: Store,       t: tr("hiw1t"), d: tr("hiw1d") },
+              { ic: ShoppingBag, t: tr("hiw2t"), d: tr("hiw2d") },
+              { ic: User,        t: tr("hiw3t"), d: tr("hiw3d") },
+              { ic: Check,       t: tr("hiw4t"), d: tr("hiw4d") },
             ].map((s, i) => {
               const Ic = s.ic;
               return (
@@ -1636,26 +1694,36 @@ function App() {
               );
             })}
           </div>
+
+          <div className="hiw-rules">
+            <div className="hiw-rules-ic"><BadgeCheck size={19} color={C.laitonHi} /></div>
+            <div>
+              <div className="hiw-rules-t">{tr("rulesT")}</div>
+              <p className="hiw-rules-d">{tr("rulesD")}</p>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ===================== STUDIYA: Ilhom galereyasi ===================== */}
-      <section className="insp">
-        <div className="insp-inner">
-          <p className="sw-eyebrow">{tr("inspEyebrow")}</p>
-          <h2 className="ab-title">{tr("inspTitle")}</h2>
-          <p className="insp-sub">{tr("inspSub")}</p>
-        </div>
-        <div className="insp-row">
-          {INSP.map((g, i) => (
-            <figure key={i} className="insp-card" style={{ animationDelay: `${i * 110}ms` }}>
-              <img src={g.img} alt={tr(g.cap)} loading="lazy" />
-              <span className="insp-badge"><Sparkles size={10} /> {tr("inspBadge")}</span>
-              <figcaption>{tr(g.cap)}</figcaption>
-            </figure>
-          ))}
-        </div>
-      </section>
+      {/* ===================== STUDIYA: Ilhom galereyasi (AI yoqilganda ko'rinadi) ===================== */}
+      {AI_STUDIO_ENABLED && (
+        <section className="insp">
+          <div className="insp-inner">
+            <p className="sw-eyebrow">{tr("inspEyebrow")}</p>
+            <h2 className="ab-title">{tr("inspTitle")}</h2>
+            <p className="insp-sub">{tr("inspSub")}</p>
+          </div>
+          <div className="insp-row">
+            {INSP.map((g, i) => (
+              <figure key={i} className="insp-card" style={{ animationDelay: `${i * 110}ms` }}>
+                <img src={g.img} alt={tr(g.cap)} loading="lazy" />
+                <span className="insp-badge"><Sparkles size={10} /> {tr("inspBadge")}</span>
+                <figcaption>{tr(g.cap)}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ===================== STUDIYA: Zetme AI haqida ===================== */}
       <section className="about" id="about">
@@ -1886,7 +1954,11 @@ function App() {
 const buildCSS = () => `
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500;600&display=swap');
 *{box-sizing:border-box}
-.root{font-family:${FONT_BODY};background:${C.paper};min-height:100vh;padding-bottom:74px}
+.root{font-family:${FONT_BODY};background:${C.paper};
+  background-image:radial-gradient(120% 46% at 50% 0%, ${C.accentSoft}, transparent 62%);
+  background-repeat:no-repeat;min-height:100vh;padding-bottom:74px;
+  transition:background-color .55s ease}
+.root, .root *{transition:background-color .4s ease, border-color .4s ease, color .25s ease}
 
 /* ---------- HERO / STUDIO — premium vayb ---------- */
 @keyframes rvIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
@@ -1958,8 +2030,50 @@ const buildCSS = () => `
 .ff5{left:48%;top:24%;width:3px;height:3px;background:#7fd8c8;box-shadow:0 0 8px 2px #7fd8c866;animation-delay:4.8s,.9s}
 .ff6{left:63%;top:44%;width:3px;height:3px;background:#ffe9b0;box-shadow:0 0 9px 2px #ffe9b066;animation-delay:6s,2.7s}
 .topbar{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.logo{height:26px;width:auto}
 .lang-wrap{position:relative}
+
+/* ---------- ZETME MONO-LOGO: tilla "Z" + harf-baharf kirib-chiquvchi "zetme" ---------- */
+.zmark{position:relative;display:inline-flex;align-items:center;gap:7px;line-height:1}
+.zmark-z{position:relative;z-index:2;font-family:${FONT_DISPLAY};font-weight:600;
+  background:linear-gradient(155deg,${C.laitonHi},${C.laiton} 55%,${C.laitonLo});
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 1px 6px ${C.laiton}55)}
+.zmark-word{position:relative;z-index:2;display:inline-flex;font-family:${FONT_DISPLAY};letter-spacing:.5px}
+.zmark-word em{font-style:normal;display:inline-block;opacity:0;color:${C.laitonHi};
+  animation:zmarkLetter 4.6s ease-in-out infinite}
+.zmark-glow{position:absolute;left:0;top:50%;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle, ${C.laiton}40, transparent 70%);
+  transform:translate(-30%,-50%);animation:zmarkGlow 4.6s ease-in-out infinite}
+.zmark-sm .zmark-z{font-size:26px}
+.zmark-sm .zmark-word em{font-size:14px}
+.zmark-sm .zmark-glow{width:34px;height:34px}
+.zmark-lg{gap:12px}
+.zmark-lg .zmark-z{font-size:86px}
+.zmark-lg .zmark-word em{font-size:26px}
+.zmark-lg .zmark-glow{width:110px;height:110px}
+@keyframes zmarkLetter{
+  0%,100%{opacity:0;transform:translateY(5px)}
+  18%,68%{opacity:1;transform:translateY(0)}
+  86%{opacity:0;transform:translateY(-5px)}
+}
+@keyframes zmarkGlow{
+  0%,100%{opacity:.35;transform:translate(-30%,-50%) scale(.9)}
+  50%{opacity:.75;transform:translate(-30%,-50%) scale(1.15)}
+}
+
+/* ---------- HERO markazi: AI montaj o'chirilganda shu animatsiya turadi ---------- */
+.hero-center{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:16px;padding:40px 20px 32px;min-height:190px}
+.hc-ring{position:absolute;border-radius:50%;border:1px solid ${C.laiton}33;pointer-events:none;
+  animation:hcPulse 5.5s ease-out infinite}
+.hc-r1{width:150px;height:150px}
+.hc-r2{width:150px;height:150px;animation-delay:1.8s}
+@keyframes hcPulse{
+  0%{opacity:.55;transform:scale(.8)}
+  100%{opacity:0;transform:scale(1.9)}
+}
+.hc-soon{position:relative;z-index:2;max-width:280px;text-align:center;font-size:12.5px;
+  line-height:1.6;color:${C.ivoireDim};font-family:${FONT_BODY};margin:0}
 .prof-entry{display:flex;align-items:center;gap:6px;background:#ffffff12;border:1px solid ${C.line};border-radius:20px;
   padding:4px 10px 4px 4px;cursor:pointer}
 .prof-entry-ring{width:22px;height:22px;border-radius:50%;border:1.5px solid;display:flex;align-items:center;justify-content:center;background:#0c261e}
@@ -2437,8 +2551,9 @@ const buildCSS = () => `
 }
 
 /* ============ Studiya: Qanday ishlaydi ============ */
-.hiw{background:${C.vert};color:${C.ivoire};padding:30px 16px 8px;position:relative}
+.hiw{background:${C.vert};color:${C.ivoire};padding:30px 16px 26px;position:relative}
 .hiw-inner{max-width:860px;margin:0 auto}
+.hiw-lead{font-size:13px;line-height:1.65;color:${C.ivoireDim};text-align:center;max-width:560px;margin:10px auto 0}
 .hiw-row{display:grid;grid-template-columns:1fr;gap:14px;margin-top:18px}
 .hiw-step{position:relative;text-align:center;padding:16px 14px 18px;border:1px solid #C6A05B2E;border-radius:16px;
   background:linear-gradient(160deg,#FFFFFF08,#FFFFFF02);animation:swFade .6s ease both}
@@ -2449,7 +2564,14 @@ const buildCSS = () => `
 .hiw-d{font-size:12.5px;line-height:1.55;color:${C.ivoireDim}}
 @media (min-width:640px){
   .hiw-row{grid-template-columns:repeat(3,1fr)}
+  .hiw-row4{grid-template-columns:repeat(4,1fr)}
 }
+.hiw-rules{position:relative;display:flex;gap:13px;align-items:flex-start;margin-top:24px;padding:18px 18px 20px;
+  border:1px solid #C6A05B33;border-radius:16px;background:linear-gradient(160deg,#C6A05B12,#FFFFFF03)}
+.hiw-rules-ic{flex-shrink:0;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:1px solid #C6A05B55;background:#C6A05B1A;margin-top:1px}
+.hiw-rules-t{font-family:${FONT_DISPLAY};font-size:16px;color:#F1ECDF;margin-bottom:5px}
+.hiw-rules-d{font-size:12.5px;line-height:1.65;color:${C.ivoireDim};margin:0}
 
 /* ============ Studiya: Ilhom galereyasi ============ */
 .insp{background:linear-gradient(180deg,${C.vert} 0%,${C.noir} 60%);color:${C.ivoire};padding:28px 0 34px}
