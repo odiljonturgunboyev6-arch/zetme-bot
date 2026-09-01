@@ -181,8 +181,10 @@ const STR = {
     payAgree: "To'lov usulini sotuvchi bilan kelishasiz",
     payPh: "Qanday to'ladingiz? (Payme, naqd...)", send: "Yuborish", paidBtn: "💸 To'lov qildim",
     tokensLeft: "token qoldi", buyTokens: "Token sotib olish",
-    tierMore: (n, t) => "Yana " + n + " token — " + t + " darajasi",
-    badgeT: "Nishon (belgi)", badgeOn: "Faol — profilingizda ko'rinadi", badgeOff: "Token to'plamasdan ham alohida sotib olinadi", buy: "Sotib olish",
+    badgeT: "Nishon (belgi)", buy: "Sotib olish",
+    badgesT: "Galichkalar", galiFree: "Bepul (standart)", galiMonth: (p) => p + " / oyiga", galiSelect: "Tanlash", galiCurrent: "Joriy",
+    regOr: "yoki", regTitle: "Telefon yoki gmail bilan ro'yxatdan o'ting", regHint: "Shunda ma'lumotlaringiz eslab qolinadi",
+    regName: "Ismingiz", regContact: "Telefon yoki email", regBtn: "Ro'yxatdan o'tish",
     genHistory: "Generatsiyalar tarixi", genEmpty: "Hali generatsiya qilinmagan. Studiyadan boshlang.",
     toNight: "Tun rejimi", toDay: "Kun rejimi",
   },
@@ -275,8 +277,10 @@ const STR = {
     payAgree: "Способ оплаты согласуете с продавцом",
     payPh: "Как оплатили? (Payme, наличные...)", send: "Отправить", paidBtn: "💸 Я оплатил",
     tokensLeft: "токенов осталось", buyTokens: "Купить токены",
-    tierMore: (n, t) => "Ещё " + n + " " + plural(n, "токен", "токена", "токенов") + " — уровень " + t,
-    badgeT: "Значок", badgeOn: "Активен — виден в вашем профиле", badgeOff: "Можно купить отдельно, не копя токены", buy: "Купить",
+    badgeT: "Значок", buy: "Купить",
+    badgesT: "Значки", galiFree: "Бесплатно (стандарт)", galiMonth: (p) => p + " / в месяц", galiSelect: "Выбрать", galiCurrent: "Текущий",
+    regOr: "или", regTitle: "Зарегистрируйтесь по телефону или gmail", regHint: "Так мы сохраним ваши данные",
+    regName: "Ваше имя", regContact: "Телефон или email", regBtn: "Зарегистрироваться",
     genHistory: "История генераций", genEmpty: "Генераций пока нет. Начните со студии.",
     toNight: "Ночной режим", toDay: "Дневной режим",
   },
@@ -370,18 +374,57 @@ const LANGS = [
   { code: "en", label: "EN", active: false },
 ];
 
-// membership tiers — badge color changes by token balance / purchased status
-const TIERS_BADGE = [
-  { id: "oddiy", label: "Oddiy", min: 0, color: C.inkDim, ring: C.mline },
-  { id: "kumush", label: "Kumush a'zo", min: 20, color: "#8A94A6", ring: "#C7CCD6" },
-  { id: "oltin", label: "Oltin a'zo", min: 60, color: C.laitonLo, ring: C.laiton },
-  { id: "olmos", label: "Olmos a'zo", min: 150, color: "#3E7FB8", ring: "#8FC1EE" },
+// GALICHKALAR: profil belgisi — 0-tier bepul/oddiy, 1-10 oylik obuna bilan
+// sotib olinadi, narx oshgani sari kurinishi ham boyib boradi (gem soni, rang,
+// nur kuchi). tierForBadge(idx) — BADGES massividan xavfsiz element qaytaradi.
+const BADGES = [
+  { id: 0,  label: "Oddiy",              price: 0,     color: "#8B958E", ring: "#C7D0CA", gems: 0, glow: 0 },
+  { id: 1,  label: "Kumush Galichka",    price: 19900, color: "#9AA7B4", ring: "#D3DBE3", gems: 1, glow: 1 },
+  { id: 2,  label: "Bronza Toj",         price: 27900, color: "#C08552", ring: "#E3B98C", gems: 2, glow: 1 },
+  { id: 3,  label: "Zumrad Gulchambar",  price: 35900, color: "#2FA36B", ring: "#8FE3B8", gems: 3, glow: 1 },
+  { id: 4,  label: "Yoqut Toj",          price: 44900, color: "#C13E5A", ring: "#F0879E", gems: 4, glow: 2 },
+  { id: 5,  label: "Sapfir Halqa",       price: 53900, color: "#3E7FB8", ring: "#8FC1EE", gems: 5, glow: 2 },
+  { id: 6,  label: "Ametist Toji",       price: 62900, color: "#8B5FBF", ring: "#C9A9E8", gems: 6, glow: 2 },
+  { id: 7,  label: "Olmos Gulchambar",   price: 71900, color: "#4FB8D6", ring: "#C9F3FA", gems: 7, glow: 3 },
+  { id: 8,  label: "Shohona Toj",        price: 80900, color: "#9A5FD0", ring: "#E8C468", gems: 8, glow: 3 },
+  { id: 9,  label: "Imperator Toji",     price: 89900, color: "#C6A05B", ring: "#F4D98A", gems: 9, glow: 4 },
+  { id: 10, label: "Afsonaviy Zetme Toji", price: 99900, color: "#E8C468", ring: "#FFEBA8", gems: 10, glow: 5, legendary: true },
 ];
-function tierForTokens(tokens, badgeOwned) {
-  let t = TIERS_BADGE[0];
-  for (const tier of TIERS_BADGE) if (tokens >= tier.min) t = tier;
-  if (badgeOwned && t.id === "oddiy") return TIERS_BADGE[1];
-  return t;
+function badgeAt(idx) { return BADGES[Math.max(0, Math.min(BADGES.length - 1, idx || 0))]; }
+
+/* Galichka — toj shaklidagi SVG belgi; tier ortgani sari gem (marvarid) soni
+   va nur (glow) kuchayib, eng yuqorisida asta aylanuvchi rangin nur qo'shiladi */
+function BadgeIcon({ tier, size = 40 }) {
+  const b = badgeAt(tier);
+  const gemAngles = Array.from({ length: b.gems }, (_, i) => (360 / Math.max(1, b.gems)) * i - 90);
+  return (
+    <span className={"gali-ic" + (b.legendary ? " gali-legendary" : "")} style={{ width: size, height: size }}>
+      {b.glow > 0 && (
+        <span className="gali-glow" style={{
+          background: `radial-gradient(circle, ${b.ring}${b.glow >= 3 ? "aa" : "66"}, transparent 70%)`,
+          filter: `blur(${2 + b.glow}px)`,
+        }} />
+      )}
+      <svg viewBox="0 0 40 40" width={size} height={size} className="gali-svg">
+        <defs>
+          <linearGradient id={`gg${tier}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={b.ring} />
+            <stop offset="100%" stopColor={b.color} />
+          </linearGradient>
+        </defs>
+        <circle cx="20" cy="20" r="17" fill="none" stroke={`url(#gg${tier})`} strokeWidth={b.id === 0 ? 1.5 : 2.4} opacity={b.id === 0 ? 0.5 : 1} />
+        {b.id > 0 && (
+          <path d="M9 24 L11 14 L16 19 L20 11 L24 19 L29 14 L31 24 Z" fill={`url(#gg${tier})`} opacity="0.95" />
+        )}
+        {b.id === 0 && <circle cx="20" cy="20" r="7" fill={b.color} opacity="0.35" />}
+        {gemAngles.map((a, i) => {
+          const rad = (a * Math.PI) / 180;
+          const r = 12.5;
+          return <circle key={i} cx={20 + r * Math.cos(rad)} cy={20 + r * Math.sin(rad) * 0.5 - 3} r="1.6" fill={b.ring} />;
+        })}
+      </svg>
+    </span>
+  );
 }
 
 // tiny localStorage wrapper — never throws, works on the real deployed site
@@ -792,8 +835,8 @@ function OrderSuccess({ orderId, payTotal, shopName, voucherDiscount, voucherPer
 }
 
 /* ============================== Profile screen ============================== */
-function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBuyTokens, onBuyBadge,
-  cust, orders, linked, vouchers, onLink, onSaveName, onPhoto, onCancelOrder, onReceiveOrder, onPaidOrder }) {
+function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge,
+  cust, orders, linked, vouchers, onLink, onRegister, onSaveName, onPhoto, onCancelOrder, onReceiveOrder, onPaidOrder }) {
   const [cancelingId, setCancelingId] = useState(null); // "tasdiqlaysizmi?" bosqichi
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelErr, setCancelErr] = useState("");
@@ -820,13 +863,16 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
     if (err) setCancelErr(err);
     else { setPayFormId(null); setPayNote(""); }
   }
-  const tier = tierForTokens(tokens, badgeOwned);
-  const nextTier = TIERS_BADGE.find((t) => t.min > tokens);
+  const tier = badgeAt(badgeTier);
   const photoRef = React.useRef(null);
 
   const [code, setCode] = useState("");
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkErr, setLinkErr] = useState("");
+  const [regName, setRegName] = useState("");
+  const [regContact, setRegContact] = useState("");
+  const [regBusy, setRegBusy] = useState(false);
+  const [regErr, setRegErr] = useState("");
   const [editName, setEditName] = useState(false);
   const [fn, setFn] = useState("");
   const [ln, setLn] = useState("");
@@ -844,6 +890,12 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
     const err = await onLink(code.trim());
     setLinkBusy(false);
     if (err) setLinkErr(err); else setCode("");
+  }
+  async function doRegister() {
+    setRegBusy(true); setRegErr("");
+    const err = await onRegister(regName.trim(), regContact.trim());
+    setRegBusy(false);
+    if (err) setRegErr(err); else { setRegName(""); setRegContact(""); }
   }
   async function doSaveName() {
     setNameBusy(true);
@@ -932,6 +984,22 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
             <a className="prof-botlink" href={`https://t.me/${BOT_USERNAME}`} target="_blank" rel="noreferrer">
               <Send size={13} /> {tr("openBot")}
             </a>
+
+            <div className="prof-reg-divider"><span>{tr("regOr")}</span></div>
+            <div className="prof-regcard">
+              <p>{tr("regTitle")}</p>
+              <div className="prof-reg-row">
+                <input value={regName} placeholder={tr("regName")} onChange={(e) => setRegName(e.target.value)} />
+              </div>
+              <div className="prof-reg-row">
+                <input value={regContact} placeholder={tr("regContact")} onChange={(e) => setRegContact(e.target.value)} />
+                <button disabled={regBusy || regName.trim().length < 2 || regContact.trim().length < 5} onClick={doRegister}>
+                  {regBusy ? "…" : tr("regBtn")}
+                </button>
+              </div>
+              <div className="prof-reg-hint">{tr("regHint")}</div>
+              {regErr && <div className="prof-err">{regErr}</div>}
+            </div>
           </div>
         ) : (
           <>
@@ -1031,56 +1099,44 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
           </>
         )}
 
-        <div className="prof-tokencard">
-          <div className="prof-token-left">
-            <Coins size={18} color={C.laiton} />
-            <div>
-              <div className="prof-token-n">{tokens}</div>
-              <div className="prof-token-l">{tr("tokensLeft")}</div>
-            </div>
-          </div>
-          <button className="prof-topup" onClick={onBuyTokens}>{tr("buyTokens")}</button>
-        </div>
-
-        {nextTier && (
-          <div className="prof-progress">
-            <div className="prof-progress-row">
-              <span>{tier.label}</span><span>{nextTier.label}</span>
-            </div>
-            <div className="prof-bar"><div className="prof-bar-fill" style={{ width: `${Math.min(100, (tokens / nextTier.min) * 100)}%`, background: nextTier.color }} /></div>
-            <div className="prof-progress-hint">{tr("tierMore", Math.max(0, nextTier.min - tokens), nextTier.label)}</div>
-          </div>
-        )}
-
-        <div className="prof-badgecard">
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span className="prof-badge-ic" style={{ background: badgeOwned ? tier.color : C.mline }}>
-              <BadgeCheck size={16} color="#fff" />
-            </span>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: 13.5 }}>{tr("badgeT")}</div>
-              <div style={{ fontSize: 11.5, color: C.inkDim }}>{badgeOwned ? tr("badgeOn") : tr("badgeOff")}</div>
-            </div>
-          </div>
-          {!badgeOwned && <button className="prof-badgebuy" onClick={onBuyBadge}>{tr("buy")}</button>}
-          {badgeOwned && <Check size={18} color={C.accent} />}
-        </div>
-
         <div className="prof-histhead">
-          <Clock size={14} color={C.inkDim} />
-          <span>{tr("genHistory")}</span>
+          <BadgeCheck size={14} color={C.inkDim} />
+          <span>{tr("badgesT")}</span>
         </div>
-        {generations.length === 0 ? (
-          <div className="prof-empty">{tr("genEmpty")}</div>
-        ) : (
-          <div className="prof-grid">
-            {generations.map((g, i) => (
-              <div key={i} className="prof-gitem">
-                {g.thumb ? <img src={g.thumb} alt="" /> : <Sparkles size={20} color={C.laitonLo} />}
-                <span>{g.date}</span>
+        <div className="gali-grid">
+          {BADGES.map((b) => {
+            const active = badgeTier === b.id;
+            return (
+              <button key={b.id} className={"gali-card" + (active ? " gali-active" : "")} onClick={() => onSelectBadge(b.id)}>
+                {active && <span className="gali-check"><Check size={11} color="#fff" /></span>}
+                <BadgeIcon tier={b.id} size={46} />
+                <div className="gali-name">{b.label}</div>
+                <div className="gali-price">{b.price === 0 ? tr("galiFree") : tr("galiMonth", fmt(b.price))}</div>
+                <div className="gali-sel">{active ? tr("galiCurrent") : tr("galiSelect")}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {AI_STUDIO_ENABLED && (
+          <>
+            <div className="prof-histhead">
+              <Clock size={14} color={C.inkDim} />
+              <span>{tr("genHistory")}</span>
+            </div>
+            {generations.length === 0 ? (
+              <div className="prof-empty">{tr("genEmpty")}</div>
+            ) : (
+              <div className="prof-grid">
+                {generations.map((g, i) => (
+                  <div key={i} className="prof-gitem">
+                    {g.thumb ? <img src={g.thumb} alt="" /> : <Sparkles size={20} color={C.laitonLo} />}
+                    <span>{g.date}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -1147,7 +1203,7 @@ function App() {
   const [custOrders, setCustOrders] = useState([]);
   const [custVouchers, setCustVouchers] = useState([]); // bekor kompensatsiyasi bonuslari
   const [tokens, setTokens] = useState(2);
-  const [badgeOwned, setBadgeOwned] = useState(false);
+  const [badgeTier, setBadgeTier] = useState(0); // 0=bepul, 1-10=galichka darajalari
   const [generations, setGenerations] = useState([]);
 
   // pastki navigatsiyada ayni shu paytda qaysi oyna faol ekanini bildiradi
@@ -1166,8 +1222,9 @@ function App() {
     if (c) { try { setProfile(JSON.parse(c)); } catch (e) {} }
     const t = storageGet("zetme_tokens", null);
     if (t != null) setTokens(Number(t));
-    const b = storageGet("zetme_badge", null);
-    if (b === "1") setBadgeOwned(true);
+    const bt = storageGet("zetme_badge_tier", null);
+    if (bt != null) setBadgeTier(Math.max(0, Math.min(10, Number(bt) || 0)));
+    else { const b = storageGet("zetme_badge", null); if (b === "1") setBadgeTier(1); } // eski format bilan moslik
     const g = storageGet("zetme_generations", null);
     if (g) { try { setGenerations(JSON.parse(g)); } catch (e) {} }
     const ca = storageGet("zetme_cust_auth", null);
@@ -1200,6 +1257,24 @@ function App() {
     const extra = custAuth && String(custAuth.chatId).startsWith("w")
       ? { oldChatId: custAuth.chatId, oldToken: custAuth.token } : {};
     const d = await customerApi({ action: "link", code, ...extra });
+    if (!d.ok) return d.error || "Xatolik";
+    const auth = { chatId: d.chatId, token: d.token };
+    setCustAuth(auth);
+    setCustProfile(d.profile);
+    setCustOrders(d.orders || []);
+    setCustVouchers(d.vouchers || []);
+    storageSet("zetme_cust_auth", JSON.stringify(auth));
+    return null;
+  }
+
+  // Telefon yoki gmail bilan ro'yxatdan o'tish (Telegram shart emas) — chindan
+  // tasdiqlanmagan "eslab qolish" hisobi, checkout paytida ochiladigan "web"
+  // hisobning aynan o'zi (api/customer.js "register" amali).
+  async function registerCustomer(name, contact) {
+    const isEmail = contact.includes("@");
+    const payload = { action: "register", name };
+    if (isEmail) payload.email = contact; else payload.phone = contact;
+    const d = await customerApi(payload);
     if (!d.ok) return d.error || "Xatolik";
     const auth = { chatId: d.chatId, token: d.token };
     setCustAuth(auth);
@@ -1422,9 +1497,10 @@ function App() {
     setTokens(newTokens);
     storageSet("zetme_tokens", String(newTokens));
   }
-  function buyBadge() {
-    setBadgeOwned(true);
-    storageSet("zetme_badge", "1");
+  function selectBadge(idx) {
+    const i = Math.max(0, Math.min(10, idx || 0));
+    setBadgeTier(i);
+    storageSet("zetme_badge_tier", String(i));
   }
 
   // MARKETPLACE: savatda BIR NECHTA do'kon mahsulotlari bo'lishi mumkin —
@@ -1538,7 +1614,7 @@ function App() {
   }, [cart, priceMode]);
 
   const checkoutGroup = cartGroups.find((g) => g.sellerId === checkoutSellerId) || null;
-  const tier = tierForTokens(tokens, badgeOwned);
+  const tier = badgeAt(badgeTier);
 
   return (
     <div className="root">
@@ -1594,7 +1670,7 @@ function App() {
               <span className="prof-entry-ring" style={{ borderColor: tier.ring }}>
                 <User size={14} color={tier.color} />
               </span>
-              <span className="prof-entry-tok"><Coins size={11} color={C.laiton} /> {tokens}</span>
+              {AI_STUDIO_ENABLED && <span className="prof-entry-tok"><Coins size={11} color={C.laiton} /> {tokens}</span>}
             </button>
             {/* KUN/TUN — gul ochiladi (kun) / g'uncha bo'lib yumiladi (tun) */}
             <button className={"bloom-toggle " + (theme === "day" ? "bt-day" : "bt-night")}
@@ -1986,11 +2062,11 @@ function App() {
         />
       )}
       {profileOpen && (
-        <ProfileScreen onClose={() => setProfileOpen(false)} profile={profile} tokens={tokens}
-          badgeOwned={badgeOwned} generations={generations} onBuyTokens={buyTokens} onBuyBadge={buyBadge}
+        <ProfileScreen onClose={() => setProfileOpen(false)} profile={profile}
+          badgeTier={badgeTier} generations={generations} onSelectBadge={selectBadge}
           cust={custProfile} orders={custOrders} linked={!!custAuth}
           vouchers={custVouchers.map((v) => ({ ...v, shopName: (shops.find((s) => s.id === v.sellerId) || {}).shopName || "" }))}
-          onLink={linkCustomer} onSaveName={saveCustName} onPhoto={setCustPhoto} onCancelOrder={cancelCustOrder}
+          onLink={linkCustomer} onRegister={registerCustomer} onSaveName={saveCustName} onPhoto={setCustPhoto} onCancelOrder={cancelCustOrder}
           onReceiveOrder={receiveCustOrder} onPaidOrder={paidCustOrder} />
       )}
     </div>
@@ -2542,25 +2618,39 @@ const buildCSS = () => `
 .prof-tier{font-size:12px;font-weight:700;margin:1px 0}
 .prof-phone{font-size:12px;color:${C.inkDim}}
 
-.prof-tokencard{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(120deg,#16281f,${C.noir});
-  color:${C.ivoire};border-radius:16px;padding:14px 16px;margin-bottom:14px}
-.prof-token-left{display:flex;align-items:center;gap:10px}
-.prof-token-n{font-family:${FONT_DISPLAY};font-size:22px;line-height:1}
-.prof-token-l{font-size:10.5px;color:${C.ivoireDim}}
-.prof-topup{background:${C.laiton};color:${C.noir};border:none;border-radius:20px;padding:8px 14px;font-size:12px;
-  font-weight:700;cursor:pointer;font-family:${FONT_BODY}}
+/* --- Galichkalar (profil belgilari) galereyasi --- */
+.gali-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:22px}
+.gali-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;
+  background:${C.paper};border:1.5px solid ${C.mline};border-radius:16px;padding:14px 8px 11px;cursor:pointer;
+  font-family:${FONT_BODY};transition:transform .15s ease,border-color .15s ease}
+.gali-card:active{transform:scale(.97)}
+.gali-active{border-color:${C.accent};background:linear-gradient(160deg,${C.accentSoft},${C.paper})}
+.gali-check{position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:50%;background:${C.accent};
+  display:flex;align-items:center;justify-content:center}
+.gali-name{font-size:11.5px;font-weight:700;color:${C.ink};margin-top:4px;line-height:1.3}
+.gali-price{font-size:10.5px;color:${C.inkDim};margin-top:1px}
+.gali-sel{margin-top:6px;font-size:10px;font-weight:700;letter-spacing:.3px;color:${C.accent};
+  border:1px solid ${C.accent}55;border-radius:12px;padding:3px 10px}
+.gali-active .gali-sel{background:${C.accent};color:#fff;border-color:${C.accent}}
 
-.prof-progress{margin-bottom:14px}
-.prof-progress-row{display:flex;justify-content:space-between;font-size:11px;color:${C.inkDim};margin-bottom:5px}
-.prof-bar{height:6px;background:${C.mline};border-radius:10px;overflow:hidden}
-.prof-bar-fill{height:100%;border-radius:10px;transition:width .4s ease}
-.prof-progress-hint{font-size:10.5px;color:${C.inkDim};margin-top:5px}
+.gali-ic{position:relative;display:inline-flex;align-items:center;justify-content:center}
+.gali-glow{position:absolute;inset:-30%;border-radius:50%;pointer-events:none}
+.gali-svg{position:relative;z-index:1}
+.gali-legendary .gali-svg{animation:galiSpin 6s linear infinite}
+@keyframes galiSpin{0%,85%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 
-.prof-badgecard{display:flex;align-items:center;justify-content:space-between;background:${C.paper};
-  border:1px solid ${C.mline};border-radius:14px;padding:12px 14px;margin-bottom:20px}
-.prof-badge-ic{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.prof-badgebuy{background:${C.ink};color:#fff;border:none;border-radius:20px;padding:7px 14px;font-size:11.5px;
-  font-weight:700;cursor:pointer;font-family:${FONT_BODY}}
+/* --- Telefon/gmail bilan ro'yxatdan o'tish (Telegram'ga alternativ) --- */
+.prof-reg-divider{display:flex;align-items:center;gap:10px;margin:16px 0 12px;font-size:11px;color:${C.inkDim};
+  text-transform:uppercase;letter-spacing:.5px}
+.prof-reg-divider::before,.prof-reg-divider::after{content:"";flex:1;height:1px;background:${C.mline}}
+.prof-regcard{background:${C.paper};border:1px solid ${C.mline};border-radius:14px;padding:14px}
+.prof-regcard p{margin:0 0 10px;font-size:12.5px;color:${C.inkDim};line-height:1.5}
+.prof-reg-row{display:flex;gap:8px;margin-bottom:8px}
+.prof-reg-row input{flex:1;padding:10px 12px;border:1px solid ${C.mline};border-radius:10px;font-size:13.5px;font-family:inherit}
+.prof-reg-row button{padding:10px 16px;border:none;border-radius:10px;background:${C.accent};color:#fff;
+  font-weight:600;font-size:12.5px;font-family:inherit;cursor:pointer;white-space:nowrap}
+.prof-reg-row button:disabled{opacity:.45}
+.prof-reg-hint{font-size:10.5px;color:${C.inkDim};margin-top:2px}
 
 .prof-histhead{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:${C.ink};margin-bottom:10px}
 .prof-empty{font-size:12.5px;color:${C.inkDim};background:${C.paper};border-radius:12px;padding:16px;text-align:center}
