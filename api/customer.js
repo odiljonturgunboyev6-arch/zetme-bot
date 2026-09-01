@@ -34,6 +34,7 @@ function publicProfile(chatId, c) {
     firstName: c.firstName || "",
     lastName: c.lastName || "",
     phone: c.phone || "",
+    email: c.email || "",
     region: c.region || "",
     photo: c.photo || "",
   };
@@ -140,6 +141,33 @@ export default async function handler(req, res) {
       const orders = (await kv.get(`myorders:${chatId}`)) || [];
       const vouchers = ((await kv.get(`vouchers:${chatId}`)) || []).filter((v) => !v.used);
       return res.status(200).json({ ok: true, chatId: String(chatId), token, profile: publicProfile(chatId, profile), orders, vouchers });
+    }
+
+    /* ---------- telefon yoki gmail bilan ro'yxatdan o'tish (Telegram shart emas) ----------
+       Mijoz Profil bo'limida ismi + telefon yoki email kiritadi -> doimiy "web" hisob
+       ochiladi (checkout.js buyurtma vaqtida ochadigan hisobning aynan o'zi), token
+       localStorage'da saqlanadi va keyingi safar avtomatik tanib olinadi. Haqiqiy
+       SMS/email tasdiqlash yo'q (bunday xizmat hali ulanmagan) — shuning uchun bu
+       "eslab qolish" ro'yxatdan o'tish, turli qurilmalar orasida umumiy login emas. */
+    if (action === "register") {
+      if (await isBlocked(KOD_SCOPE, req, KOD_LIMIT)) {
+        return res.status(429).json({ ok: false, error: TOO_MANY_MSG });
+      }
+      const name = String(body.name || "").trim().slice(0, 60);
+      const phone = String(body.phone || "").trim().slice(0, 25);
+      const email = String(body.email || "").trim().slice(0, 80);
+      if (name.length < 2) return res.status(400).json({ ok: false, error: "Ismingizni kiriting" });
+      const hasPhone = phone.replace(/\D/g, "").length >= 7;
+      const hasEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!hasPhone && !hasEmail) {
+        return res.status(400).json({ ok: false, error: "Telefon raqami yoki email kiriting" });
+      }
+      const newId = "w" + Date.now().toString(36) + randomBytes(4).toString("hex");
+      const newToken = randomBytes(24).toString("hex");
+      await kv.set(`ctoken:${newId}`, newToken);
+      const c = { name, firstName: name, phone, email };
+      await kv.set(`customer:${newId}`, c);
+      return res.status(200).json({ ok: true, chatId: newId, token: newToken, profile: publicProfile(newId, c), orders: [], vouchers: [] });
     }
 
     /* ---------- token talab qiladigan amallar ---------- */
