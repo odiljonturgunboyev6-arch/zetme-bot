@@ -60,6 +60,7 @@ const Clock = (p) => <Ic {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5
 const Lock = (p) => <Ic {...p}><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></Ic>;
 const Store = (p) => <Ic {...p}><path d="M3 9l1.5-5h15L21 9" /><path d="M4 9v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" /><path d="M9 19v-5h6v5" /></Ic>;
 const Package = (p) => <Ic {...p}><path d="M21 8l-9-5-9 5 9 5 9-5z" /><path d="M3 8v9l9 5 9-5V8" /><path d="M12 13v9" /></Ic>;
+const Trophy = (p) => <Ic {...p}><path d="M7 4h10v4a5 5 0 0 1-10 0V4z" /><path d="M7 5H4v1a4 4 0 0 0 4 4" /><path d="M17 5h3v1a4 4 0 0 1-4 4" /><path d="M12 13v3" /><path d="M8.5 20h7" /><path d="M9.5 20v-1.5a2.5 2.5 0 0 1 5 0V20" /></Ic>;
 
 /* ============================== Tokens ============================== */
 const C = {
@@ -187,6 +188,11 @@ const STR = {
     regName: "Ismingiz", regContact: "Telefon yoki email", regBtn: "Ro'yxatdan o'tish",
     genHistory: "Generatsiyalar tarixi", genEmpty: "Hali generatsiya qilinmagan. Studiyadan boshlang.",
     toNight: "Tun rejimi", toDay: "Kun rejimi",
+    lbEyebrow: "Musobaqa", lbTitle: "TOP xaridorlar", lbSub: "Eng ko'p xarid qilgan mijozlar reytingi — har hafta yangilanadi",
+    lbDaily: "Kunlik", lbWeekly: "Haftalik", lbMonthly: "Oylik", lbQuarterly: "Choraklik", lbHalfyear: "Yarim yillik", lbYearly: "Yillik",
+    lbRetail: "Chakana", lbWholesale: "Optom",
+    lbLoading: "Yuklanmoqda…", lbEmpty: "Bu davrda hali xaridlar yo'q",
+    lbOrdersN: (n) => n + " ta buyurtma",
   },
   ru: {
     eyebrow: "AI ботаническая студия", heroT1: "Увидьте цветок", heroEm: "в горшке", heroT2: "",
@@ -283,6 +289,11 @@ const STR = {
     regName: "Ваше имя", regContact: "Телефон или email", regBtn: "Зарегистрироваться",
     genHistory: "История генераций", genEmpty: "Генераций пока нет. Начните со студии.",
     toNight: "Ночной режим", toDay: "Дневной режим",
+    lbEyebrow: "Соревнование", lbTitle: "ТОП покупатели", lbSub: "Рейтинг клиентов с наибольшими покупками — обновляется каждую неделю",
+    lbDaily: "За день", lbWeekly: "За неделю", lbMonthly: "За месяц", lbQuarterly: "За квартал", lbHalfyear: "За полгода", lbYearly: "За год",
+    lbRetail: "Розница", lbWholesale: "Опт",
+    lbLoading: "Загрузка…", lbEmpty: "За этот период покупок пока нет",
+    lbOrdersN: (n) => n + " " + plural(n, "заказ", "заказа", "заказов"),
   },
 };
 /* Ruscha son shakllari: 1 магазин / 2 магазина / 5 магазинов */
@@ -1143,6 +1154,109 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
   );
 }
 
+/* ============================== Mijozlar sotuv reytingi (liderlar taxtasi) ==============================
+   Barcha do'konlar bo'yicha eng ko'p xarid qilgan mijozlar — davr (kunlik...yillik) va
+   narx turi (chakana/optom) bo'yicha alohida filtrlanadi. Ma'lumot api/leaderboard.js dan. */
+const LB_PERIODS = [
+  { id: "daily", key: "lbDaily" }, { id: "weekly", key: "lbWeekly" }, { id: "monthly", key: "lbMonthly" },
+  { id: "quarterly", key: "lbQuarterly" }, { id: "halfyear", key: "lbHalfyear" }, { id: "yearly", key: "lbYearly" },
+];
+const LB_MEDALS = ["🥇", "🥈", "🥉"];
+
+function Leaderboard() {
+  const [period, setPeriod] = useState("monthly");
+  const [priceMode, setPriceMode] = useState("chakana");
+  const [ranking, setRanking] = useState(null); // null = yuklanmoqda
+  const [err, setErr] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    setRanking(null); setErr(null);
+    fetch(`${API_BASE}/api/leaderboard`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ period, priceMode }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!alive) return;
+        if (d.ok) setRanking(d.ranking || []); else setErr(d.error || "Xatolik");
+      })
+      .catch(() => { if (alive) setErr("Xatolik"); });
+    return () => { alive = false; };
+  }, [period, priceMode]);
+
+  const top3 = (ranking || []).slice(0, 3);
+  const rest = (ranking || []).slice(3, 10);
+
+  return (
+    <section className="lb">
+      <div className="lb-inner">
+        <p className="sw-eyebrow">{tr("lbEyebrow")}</p>
+        <h2 className="ab-title"><Trophy size={20} color={C.laiton} /> {tr("lbTitle")}</h2>
+        <p className="hiw-lead">{tr("lbSub")}</p>
+
+        <div className="lb-filters">
+          <div className="lb-toggle">
+            <button className={"lb-toggle-btn" + (priceMode === "chakana" ? " active" : "")} onClick={() => setPriceMode("chakana")}>{tr("lbRetail")}</button>
+            <button className={"lb-toggle-btn" + (priceMode === "optom" ? " active" : "")} onClick={() => setPriceMode("optom")}>{tr("lbWholesale")}</button>
+          </div>
+          <div className="lb-periods">
+            {LB_PERIODS.map((p) => (
+              <button key={p.id} className={"lb-period-btn" + (period === p.id ? " active" : "")} onClick={() => setPeriod(p.id)}>
+                {tr(p.key)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {ranking === null && !err && <div className="lb-state">{tr("lbLoading")}</div>}
+        {err && <div className="lb-state">{err}</div>}
+        {ranking && ranking.length === 0 && <div className="lb-state">{tr("lbEmpty")}</div>}
+
+        {ranking && ranking.length > 0 && (
+          <>
+            <div className="lb-podium">
+              {[1, 0, 2].map((i) => {
+                const r = top3[i];
+                if (!r) return <div key={i} className={"lb-podium-item lb-p" + (i + 1) + " lb-podium-empty"} />;
+                return (
+                  <div key={r.chatId} className={"lb-podium-item lb-p" + (i + 1)}>
+                    <div className="lb-medal">{LB_MEDALS[i]}</div>
+                    <div className="lb-avatar">
+                      {r.photo ? <img src={r.photo} alt="" /> : <User size={i === 0 ? 24 : 18} color={C.laitonLo} />}
+                    </div>
+                    <div className="lb-name">{r.name}</div>
+                    <div className="lb-amt">{fmt(r.total)}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {rest.length > 0 && (
+              <div className="lb-list">
+                {rest.map((r) => (
+                  <div key={r.chatId} className="lb-row">
+                    <span className="lb-rank">{r.rank}</span>
+                    <div className="lb-row-avatar">
+                      {r.photo ? <img src={r.photo} alt="" /> : <User size={15} color={C.laitonLo} />}
+                    </div>
+                    <div className="lb-row-mid">
+                      <div className="lb-row-name">{r.name}</div>
+                      <div className="lb-row-orders">{tr("lbOrdersN", r.orders)}</div>
+                    </div>
+                    <div className="lb-row-amt">{fmt(r.total)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
 /* ============================== App ============================== */
 function App() {
   const [flower, setFlower] = useState(null);
@@ -1793,6 +1907,9 @@ function App() {
           )}
         </div>
       </section>
+
+      {/* ===================== MIJOZLAR SOTUV REYTINGI (liderlar taxtasi) ===================== */}
+      <Leaderboard />
 
       {/* ===================== MA'LUMOTLAR: sayt haqida, buyurtma qo'llanmasi, qoidalar ===================== */}
       <section className="hiw" id="info">
@@ -2739,6 +2856,53 @@ const buildCSS = () => `
   border:1px solid #C6A05B55;background:#C6A05B1A;margin-top:1px}
 .hiw-rules-t{font-family:${FONT_DISPLAY};font-size:16px;color:#F1ECDF;margin-bottom:5px}
 .hiw-rules-d{font-size:12.5px;line-height:1.65;color:${C.ivoireDim};margin:0}
+
+/* ============ Mijozlar sotuv reytingi (liderlar taxtasi) ============ */
+.lb{background:${C.vert};color:${C.ivoire};padding:34px 16px 30px;position:relative}
+.lb-inner{max-width:720px;margin:0 auto}
+.lb .ab-title{display:flex;align-items:center;justify-content:center;gap:8px}
+.lb-filters{display:flex;flex-direction:column;align-items:center;gap:10px;margin:18px 0 22px}
+.lb-toggle{display:inline-flex;background:#FFFFFF0D;border:1px solid #C6A05B33;border-radius:20px;padding:3px}
+.lb-toggle-btn{border:none;background:transparent;color:${C.ivoireDim};font-size:12px;font-weight:600;
+  font-family:${FONT_BODY};padding:7px 18px;border-radius:16px;cursor:pointer;transition:all .15s ease}
+.lb-toggle-btn.active{background:${C.laiton};color:${C.noir}}
+.lb-periods{display:flex;gap:6px;overflow-x:auto;max-width:100%;padding:2px;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;justify-content:center;flex-wrap:wrap}
+.lb-periods::-webkit-scrollbar{display:none}
+.lb-period-btn{flex-shrink:0;border:1px solid #C6A05B33;background:#FFFFFF08;color:${C.ivoireDim};font-size:11px;
+  font-weight:600;font-family:${FONT_BODY};padding:6px 13px;border-radius:14px;cursor:pointer;white-space:nowrap;transition:all .15s ease}
+.lb-period-btn.active{background:#C6A05B26;color:#E7D3A0;border-color:#C6A05B99}
+.lb-state{text-align:center;font-size:12.5px;color:${C.ivoireDim};padding:26px 10px}
+
+.lb-podium{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:end;margin-bottom:18px}
+.lb-podium-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 8px 14px;border-radius:16px;
+  border:1px solid #C6A05B33;background:linear-gradient(160deg,#FFFFFF0A,#FFFFFF02);animation:swFade .5s ease both;text-align:center}
+.lb-podium-empty{visibility:hidden}
+.lb-p1{order:2;padding-top:6px;border-color:#C6A05B80;background:linear-gradient(160deg,#C6A05B22,#FFFFFF02);
+  box-shadow:0 10px 28px #00000055}
+.lb-p2{order:1}
+.lb-p3{order:3}
+.lb-medal{font-size:22px;line-height:1}
+.lb-p1 .lb-medal{font-size:28px}
+.lb-avatar{width:46px;height:46px;border-radius:50%;overflow:hidden;background:#0B211B;border:1.5px solid #C6A05B55;
+  display:flex;align-items:center;justify-content:center;margin-top:2px}
+.lb-p1 .lb-avatar{width:58px;height:58px;border-color:${C.laiton}}
+.lb-avatar img{width:100%;height:100%;object-fit:cover}
+.lb-name{font-size:11.5px;font-weight:600;color:#F1ECDF;margin-top:3px;max-width:90px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.lb-amt{font-size:11px;color:#E7D3A0;font-weight:700}
+
+.lb-list{display:flex;flex-direction:column;gap:7px}
+.lb-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:13px;
+  border:1px solid #C6A05B22;background:#FFFFFF06;animation:swFade .5s ease both}
+.lb-rank{width:20px;flex-shrink:0;text-align:center;font-size:12px;font-weight:700;color:${C.ivoireDim};font-family:${FONT_DISPLAY}}
+.lb-row-avatar{width:32px;height:32px;border-radius:50%;overflow:hidden;background:#0B211B;border:1px solid #C6A05B40;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lb-row-avatar img{width:100%;height:100%;object-fit:cover}
+.lb-row-mid{flex:1;min-width:0}
+.lb-row-name{font-size:12.5px;font-weight:600;color:#F1ECDF;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-row-orders{font-size:10.5px;color:${C.ivoireDim}}
+.lb-row-amt{font-size:12px;font-weight:700;color:#E7D3A0;flex-shrink:0}
 
 /* ============ Studiya: Ilhom galereyasi ============ */
 .insp{background:linear-gradient(180deg,${C.vert} 0%,${C.noir} 60%);color:${C.ivoire};padding:28px 0 34px}
