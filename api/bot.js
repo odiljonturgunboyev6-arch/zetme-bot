@@ -7,6 +7,7 @@ import { kv } from "@vercel/kv";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const OWNER_CHAT_ID = process.env.OWNER_CHAT_ID;
+const TG_WEBHOOK_SECRET = process.env.TG_WEBHOOK_SECRET;
 const API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 const REGIONS = [
@@ -71,6 +72,15 @@ function regionKeyboard() {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(200).send("Zetme AI bot webhook is alive.");
+
+  // Bu so'rov haqiqatan Telegram'dan kelayotganini tekshiramiz — aks holda
+  // istalgan odam soxta update yuborib /stat kabi buyruqlarni ishlata olardi.
+  // TG_WEBHOOK_SECRET Vercel ENV'da o'rnatilgandan so'ng, webhook shu qiymat bilan
+  // qayta o'rnatilishi shart (setWebhook?...&secret_token=<TG_WEBHOOK_SECRET>).
+  if (TG_WEBHOOK_SECRET && req.headers["x-telegram-bot-api-secret-token"] !== TG_WEBHOOK_SECRET) {
+    return res.status(401).send("unauthorized");
+  }
+
   const update = req.body;
 
   try {

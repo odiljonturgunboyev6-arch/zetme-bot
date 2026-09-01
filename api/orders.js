@@ -12,8 +12,12 @@
 
 import { kv } from "@vercel/kv";
 import { createHash } from "crypto";
+import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG } from "./_lib/security.js";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const AUTH_SCOPE = "auth";
+const AUTH_LIMIT = 8;
+const AUTH_WINDOW = 900;
 
 function isAdmin(req) {
   const auth = req.headers["x-admin-password"];
@@ -45,11 +49,19 @@ export default async function handler(req, res) {
     const body = req.body || {};
     const action = String(body.action || "");
 
+    if (await isBlocked(AUTH_SCOPE, req, AUTH_LIMIT)) {
+      return res.status(429).json({ ok: false, error: TOO_MANY_MSG });
+    }
+
     let sellerId = null;
     const seller = await resolveSeller(req);
     if (seller) sellerId = seller.id;
     else if (isAdmin(req)) sellerId = String(body.sellerId || "zetme");
-    if (!sellerId) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+    if (!sellerId) {
+      await recordFailure(AUTH_SCOPE, req, AUTH_WINDOW);
+      return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+    }
+    await clearFailures(AUTH_SCOPE, req);
 
     if (action === "list") {
       const orders = (await kv.get(`orders:${sellerId}`)) || [];

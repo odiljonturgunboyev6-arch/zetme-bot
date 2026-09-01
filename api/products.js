@@ -11,10 +11,31 @@
 
 import { kv } from "@vercel/kv";
 import { createHash } from "crypto";
+import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG } from "./_lib/security.js";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const KEY = "products";
 const MAIN_SELLER_ID = "zetme";
+const AUTH_SCOPE = "auth";
+const AUTH_LIMIT = 8;
+const AUTH_WINDOW = 900;
+
+// resolveActor natijasini rate-limit bilan birga tekshiradi: noto'g'ri
+// login/parol IP bo'yicha hisoblanadi, limitdan oshsa 429 qaytariladi.
+async function authOrBlock(req, res) {
+  if (await isBlocked(AUTH_SCOPE, req, AUTH_LIMIT)) {
+    res.status(429).json({ ok: false, error: TOO_MANY_MSG });
+    return null;
+  }
+  const actor = await resolveActor(req);
+  if (!actor) {
+    await recordFailure(AUTH_SCOPE, req, AUTH_WINDOW);
+    res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+    return null;
+  }
+  await clearFailures(AUTH_SCOPE, req);
+  return actor;
+}
 
 function isAdmin(req) {
   const auth = req.headers["x-admin-password"];
@@ -140,8 +161,8 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      const actor = await resolveActor(req);
-      if (!actor) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+      const actor = await authOrBlock(req, res);
+      if (!actor) return;
 
       const body = req.body || {};
       const { name, category, color, variants } = body;
@@ -176,8 +197,8 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "PUT") {
-      const actor = await resolveActor(req);
-      if (!actor) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+      const actor = await authOrBlock(req, res);
+      if (!actor) return;
 
       const body = req.body || {};
       const { id, name, category, color, variants } = body;
@@ -215,8 +236,8 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "DELETE") {
-      const actor = await resolveActor(req);
-      if (!actor) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+      const actor = await authOrBlock(req, res);
+      if (!actor) return;
       const id = req.query.id;
       const list = (await kv.get(KEY)) || [];
       const target = list.find((p) => p.id === id);

@@ -22,10 +22,14 @@
 
 import { kv } from "@vercel/kv";
 import { createHash, randomBytes } from "crypto";
+import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG } from "./_lib/security.js";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const KEY = "sellers";
 const MAIN_SELLER_ID = "zetme";
+const AUTH_SCOPE = "auth";
+const AUTH_LIMIT = 8;
+const AUTH_WINDOW = 900;
 
 function isAdmin(req) {
   const auth = req.headers["x-admin-password"];
@@ -113,6 +117,12 @@ export default async function handler(req, res) {
 
     const body = req.body || {};
     const action = String(body.action || "");
+
+    // "register" — yangi ariza, parol tekshiruvi yo'q, brute-force bilan aloqasi yo'q.
+    if (action !== "register" && (await isBlocked(AUTH_SCOPE, req, AUTH_LIMIT))) {
+      return res.status(429).json({ ok: false, error: TOO_MANY_MSG });
+    }
+
     let list = await loadSellers();
 
     /* ---------------- ochiq: ro'yxatdan o'tish ---------------- */
@@ -154,8 +164,10 @@ export default async function handler(req, res) {
       const login = String(body.login || "").trim().toLowerCase();
       const seller = list.find((s) => s.login === login);
       if (!seller || !verifySellerCredentials(seller, String(body.password || ""))) {
+        await recordFailure(AUTH_SCOPE, req, AUTH_WINDOW);
         return res.status(401).json({ ok: false, error: "Login yoki parol noto'g'ri" });
       }
+      await clearFailures(AUTH_SCOPE, req);
       if (seller.status === "pending") return res.status(403).json({ ok: false, error: "Arizangiz hali tasdiqlanmagan — administrator ko'rib chiqmoqda" });
       if (seller.status !== "active") return res.status(403).json({ ok: false, error: "Bu do'kon bloklangan" });
       return res.status(200).json({ ok: true, seller: adminSeller(seller), isSuper: !!seller.builtin });
@@ -167,8 +179,10 @@ export default async function handler(req, res) {
       const idx = list.findIndex((s) => s.login === login);
       const seller = list[idx];
       if (!seller || !verifySellerCredentials(seller, String(body.password || ""))) {
+        await recordFailure(AUTH_SCOPE, req, AUTH_WINDOW);
         return res.status(401).json({ ok: false, error: "Login yoki parol noto'g'ri" });
       }
+      await clearFailures(AUTH_SCOPE, req);
       if (seller.status !== "active") return res.status(403).json({ ok: false, error: "Do'kon faol emas" });
 
       const updated = { ...seller };
@@ -213,7 +227,11 @@ export default async function handler(req, res) {
     }
 
     /* ---------------- super-admin amallari ---------------- */
-    if (!isAdmin(req)) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+    if (!isAdmin(req)) {
+      await recordFailure(AUTH_SCOPE, req, AUTH_WINDOW);
+      return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+    }
+    await clearFailures(AUTH_SCOPE, req);
 
     if (action === "adminList") {
       return res.status(200).json({ ok: true, sellers: list.map(adminSeller) });

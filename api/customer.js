@@ -19,8 +19,12 @@
 import { kv } from "@vercel/kv";
 import { put } from "@vercel/blob";
 import { randomBytes } from "crypto";
+import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG, isAllowedImageType } from "./_lib/security.js";
 
 const MAX_PHOTO_BYTES = 400 * 1024; // ~400KB (sayt oldindan siqadi)
+const KOD_SCOPE = "kod";
+const KOD_LIMIT = 10;   // 6 xonali kodni "taxmin qilish"dan himoya
+const KOD_WINDOW = 600;
 
 function publicProfile(chatId, c) {
   c = c || {};
@@ -75,10 +79,17 @@ export default async function handler(req, res) {
 
     /* ---------- Telegram kodi bilan ulash ---------- */
     if (action === "link") {
+      if (await isBlocked(KOD_SCOPE, req, KOD_LIMIT)) {
+        return res.status(429).json({ ok: false, error: TOO_MANY_MSG });
+      }
       const code = String(body.code || "").trim();
       if (!/^\d{6}$/.test(code)) return res.status(400).json({ ok: false, error: "6 xonali kodni kiriting" });
       const chatId = await kv.get(`link:${code}`);
-      if (!chatId) return res.status(400).json({ ok: false, error: "Kod noto'g'ri yoki muddati tugagan. Botda /kod deb qayta yozing." });
+      if (!chatId) {
+        await recordFailure(KOD_SCOPE, req, KOD_WINDOW);
+        return res.status(400).json({ ok: false, error: "Kod noto'g'ri yoki muddati tugagan. Botda /kod deb qayta yozing." });
+      }
+      await clearFailures(KOD_SCOPE, req);
       await kv.del(`link:${code}`);
 
       let token = await kv.get(`ctoken:${chatId}`);
@@ -214,13 +225,17 @@ export default async function handler(req, res) {
     if (action === "setPhoto") {
       const dataBase64 = String(body.dataBase64 || "");
       if (!dataBase64) return res.status(400).json({ ok: false, error: "Rasm ma'lumoti yo'q" });
+      const contentType = String(body.contentType || "image/jpeg");
+      if (!isAllowedImageType(contentType)) {
+        return res.status(400).json({ ok: false, error: "Faqat JPEG, PNG, WEBP yoki GIF rasm yuklash mumkin" });
+      }
       const buffer = Buffer.from(dataBase64, "base64");
       if (buffer.length > MAX_PHOTO_BYTES) {
         return res.status(400).json({ ok: false, error: "Rasm juda katta — kichikroq rasm tanlang" });
       }
       const blob = await put(`customers/${chatId}.jpg`, buffer, {
         access: "public",
-        contentType: String(body.contentType || "image/jpeg"),
+        contentType,
         addRandomSuffix: false,
         allowOverwrite: true,
       });

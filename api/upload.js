@@ -7,9 +7,13 @@
 import { put } from "@vercel/blob";
 import { kv } from "@vercel/kv";
 import { createHash } from "crypto";
+import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG, isAllowedImageType } from "./_lib/security.js";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const MAX_BYTES = 4.5 * 1024 * 1024; // ~4.5 MB — Vercel body limitiga mos
+const AUTH_SCOPE = "auth";
+const AUTH_LIMIT = 8;
+const AUTH_WINDOW = 900;
 
 function hashPassword(password, salt) {
   return createHash("sha256").update(salt + ":" + String(password)).digest("hex");
@@ -37,14 +41,22 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
 
+  if (await isBlocked(AUTH_SCOPE, req, AUTH_LIMIT)) {
+    return res.status(429).json({ ok: false, error: TOO_MANY_MSG });
+  }
   if (!(await isAuthorized(req))) {
+    await recordFailure(AUTH_SCOPE, req, AUTH_WINDOW);
     return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
   }
+  await clearFailures(AUTH_SCOPE, req);
 
   try {
     const { filename, contentType, dataBase64 } = req.body || {};
     if (!filename || !dataBase64) {
       return res.status(400).json({ ok: false, error: "Fayl ma'lumotlari yetarli emas" });
+    }
+    if (!isAllowedImageType(contentType)) {
+      return res.status(400).json({ ok: false, error: "Faqat JPEG, PNG, WEBP yoki GIF rasm yuklash mumkin" });
     }
     const buffer = Buffer.from(dataBase64, "base64");
     if (buffer.length > MAX_BYTES) {
@@ -54,7 +66,7 @@ export default async function handler(req, res) {
 
     const blob = await put(safeName, buffer, {
       access: "public",
-      contentType: contentType || "image/jpeg",
+      contentType,
     });
 
     res.status(200).json({ ok: true, url: blob.url });
