@@ -621,7 +621,7 @@ function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, ch
   const showTeaser = bonusOn && total >= TEASER_MIN && total < TEASER_MAX;
 
   return (
-    <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="ov ov-full" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="cart">
         <div className="cart-head">
           <span style={{ fontFamily: FONT_DISPLAY, fontSize: 20 }}>{tr("cartTitle")}</span>
@@ -843,7 +843,7 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
   };
 
   return (
-    <div className="ov">
+    <div className="ov ov-full">
       <div className="profile">
         <button className="pm-close" onClick={onClose}><X size={18} /></button>
         <input ref={photoRef} type="file" accept="image/*" hidden onChange={onPhotoFile} />
@@ -1100,6 +1100,12 @@ function App() {
   const [priceMode, setPriceMode] = useState("chakana"); // "chakana" | "optom"
   const [shopFilter, setShopFilter] = useState(null);    // null | { id, name } — do'kon sahifasi
 
+  // FULLSCREEN OYNALAR: Studiya/Mahsulotlar — asosiy "sahifa" almashinuvi (bittasi to'liq
+  // ko'rinadi, ikkinchisi butunlay yashiriladi — orqa fonda hech narsa qolmaydi).
+  // Savat/Profil esa modallar (pastda), lekin ular ham endi to'liq fullscreen bo'ladi.
+  const [mainTab, setMainTab] = useState("studio"); // "studio" | "products"
+  useEffect(() => { window.scrollTo(0, 0); }, [mainTab]);
+
   const [activeProduct, setActiveProduct] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState([]);
@@ -1121,6 +1127,16 @@ function App() {
   const [tokens, setTokens] = useState(2);
   const [badgeOwned, setBadgeOwned] = useState(false);
   const [generations, setGenerations] = useState([]);
+
+  // pastki navigatsiyada ayni shu paytda qaysi oyna faol ekanini bildiradi
+  // (Savat/Profil ochiq bo'lsa — o'shalar; aks holda Studiya/Mahsulotlar tabi)
+  const navActive = cartOpen ? "cart" : profileOpen ? "profile" : mainTab;
+
+  // Savat/Profil (fullscreen oynalar) ochiq paytda orqadagi sahifa aylanmasin
+  useEffect(() => {
+    document.body.style.overflow = (cartOpen || profileOpen) ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [cartOpen, profileOpen]);
 
   // load persisted account state once (real localStorage — works on the live site)
   useEffect(() => {
@@ -1319,8 +1335,9 @@ function App() {
   function openShopById(s) {
     setShopFilter({ id: s.id, name: s.name });
     setActiveProduct(null);
-    const el = document.getElementById("market");
-    if (el) el.scrollIntoView({ behavior: "smooth" });
+    // Studiya oynasidan (do'konlar devori) bosilgan bo'lsa — Mahsulotlar
+    // fullscreen oynasiga o'tkazamiz (endi u alohida sahifa, scroll emas)
+    setMainTab("products");
   }
 
   // Filtrlash: narx rejimi (optom narxi yo'q variantlar yashirinadi) +
@@ -1500,6 +1517,10 @@ function App() {
   return (
     <div className="root">
       <style>{buildCSS()}</style>
+
+      {/* ===================== STUDIYA OYNASI: to'liq fullscreen sahifa ===================== */}
+      {mainTab === "studio" && (
+      <React.Fragment>
 
       {/* ===================== TOP: premium AI hero + studio ===================== */}
       <section className="hero">
@@ -1757,8 +1778,18 @@ function App() {
         </div>
       </section>
 
-      {/* ===================== BOTTOM: marketplace — do'kon → bo'limlar → mahsulotlar ===================== */}
-      <section className="market" id="market">
+      </React.Fragment>
+      )}
+
+      {/* ===================== MAHSULOTLAR OYNASI: to'liq fullscreen sahifa ===================== */}
+      {mainTab === "products" && (
+      <section className="market market-full" id="market">
+        <div className="market-fullhead">
+          <button className="market-back" onClick={() => setMainTab("studio")}>
+            <ArrowLeft size={15} /> {tr("navStudio")}
+          </button>
+          <ZetmeMark size="sm" />
+        </div>
         {!shopFilter ? (
           /* ---------- 1-qadam: faqat do'konlar ro'yxati ---------- */
           <>
@@ -1858,21 +1889,22 @@ function App() {
           </>
         )}
       </section>
+      )}
 
-      {/* bottom nav (mobile) */}
+      {/* bottom nav (mobile) — har doim ustida, qaysi oyna faolligini bo'yab ko'rsatadi */}
       <nav className="bottomnav">
-        <button className="bn-item active" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+        <button className={"bn-item" + (navActive === "studio" ? " active" : "")} onClick={() => setMainTab("studio")}>
           <Sparkles size={18} /><span>{tr("navStudio")}</span>
         </button>
-        <button className="bn-item" onClick={() => { const el = document.getElementById("market"); if (el) el.scrollIntoView({ behavior: "smooth" }); }}>
+        <button className={"bn-item" + (navActive === "products" ? " active" : "")} onClick={() => setMainTab("products")}>
           <Store size={18} /><span>{tr("navProducts")}</span>
         </button>
-        <button className="bn-item" onClick={() => setCartOpen(true)} style={{ position: "relative" }}>
+        <button className={"bn-item" + (navActive === "cart" ? " active" : "")} onClick={() => setCartOpen(true)} style={{ position: "relative" }}>
           <ShoppingBag size={18} />
           {cartCount > 0 && <span className="bn-badge">{cartCount}</span>}
           <span>{tr("navCart")}</span>
         </button>
-        <button className="bn-item" onClick={() => setProfileOpen(true)} style={{ position: "relative" }}>
+        <button className={"bn-item" + (navActive === "profile" ? " active" : "")} onClick={() => setProfileOpen(true)} style={{ position: "relative" }}>
           <User size={18} />
           {hasNews && !profileOpen && <span className="bn-dot" />}
           <span>{tr("navProfile")}</span>
@@ -2185,7 +2217,7 @@ const buildCSS = () => `
 .sw-skel{background:linear-gradient(150deg,${C.vertLo},${C.noir});animation:swSkel 1.4s ease-in-out infinite}
 
 /* ---------- STUDIYA: ZETME AI HAQIDA ---------- */
-.about{background:linear-gradient(180deg,${C.vert} 0%,${C.noir} 100%);color:${C.ivoire};padding:30px 16px 34px;
+.about{background:linear-gradient(180deg,${C.vert} 0%,${C.noir} 100%);color:${C.ivoire};padding:30px 16px 84px;
   border-top:1px solid ${C.line}}
 .ab-inner{max-width:1100px;margin:0 auto}
 .ab-title{font-family:${FONT_DISPLAY};font-weight:500;font-size:clamp(24px,6.2vw,34px);text-align:center;margin:0 0 10px;
@@ -2220,6 +2252,11 @@ const buildCSS = () => `
 
 /* ---------- MARKETPLACE ---------- */
 .market{padding:20px 16px 10px;max-width:1100px;margin:0 auto}
+.market-full{min-height:100dvh;padding-bottom:90px;background:${C.paper};animation:swFade .35s ease both}
+.market-fullhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.market-back{display:flex;align-items:center;gap:6px;background:transparent;border:1px solid ${C.mline};
+  border-radius:20px;padding:7px 13px 7px 10px;font-size:12px;font-weight:600;color:${C.inkDim};
+  cursor:pointer;font-family:${FONT_BODY}}
 .market-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
 .market-title{font-family:${FONT_DISPLAY};font-size:24px;color:${C.ink};margin:0;font-weight:600}
 .market-sub{font-size:12px;color:${C.inkDim}}
@@ -2299,15 +2336,19 @@ const buildCSS = () => `
 
 /* ---------- BOTTOM NAV ---------- */
 .bottomnav{position:fixed;left:0;right:0;bottom:0;background:${C.card};border-top:1px solid ${C.mline};
-  display:flex;z-index:15;padding:6px 0 8px}
+  display:flex;z-index:60;padding:6px 6px 8px;gap:3px}
 .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;border:none;
-  color:${C.inkDim};font-size:10.5px;font-family:${FONT_BODY};cursor:pointer;position:relative}
-.bn-item.active{color:${C.accent};font-weight:600}
+  color:${C.inkDim};font-size:10.5px;font-family:${FONT_BODY};cursor:pointer;position:relative;
+  padding:6px 2px;border-radius:14px;transition:background-color .25s ease,color .25s ease}
+.bn-item.active{color:${C.accent};font-weight:600;background:${C.accentSoft}}
 .bn-badge{position:absolute;top:-4px;right:calc(50% - 18px);background:${C.sale};color:#fff;font-size:9px;
   border-radius:20px;min-width:15px;height:15px;display:flex;align-items:center;justify-content:center;padding:0 3px}
 
 /* ---------- overlay shared ---------- */
 .ov{position:fixed;inset:0;background:#0006;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+/* to'liq fullscreen oynalar (Savat/Profil) — orqa fonda hech narsa ko'rinmaydi,
+   pastki navigatsiya esa navActive orqali "qaysi oyna faol" ekanini bo'yab ko'rsatib turadi */
+.ov-full{background:${C.paper};align-items:stretch;justify-content:stretch;bottom:64px;z-index:40}
 .pm-close{position:absolute;top:12px;right:12px;background:${C.paper};border:1px solid ${C.mline};border-radius:20px;
   width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
 
@@ -2347,8 +2388,8 @@ const buildCSS = () => `
   cursor:pointer;margin-top:8px;font-family:${FONT_BODY}}
 
 /* cart */
-.cart{position:relative;background:${C.card};width:100%;max-width:480px;border-radius:20px 20px 0 0;
-  max-height:85vh;overflow-y:auto;padding:18px 18px 22px;animation:slideup .3s ease both}
+.cart{position:relative;background:${C.card};width:100%;max-width:600px;margin:0 auto;border-radius:0;
+  height:100%;max-height:100%;overflow-y:auto;padding:18px 18px 30px;animation:slideup .3s ease both}
 .cart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .cart-modebadge{font-size:11.5px;font-weight:600;color:${C.accent};background:#EAF3EC;border-radius:10px;
   padding:7px 10px;margin-bottom:8px;display:inline-block}
@@ -2395,8 +2436,8 @@ const buildCSS = () => `
 .co-hint{font-size:11px;color:${C.inkDim};margin-top:12px;line-height:1.5}
 
 /* profile screen */
-.profile{position:relative;background:${C.card};width:100%;max-width:480px;border-radius:20px 20px 0 0;
-  height:96vh;max-height:96vh;overflow-y:auto;padding:20px 20px 26px;animation:slideup .3s ease both;text-align:left}
+.profile{position:relative;background:${C.card};width:100%;max-width:600px;margin:0 auto;border-radius:0;
+  height:100%;max-height:100%;overflow-y:auto;padding:20px 20px 30px;animation:slideup .3s ease both;text-align:left}
 .prof-photo{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .prof-cam{position:absolute;bottom:-2px;right:-2px;width:20px;height:20px;border-radius:50%;background:${C.accent};
   display:flex;align-items:center;justify-content:center;border:2px solid ${C.card}}
