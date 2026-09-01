@@ -22,6 +22,21 @@ const AUTH_WINDOW = 900;
 
 // resolveActor natijasini rate-limit bilan birga tekshiradi: noto'g'ri
 // login/parol IP bo'yicha hisoblanadi, limitdan oshsa 429 qaytariladi.
+function sanitizeColors(colors) {
+  if (!Array.isArray(colors)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const c of colors) {
+    const v = String(c ?? "").trim().slice(0, 24);
+    const key = v.toLowerCase();
+    if (!v || seen.has(key)) continue;
+    seen.add(key);
+    out.push(v);
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
 async function authOrBlock(req, res) {
   if (await isBlocked(AUTH_SCOPE, req, AUTH_LIMIT)) {
     res.status(429).json({ ok: false, error: TOO_MANY_MSG });
@@ -165,7 +180,7 @@ export default async function handler(req, res) {
       if (!actor) return;
 
       const body = req.body || {};
-      const { name, category, color, variants } = body;
+      const { name, category, color, colors, variants } = body;
       if (!name || !category) {
         return res.status(400).json({ ok: false, error: "Nomi va kategoriya shart" });
       }
@@ -178,6 +193,7 @@ export default async function handler(req, res) {
         ? (String(body.sellerId || MAIN_SELLER_ID))
         : actor.id;
 
+      const colorList = sanitizeColors(colors);
       const list = (await kv.get(KEY)) || [];
       const product = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -186,7 +202,8 @@ export default async function handler(req, res) {
         category: category === "gul" ? "gul" : "tuvak",
         unit,
         sectionId: await resolveSection(sellerId, body.sectionId),
-        color: color ? String(color) : "",
+        color: colorList[0] || (color ? String(color) : ""),
+        colors: colorList,
         variants: normalizeVariants(variants),
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -201,7 +218,7 @@ export default async function handler(req, res) {
       if (!actor) return;
 
       const body = req.body || {};
-      const { id, name, category, color, variants } = body;
+      const { id, name, category, color, colors, variants } = body;
       if (!id) return res.status(400).json({ ok: false, error: "Mahsulot ID si yo'q" });
       if (!name || !category) {
         return res.status(400).json({ ok: false, error: "Nomi va kategoriya shart" });
@@ -219,6 +236,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ ok: false, error: "Bu mahsulot sizning do'koningizga tegishli emas" });
       }
 
+      const colorList = sanitizeColors(colors);
       const updated = {
         ...list[idx],
         sellerId: ownerId,
@@ -226,7 +244,8 @@ export default async function handler(req, res) {
         category: category === "gul" ? "gul" : "tuvak",
         unit,
         sectionId: await resolveSection(ownerId, body.sectionId),
-        color: color ? String(color) : "",
+        color: colorList[0] || (color ? String(color) : ""),
+        colors: colorList,
         variants: normalizeVariants(variants),
         updatedAt: Date.now(),
       };

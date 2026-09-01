@@ -112,10 +112,18 @@ export default async function handler(req, res) {
         return res.status(400).json({ ok: false, error: "Bu mahsulot uchun narx aniqlanmagan" });
       }
       const qty = Math.max(1, Math.min(999, Math.floor(Number(it.qty) || 1)));
+
+      // mijoz tanlagan rang — faqat shu mahsulot uchun ro'yxatdagi ranglardan
+      // biri bo'lsa qabul qilinadi (soxta/qalbaki qiymatlardan himoya)
+      const famColors = Array.isArray(fam.colors) && fam.colors.length ? fam.colors : (fam.color ? [fam.color] : []);
+      const reqColor = String((it && it.color) || "").trim().slice(0, 24);
+      const color = famColors.find((c) => c.toLowerCase() === reqColor.toLowerCase()) || "";
+
       resolved.push({
-        name: `${variant.name || fam.name} — ${variant.litr} ${UNIT_SHORT[fam.unit] || "L"}`,
+        name: `${variant.name || fam.name} — ${variant.litr} ${UNIT_SHORT[fam.unit] || "L"}${color ? ` (${color})` : ""}`,
         price: unitPrice,
         qty,
+        color,
       });
     }
 
