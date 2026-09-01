@@ -25,24 +25,29 @@ Mijoz ismi/telefoni/viloyatini "eslab qolish" uchun kichik bazaga ehtiyoj bor.
 
 ## 4. Kerakli sozlamalarni (Environment Variables) qo'shish
 
-Loyihada **Settings → Environment Variables** bo'limiga o'ting, ikkitasini qo'shing:
+Loyihada **Settings → Environment Variables** bo'limiga o'ting, quyidagilarni qo'shing (⚠️ qiymatlarni HECH QACHON bu faylga yoki boshqa repo fayliga yozmang — faqat Vercel'ning o'z Environment Variables bo'limida saqlanadi):
 
 | Nomi | Qiymati |
 |---|---|
-| `BOT_TOKEN` | `8032690204:AAFXbCRNBR8CHz-QdXKn05oRXBG_1rFeIiY` |
-| `OWNER_CHAT_ID` | `5262377062` |
+| `BOT_TOKEN` | BotFather bergan token (maxfiy!) |
+| `OWNER_CHAT_ID` | sizning Telegram Chat ID'ingiz |
+| `TG_WEBHOOK_SECRET` | o'zingiz o'ylab topgan uzun tasodifiy satr (masalan `openssl rand -hex 24`) — webhook'ni soxta so'rovlardan himoya qiladi |
 
 Qo'shgandan so'ng loyihani qayta joylashtiring (**Deployments → ⋯ → Redeploy**).
 
 ## 5. Telegram'ga botning manzilini aytish (webhook)
 
-Vercel loyihangiz manzilini oling (masalan `https://zetme-bot.vercel.app`), so'ng brauzerda quyidagi manzilni oching (TOKEN va DOMAIN'ni o'zingiznikiga almashtiring):
+Vercel loyihangiz manzilini oling (masalan `https://zetme-bot.vercel.app`), so'ng brauzerda quyidagi manzilni oching (TOKEN, DOMAIN va SECRET'ni o'zingiznikiga almashtiring — bu yerga haqiqiy qiymatlarni yozmang, faqat shablon):
 
 ```
-https://api.telegram.org/bot8032690204:AAFXbCRNBR8CHz-QdXKn05oRXBG_1rFeIiY/setWebhook?url=https://zetme-bot.vercel.app/api/bot
+https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<DOMAIN>/api/bot&secret_token=<TG_WEBHOOK_SECRET>
 ```
+
+`secret_token` — Vercel'ga qo'shgan `TG_WEBHOOK_SECRET` bilan bir xil bo'lishi shart, aks holda bot soxta so'rovlarni rad etadi.
 
 Javobda `"ok":true` chiqsa — tayyor. Endi bot jonlandi.
+
+⚠️ **Eslatma:** agar tokeningiz avval biror joyda (masalan README, chat, skrinshot) ochiq holda ko'rinib qolgan bo'lsa, uni ishonchsiz deb hisoblang — BotFather'da `/mybots → API Token → Revoke current token` orqali darhol yangisiga almashtiring.
 
 ## 6. Sinash
 
@@ -55,5 +60,5 @@ Javobda `"ok":true` chiqsa — tayyor. Endi bot jonlandi.
 ## Muhim eslatmalar
 
 - `api/bot.js` ichidagi `PRODUCTS` ro'yxati saytdagi mahsulotlar bilan **bir xil kodlarda** bo'lishi kerak — yangi mahsulot qo'shsangiz, shu yerga ham qo'shing (keyingi bosqichda buni umumiy bazaga ko'chiramiz, hozircha qo'lda sinxron).
-- Token xavfsiz — u endi faqat Vercel serverida, hech qanday sahifa manbasida ko'rinmaydi.
+- Token xavfsiz bo'lishi uchun uni FAQAT Vercel Environment Variables'da saqlang — hech qanday koddagi faylga, README'ga yoki chatga yozmang.
 - Minimal buyurtma (200 000 so'm) serverda ham qayta tekshiriladi — sayt tekshiruvi chetlab o'tilsa ham himoyalangan.
