@@ -1,0 +1,19 @@
+{
+  "name": "Zetme — Gul va tuvak marketpleysi",
+  "short_name": "Zetme",
+  "description": "Zetme — tuvaklar va gullar katalogi, tasdiqlangan do'konlardan xarid, bonuslar.",
+  "start_url": "/?pwa=1",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12241B",
+  "theme_color": "#12241B",
+  "lang": "uz",
+  "dir": "ltr",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

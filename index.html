@@ -6,12 +6,32 @@
 <title>Zetme AI — Gul va tuvak studiyasi</title>
 <meta name="description" content="Zetme AI — gulingizni tuvakda AI bilan ko'ring, tuvaklar katalogidan xarid qiling." />
 
+<!-- PWA: telefonga "ilova" sifatida o'rnatish uchun — manifest + ikonalar + tema rangi.
+     Haqiqiy build/servis kerak emas, bularning barchasi statik fayllar. -->
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#12241B" />
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Zetme" />
+<meta name="mobile-web-app-capable" content="yes" />
+
 <!-- Build qadamisiz ishlaydi: React/ReactDOM CDN'dan, JSX esa Babel orqali BROWSER'DA
      (sahifa ochilganda) o'giriladi. Shuning uchun bu bitta index.html faylini to'g'ridan
      to'g'ri GitHub'ga joylash kifoya — npm install/build kerak emas. -->
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>
+  // servis vorker: PWA o'rnatilishi va tez ochilishi uchun (ixtiyoriy, xato bo'lsa ham sayt ishlayveradi)
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    });
+  }
+</script>
 </head>
 <body>
 <div id="root"></div>
@@ -62,6 +82,8 @@ const Lock = (p) => <Ic {...p}><rect x="4" y="11" width="16" height="9" rx="2" /
 const Store = (p) => <Ic {...p}><path d="M3 9l1.5-5h15L21 9" /><path d="M4 9v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" /><path d="M9 19v-5h6v5" /></Ic>;
 const Package = (p) => <Ic {...p}><path d="M21 8l-9-5-9 5 9 5 9-5z" /><path d="M3 8v9l9 5 9-5V8" /><path d="M12 13v9" /></Ic>;
 const Trophy = (p) => <Ic {...p}><path d="M7 4h10v4a5 5 0 0 1-10 0V4z" /><path d="M7 5H4v1a4 4 0 0 0 4 4" /><path d="M17 5h3v1a4 4 0 0 1-4 4" /><path d="M12 13v3" /><path d="M8.5 20h7" /><path d="M9.5 20v-1.5a2.5 2.5 0 0 1 5 0V20" /></Ic>;
+const DownloadIc = (p) => <Ic {...p}><path d="M12 4v11" /><path d="M7 10l5 5 5-5" /><path d="M5 20h14" /></Ic>;
+const ShareIc = (p) => <Ic {...p}><path d="M12 3v12" /><path d="M8 7l4-4 4 4" /><rect x="4" y="12" width="16" height="8" rx="2" /></Ic>;
 
 /* ============================== Tokens ============================== */
 const C = {
@@ -143,6 +165,11 @@ const STR = {
     emptyShopOptom: "Bu do'kon mahsulotlariga hali optom narx kiritilmagan.",
     emptyShop: "Bu do'konda hozircha mahsulot yo'q.",
     navStudio: "Studiya", navProducts: "Mahsulotlar", navCart: "Savat", navProfile: "Profil",
+    installTitle: "Zetme'ni telefonga o'rnating",
+    installBodyAndroid: "Ilova kabi tezroq ochiladi, manzil satrisiz",
+    installBodyIOS: "Pastdagi Ulashish tugmasi → \u201cBosh ekranga qo'shish\u201d",
+    installBodyTelegram: "O'rnatish uchun Chrome yoki Safari'da oching",
+    installBtn: "O'rnatish", installBtnBrowser: "Brauzerda ochish",
     pmOptom: "Optom narx", pmChakana: "Chakana narx", pmSize: "O'lcham", pmColor: "Rang",
     addCart: "Savatga qo'shish — ",
     pmStudioGul: "Bu gulni tuvakka AI bilan moslab ko'rish", pmStudioTuvak: "Shu tuvakka gulni AI bilan moslab ko'rish",
@@ -240,6 +267,11 @@ const STR = {
     emptyShopOptom: "Для товаров этого магазина ещё не указана оптовая цена.",
     emptyShop: "В этом магазине пока нет товаров.",
     navStudio: "Студия", navProducts: "Товары", navCart: "Корзина", navProfile: "Профиль",
+    installTitle: "Установите Zetme на телефон",
+    installBodyAndroid: "Открывается как приложение, быстрее и без адресной строки",
+    installBodyIOS: "Кнопка \u201cПоделиться\u201d внизу → \u201cНа экран «Домой»\u201d",
+    installBodyTelegram: "Откройте в Chrome или Safari, чтобы установить",
+    installBtn: "Установить", installBtnBrowser: "Открыть в браузере",
     pmOptom: "Оптовая цена", pmChakana: "Розничная цена", pmSize: "Размер", pmColor: "Цвет",
     addCart: "В корзину — ",
     pmStudioGul: "Примерить этот цветок к горшку с ИИ", pmStudioTuvak: "Примерить цветок к этому горшку с ИИ",
@@ -1337,6 +1369,86 @@ function Leaderboard() {
   );
 }
 
+/* ============================== "Ilovaga o'rnatish" banneri ============================== */
+/* Mijoz saytni telefonining bosh ekraniga PWA sifatida o'rnatishi mumkin — tezroq
+   ochiladi, brauzer manzil satrisiz, ilova kabi ishlaydi. Uch holat farqlanadi:
+   1) Telegram ichki brauzeri — PWA o'rnatishni umuman qo'llab-quvvatlamaydi,
+      shuning uchun "...odatiy brauzerda oching" ko'rsatmasi beriladi.
+   2) Android/Chrome — brauzer o'zi "beforeinstallprompt" hodisasini beradi,
+      shu yerda tugma bosilganda tizim o'rnatish oynasini ochamiz.
+   3) iOS Safari — brauzer hech qanday hodisa bermaydi (Apple cheklovi),
+      shuning uchun qo'lda ko'rsatma: Ulashish → "Bosh ekranga qo'shish". */
+function isStandalonePWA() {
+  try {
+    return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  } catch (e) { return false; }
+}
+function InstallBanner() {
+  const [mode, setMode] = useState(null); // null | "android" | "ios" | "telegram"
+  const [dismissed, setDismissed] = useState(false);
+  const deferredRef = React.useRef(null);
+
+  useEffect(() => {
+    if (isStandalonePWA()) return;
+    const ua = navigator.userAgent || "";
+    const isTelegramWV = !!window.TelegramWebviewProxy || /\bTelegram\b/i.test(ua);
+    const isIOS = /iphone|ipad|ipod/i.test(ua) && !window.MSStream;
+
+    let dismissedAt = 0;
+    try { dismissedAt = Number(localStorage.getItem("zetme_install_dismissed") || 0); } catch (e) {}
+    if (dismissedAt && Date.now() - dismissedAt < 14 * 86400000) return; // 14 kun ko'rsatilmaydi
+
+    if (isTelegramWV) { setMode("telegram"); return; }
+    if (isIOS) { setMode("ios"); return; }
+
+    const onPrompt = (e) => {
+      e.preventDefault();
+      deferredRef.current = e;
+      setMode("android");
+    };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    const onInstalled = () => { setMode(null); deferredRef.current = null; };
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  function dismiss() {
+    setDismissed(true);
+    try { localStorage.setItem("zetme_install_dismissed", String(Date.now())); } catch (e) {}
+  }
+  async function doInstall() {
+    const dp = deferredRef.current;
+    if (!dp) return;
+    dp.prompt();
+    try { await dp.userChoice; } catch (e) {}
+    deferredRef.current = null;
+    setMode(null);
+  }
+  function openInBrowser() {
+    try { window.open(location.href.split("#")[0], "_blank"); } catch (e) {}
+  }
+
+  if (!mode || dismissed) return null;
+  return (
+    <div className="installbar">
+      <div className="installbar-ic">
+        {mode === "ios" ? <ShareIc size={18} color={C.laiton} /> : <DownloadIc size={18} color={C.laiton} />}
+      </div>
+      <div className="installbar-txt">
+        {mode === "android" && <><b>{tr("installTitle")}</b><span>{tr("installBodyAndroid")}</span></>}
+        {mode === "ios" && <><b>{tr("installTitle")}</b><span>{tr("installBodyIOS")}</span></>}
+        {mode === "telegram" && <><b>{tr("installTitle")}</b><span>{tr("installBodyTelegram")}</span></>}
+      </div>
+      {mode === "android" && <button className="installbar-btn" onClick={doInstall}>{tr("installBtn")}</button>}
+      {mode === "telegram" && <button className="installbar-btn" onClick={openInBrowser}>{tr("installBtnBrowser")}</button>}
+      <button className="installbar-x" onClick={dismiss} aria-label="Yopish"><X size={15} /></button>
+    </div>
+  );
+}
+
 /* ============================== App ============================== */
 function App() {
   const [flower, setFlower] = useState(null);
@@ -2258,6 +2370,7 @@ function App() {
           onLink={linkCustomer} onRegister={registerCustomer} onSaveName={saveCustName} onPhoto={setCustPhoto} onCancelOrder={cancelCustOrder}
           onReceiveOrder={receiveCustOrder} onPaidOrder={paidCustOrder} />
       )}
+      <InstallBanner />
     </div>
   );
 }
@@ -2640,6 +2753,18 @@ const buildCSS = () => `
 .pmtoggle-btn.active{background:${C.accent};color:#fff}
 
 /* ---------- BOTTOM NAV ---------- */
+.installbar{position:fixed;left:10px;right:10px;bottom:84px;z-index:55;display:flex;align-items:center;gap:10px;
+  background:${C.card};border:1px solid ${C.mline};border-radius:16px;padding:10px 10px 10px 12px;
+  box-shadow:0 10px 30px #0003;animation:rvIn .4s ease both}
+.installbar-ic{flex-shrink:0;width:34px;height:34px;border-radius:10px;background:${C.accentSoft};
+  display:flex;align-items:center;justify-content:center}
+.installbar-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.installbar-txt b{font-size:12.5px;color:${C.ink}}
+.installbar-txt span{font-size:11px;color:${C.inkDim};line-height:1.3}
+.installbar-btn{flex-shrink:0;border:none;border-radius:10px;background:${C.accent};color:#fff;
+  font-weight:700;font-size:12px;padding:8px 12px;cursor:pointer;white-space:nowrap}
+.installbar-x{flex-shrink:0;border:none;background:transparent;color:${C.inkDim};cursor:pointer;
+  width:22px;height:22px;display:flex;align-items:center;justify-content:center}
 .bottomnav{position:fixed;left:0;right:0;bottom:0;background:${C.card};border-top:1px solid ${C.mline};
   display:flex;z-index:60;padding:6px 6px 8px;gap:3px}
 .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;border:none;
