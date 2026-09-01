@@ -645,9 +645,12 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
   const [vi, setVi] = useState(0);
   const [qty, setQty] = useState(1);
   const [imgIdx, setImgIdx] = useState(0);
+  const [colorIdx, setColorIdx] = useState(0);
   const v = variants[vi] || variants[0] || {};
   const displayName = v.name || p.name;
-  const displayColor = v.color || p.color;
+  const colorList = (Array.isArray(p.colors) && p.colors.length) ? p.colors : (p.color ? [p.color] : []);
+  const selectedColor = colorList[colorIdx] || colorList[0] || v.color || p.color || "";
+  const displayColor = selectedColor || v.color || p.color;
   const unitPrice = priceOf(v, priceMode);
   const imgs = variantImgs(v);
   const heroImg = imgs[imgIdx] || imgs[0] || "";
@@ -688,6 +691,16 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
             </div>
           )}
 
+          {colorList.length > 1 && (
+            <div className="pm-litrrow">
+              {colorList.map((c, i) => (
+                <button key={c + i} className={"pm-litrchip" + (i === colorIdx ? " active" : "")} onClick={() => setColorIdx(i)}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="pm-specs">
             <div><span>{unitOf(p.unit).spec}</span><b>{v.litr ? `${v.litr} ${unitOf(p.unit).short}` : "—"}</b></div>
             <div><span>{tr("pmSize")}</span><b>{v.size || "—"}</b></div>
@@ -698,7 +711,7 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
             <span>{qty}</span>
             <button onClick={() => setQty((q) => q + 1)}><Plus size={15} /></button>
           </div>
-          <button className="pm-add" onClick={() => { onAdd(p, v, qty); onClose(); }}>
+          <button className="pm-add" onClick={() => { onAdd(p, v, qty, selectedColor); onClose(); }}>
             <ShoppingBag size={16} /> {tr("addCart")}{fmt(unitPrice * qty)}
           </button>
           {AI_STUDIO_ENABLED && (
@@ -780,7 +793,7 @@ function CartShopGroup({ group, priceMode, onQty, onCheckout, index }) {
             <div className="cart-emoji">{it.image ? <img src={it.image} alt="" /> : "🪴"}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: 13.5 }}>{it.name}</div>
-              <div style={{ fontSize: 12, color: C.inkDim }}>{it.litr} {unitOf(it.unit).short} · {fmt(priceOf(it, priceMode))}</div>
+              <div style={{ fontSize: 12, color: C.inkDim }}>{it.litr} {unitOf(it.unit).short}{it.color ? ` · ${it.color}` : ""} · {fmt(priceOf(it, priceMode))}</div>
             </div>
             <div className="qty-mini">
               <button onClick={() => onQty(it.key, -1)}><Minus size={13} /></button>
@@ -1688,8 +1701,8 @@ function App() {
   // har biri Savat oynasida alohida guruh sifatida ko'rsatiladi, har birining
   // o'z "Buyurtma berish" tugmasi bor (checkout esa har doim bitta sotuvchiga
   // tegishli qatorlarnigina yuboradi — buni server ham talab qiladi).
-  function doAddToCart(fam, variant, qty) {
-    const key = `${fam.id}_${variant.id}`;
+  function doAddToCart(fam, variant, qty, color) {
+    const key = `${fam.id}_${variant.id}_${color || ""}`;
     setCart((c) => {
       const ex = c.find((i) => i.key === key);
       if (ex) return c.map((i) => (i.key === key ? { ...i, qty: i.qty + qty } : i));
@@ -1697,15 +1710,15 @@ function App() {
         key, id: fam.id, variantId: variant.id,
         name: variant.name || fam.name, litr: variant.litr, unit: fam.unit || "litr",
         price: Number(variant.price), optPrice: Number(variant.optPrice),
-        image: variantImg(variant), qty,
+        image: variantImg(variant), qty, color: color || "",
         sellerId: fam.sellerId || "zetme",
         shopName: fam.shopName || "Tuvaklar",
         bonusEnabled: fam.bonusEnabled !== false,
       }];
     });
   }
-  function addToCart(fam, variant, qty) {
-    doAddToCart(fam, variant, qty);
+  function addToCart(fam, variant, qty, color) {
+    doAddToCart(fam, variant, qty, color);
   }
   function openShop(p) {
     setShopFilter({ id: p.sellerId || "zetme", name: p.shopName || "Tuvaklar" });
@@ -1741,7 +1754,7 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           priceMode,
-          items: sellerItems.map((i) => ({ id: i.id, variantId: i.variantId, qty: i.qty })),
+          items: sellerItems.map((i) => ({ id: i.id, variantId: i.variantId, qty: i.qty, color: i.color || "" })),
           customer: customerData,
           auth: custAuth || undefined,
         }),

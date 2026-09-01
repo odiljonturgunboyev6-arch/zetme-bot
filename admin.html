@@ -138,6 +138,14 @@
   .vOverrideWrap.open { display:flex; }
   .vOverrideWrap > div { flex:1; }
   .addVariantBtn { width:100%; padding:11px; border:1.5px dashed var(--accent); border-radius:11px; background:transparent; color:var(--accent); font-weight:700; font-size:13.5px; cursor:pointer; margin-top:4px; }
+  .colorAddRow { display:flex; gap:8px; margin-top:4px; }
+  .colorAddRow input { flex:1; margin:0; }
+  .colorAddRow button { flex-shrink:0; padding:0 16px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-weight:700; font-size:13px; cursor:pointer; }
+  .colorAddRow button:disabled { opacity:.4; cursor:not-allowed; }
+  .colorChips { display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
+  .colorChip { display:flex; align-items:center; gap:6px; background:#EAF3EC; border:1px solid var(--mline); border-radius:20px; padding:5px 6px 5px 12px; font-size:12.5px; font-weight:600; color:var(--ink); }
+  .colorChip button { border:none; background:rgba(0,0,0,.08); color:var(--inkDim); width:18px; height:18px; border-radius:50%; font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+  .colorChip button:hover { background:var(--sale); color:#fff; }
   .addVariantBtn:disabled { opacity:.4; cursor:not-allowed; border-color:var(--inkDim); color:var(--inkDim); }
   .hint { font-size:11.5px; color:var(--inkDim); margin-top:6px; line-height:1.5; }
 
@@ -255,17 +263,16 @@
       <select id="fSection"></select>
       <div class="hint" id="secHint">Bo'limlarni "Profil" bo'limidagi Do'kon sozlamalarida yaratasiz (5 tagacha).</div>
 
-      <label style="margin-top:14px;">Studiya turi — AI studiyasi rasmni qaysi katakka qo'yishini hal qiladi</label>
-      <div class="tabs">
-        <div class="tab active" data-cat="tuvak" onclick="setCat('tuvak')">Tuvak / buyum</div>
-        <div class="tab" data-cat="gul" onclick="setCat('gul')">Gul / o'simlik</div>
-      </div>
-
       <label>Umumiy nomi (masalan: Gul tuvak rombik)</label>
       <input type="text" id="fName" placeholder="Gul tuvak rombik" />
 
-      <label>Rang (ixtiyoriy, umumiy)</label>
-      <input type="text" id="fColor" placeholder="Oq" />
+      <label style="margin-top:14px;">Ranglar (ixtiyoriy — bir nechtasini qo'shsangiz, mijoz saytda rangni tanlab buyurtma beradi)</label>
+      <div class="colorAddRow">
+        <input type="text" id="fColorInput" maxlength="20" placeholder="Masalan: Oq"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();addColor();}" />
+        <button type="button" id="addColorBtn" onclick="addColor()">+ Qo'shish</button>
+      </div>
+      <div class="colorChips" id="colorChips"></div>
 
       <label style="margin-top:14px;">O'lchov birligi — variantlar shu birlikda kiritiladi</label>
       <div class="tabs">
@@ -860,18 +867,13 @@
     document.getElementById("cancelBtn").classList.add("hidden");
     document.getElementById("submitBtn").textContent = "Saqlash";
     document.getElementById("fName").value = "";
-    document.getElementById("fColor").value = "";
-    setCat("tuvak");
+    colors = [];
+    renderColorChips();
     renderSectionSelect();
     document.getElementById("fSection").value = "";
     variants = [blankVariant()];
     setUnit("litr");   // renderVariants ni ham chaqiradi
     document.getElementById("formMsg").innerHTML = "";
-  }
-
-  function setCat(c) {
-    category = c;
-    document.querySelectorAll(".tab[data-cat]").forEach(t => t.classList.toggle("active", t.dataset.cat === c));
   }
 
   // ===================== o'lchov birligi =====================
@@ -919,6 +921,30 @@
     renderSections();
     renderSectionSelect();
   }
+  // ===================== ranglar (bir nechta, mijoz saytda tanlaydi) =====================
+  let colors = [];
+  function renderColorChips() {
+    const wrap = document.getElementById("colorChips");
+    wrap.innerHTML = colors.map((c, i) => `
+      <span class="colorChip">${escHtml(c)}<button type="button" onclick="removeColor(${i})" title="O'chirish">✕</button></span>
+    `).join("");
+    document.getElementById("addColorBtn").disabled = colors.length >= 8;
+  }
+  function addColor() {
+    if (colors.length >= 8) return;
+    const inp = document.getElementById("fColorInput");
+    const val = inp.value.trim();
+    if (!val) return;
+    if (colors.some(c => c.toLowerCase() === val.toLowerCase())) { inp.value = ""; return; }
+    colors.push(val);
+    inp.value = "";
+    renderColorChips();
+  }
+  function removeColor(i) {
+    colors.splice(i, 1);
+    renderColorChips();
+  }
+
   function renderSectionSelect() {
     const sel = document.getElementById("fSection");
     const cur = sel.value;
@@ -951,15 +977,20 @@
     wrap.innerHTML = variants.map((v, idx) => {
       const hasOverride = v.name || v.color;
       const openClass = (v.overrideOpen || hasOverride) ? " open" : "";
-      const imgsHtml = (v.imgs || []).map((im, k) => `
-        <div class="vimg">
-          <img src="${im.dataUrl || im.url}" />
-          <button type="button" class="vimg-x" onclick="removeVariantImage(${idx},${k})" title="Rasmni o'chirish">✕</button>
-          ${k === 0 ? '<span class="vimg-main">asosiy</span>' : ""}
-        </div>
-      `).join("");
-      const addSlot = (v.imgs || []).length < 3
-        ? `<div class="vimgslot" onclick="pickVariantImage(${idx})">+ Rasm<br>(${(v.imgs || []).length}/3)</div>` : "";
+      const imgsHtml = [0, 1, 2].map((k) => {
+        const im = (v.imgs || [])[k];
+        if (im) {
+          return `
+            <div class="vimg">
+              <img src="${im.dataUrl || im.url}" />
+              <button type="button" class="vimg-x" onclick="removeVariantImage(${idx},${k})" title="Rasmni o'chirish">✕</button>
+              ${k === 0 ? '<span class="vimg-main">asosiy</span>' : ""}
+            </div>
+          `;
+        }
+        return `<div class="vimgslot" onclick="pickVariantImage(${idx})">+ Rasm</div>`;
+      }).join("");
+      const addSlot = "";
       return `
         <div class="variantRow">
           <div class="vhead">
@@ -1148,7 +1179,6 @@
 
   async function submitProduct() {
     const name = document.getElementById("fName").value.trim();
-    const color = document.getElementById("fColor").value.trim();
     const msgEl = document.getElementById("formMsg");
     const btn = document.getElementById("submitBtn");
 
@@ -1189,7 +1219,7 @@
       msgEl.innerHTML = '<div class="msg ok">Saqlanmoqda…</div>';
 
       const payload = {
-        name, category, color, unit,
+        name, category, color: colors[0] || "", colors: colors.slice(), unit,
         sectionId: document.getElementById("fSection").value || "",
         variants: outVariants,
       };
@@ -1241,8 +1271,8 @@
     document.getElementById("submitBtn").textContent = "Yangilash";
 
     document.getElementById("fName").value = p.name || "";
-    document.getElementById("fColor").value = p.color || "";
-    setCat(p.category === "gul" ? "gul" : "tuvak");
+    colors = Array.isArray(p.colors) && p.colors.length ? p.colors.slice(0, 8) : (p.color ? [p.color] : []);
+    renderColorChips();
     renderSectionSelect();
     document.getElementById("fSection").value =
       sections.some(s => s.id === p.sectionId) ? p.sectionId : "";
