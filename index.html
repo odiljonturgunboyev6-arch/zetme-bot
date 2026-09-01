@@ -125,9 +125,9 @@ const STR = {
     inspEyebrow: "Ilhom galereyasi", inspTitle: "AI ko'zi bilan", inspSub: "Studiyada yaratilgan kadrlar — sizniki ham shunday chiqadi",
     inspBadge: "AI bilan yaratilgan",
     insp1: "Oltin barg tuvak · ranunculus", insp2: "Oltin barg tuvak · orxideya", insp3: "Sopol tuvak · ranunculus",
-    abT1: "Sotib olishdan", abEm: "oldin", abT2: "ko'ring",
-    abLead: "Zetme AI — gul va tuvakni bitta kadrda birlashtiradigan botanik studiya. Gulingiz qaysi tuvakda chiroyli ko'rinishini, qaysi rang xonangizga mos tushishini xariddan oldin bilib olasiz. Tanlov — taxmin emas, ko'rilgan natija.",
-    abC1t: "Avval ko'ring, keyin oling", abC1d: "Gul va tuvak rasmini yuklang — AI ularni birlashtiradi va moslikni baholab beradi.",
+    abT1: "Ko'rib", abEm: "ishonch bilan", abT2: "tanlang",
+    abLead: "Zetme — ishonchli sotuvchilarni, tez xaridni va yoqimli bonuslarni bir joyga jamlagan botanik platforma. Har bir mahsulotning aniq rasmini ko'rib, narxini solishtirib, o'zingizga mos tanlovni osongina qilasiz.",
+    abC1t: "Katalogdan ko'rib tanlang", abC1d: "Har bir mahsulotning aniq rasmlari va tavsifi — hech qanday taxmin qilishga hojat yo'q.",
     abC2t: "Bir necha soniyada", abC2d: "Dizayner kutish yo'q, o'lchov yo'q. Natija shu zahoti ekraningizda paydo bo'ladi.",
     abC3t: "Tasdiqlangan do'konlar", abC3d: "Har bir sotuvchi administrator tomonidan tekshiriladi. Buyurtma to'g'ridan-to'g'ri do'konga boradi.",
     abC4t: "Bonus va sovg'alar", abC4d: "1 mln so'mdan yuqori buyurtmalarga sovg'a, yirik xaridlarga esa pul bonuslari beriladi.",
@@ -222,9 +222,9 @@ const STR = {
     inspEyebrow: "Галерея вдохновения", inspTitle: "Глазами ИИ", inspSub: "Кадры, созданные в студии — ваш получится таким же",
     inspBadge: "Создано с ИИ",
     insp1: "Золотое кашпо · ранункулюс", insp2: "Золотое кашпо · орхидея", insp3: "Керамическое кашпо · ранункулюс",
-    abT1: "Посмотрите", abEm: "до", abT2: "покупки",
-    abLead: "Zetme AI — ботаническая студия, которая объединяет цветок и горшок в одном кадре. Ещё до покупки вы узнаете, в каком горшке ваш цветок смотрится красивее и какой цвет подойдёт вашей комнате. Выбор — не догадка, а увиденный результат.",
-    abC1t: "Сначала посмотрите, потом купите", abC1d: "Загрузите фото цветка и горшка — ИИ объединит их и оценит сочетание.",
+    abT1: "Смотрите", abEm: "и выбирайте", abT2: "с уверенностью",
+    abLead: "Zetme — ботаническая платформа, которая собрала в одном месте проверенных продавцов, быструю покупку и приятные бонусы. Смотрите чёткие фото каждого товара, сравнивайте цены и легко находите то, что подходит именно вам.",
+    abC1t: "Выбирайте прямо из каталога", abC1d: "Чёткие фото и описание каждого товара — никаких догадок.",
     abC2t: "За несколько секунд", abC2d: "Не нужно ждать дизайнера и делать замеры. Результат сразу на вашем экране.",
     abC3t: "Проверенные магазины", abC3d: "Каждый продавец проверяется администратором. Заказ идёт напрямую в магазин.",
     abC4t: "Бонусы и подарки", abC4d: "К заказам свыше 1 млн сумов — подарок, к крупным покупкам — денежные бонусы.",
@@ -2036,7 +2036,7 @@ function App() {
       {/* ===================== STUDIYA: Zetme AI haqida ===================== */}
       <section className="about" id="about">
         <div className="ab-inner">
-          <p className="sw-eyebrow">Zetme AI</p>
+          <p className="sw-eyebrow">Zetme</p>
           <h2 className="ab-title">{tr("abT1")} <em>{tr("abEm")}</em> {tr("abT2")}</h2>
           <p className="ab-lead">{tr("abLead")}</p>
 
