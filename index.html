@@ -347,15 +347,15 @@ function seasonLeafPalette() {
   return ["#DDE6E0", "#B9C4B6", "#8FA398"];                          // qish
 }
 const LEAVES = [
-  { l: 4,  dur: 19, dl: 0,  s: 13, sw: 34, sp: 1,  c: 0 },
-  { l: 13, dur: 23, dl: 4,  s: 10, sw: 22, sp: -1, c: 1 },
-  { l: 24, dur: 17, dl: 9,  s: 15, sw: 40, sp: 1,  c: 2 },
-  { l: 35, dur: 25, dl: 2,  s: 11, sw: 26, sp: -1, c: 0 },
-  { l: 47, dur: 20, dl: 12, s: 14, sw: 30, sp: 1,  c: 1 },
-  { l: 58, dur: 22, dl: 6,  s: 12, sw: 44, sp: -1, c: 2 },
-  { l: 69, dur: 18, dl: 15, s: 16, sw: 24, sp: 1,  c: 0 },
-  { l: 79, dur: 24, dl: 3,  s: 10, sw: 36, sp: -1, c: 1 },
-  { l: 90, dur: 21, dl: 10, s: 13, sw: 28, sp: 1,  c: 2 },
+  { l: 4,  dur: 19, dl: 0,  s: 19, sw: 34, sp: 1,  c: 0 },
+  { l: 13, dur: 23, dl: 4,  s: 15, sw: 22, sp: -1, c: 1 },
+  { l: 24, dur: 17, dl: 9,  s: 22, sw: 40, sp: 1,  c: 2 },
+  { l: 35, dur: 25, dl: 2,  s: 16, sw: 26, sp: -1, c: 0 },
+  { l: 47, dur: 20, dl: 12, s: 20, sw: 30, sp: 1,  c: 1 },
+  { l: 58, dur: 22, dl: 6,  s: 17, sw: 44, sp: -1, c: 2 },
+  { l: 69, dur: 18, dl: 15, s: 23, sw: 24, sp: 1,  c: 0 },
+  { l: 79, dur: 24, dl: 3,  s: 15, sw: 36, sp: -1, c: 1 },
+  { l: 90, dur: 21, dl: 10, s: 19, sw: 28, sp: 1,  c: 2 },
 ];
 function LeafRain() {
   const palette = React.useMemo(() => seasonLeafPalette(), []);
@@ -371,7 +371,7 @@ function LeafRain() {
           "--spin": lf.sp,
         }}>
           <svg viewBox="0 0 20 20" width={lf.s} height={lf.s}>
-            <path d="M10 1.2C15.4 6.1 16.4 12 10 18.8 3.6 12 4.6 6.1 10 1.2Z" fill={palette[lf.c % palette.length]} opacity="0.55" />
+            <path d="M10 1.2C15.4 6.1 16.4 12 10 18.8 3.6 12 4.6 6.1 10 1.2Z" fill={palette[lf.c % palette.length]} opacity="0.62" />
             <path d="M10 3.3V17" stroke="#00000022" strokeWidth="0.6" />
           </svg>
         </span>
@@ -568,18 +568,21 @@ const Z_LOGO = "data:image/webp;base64,UklGRkaHAABXRUJQVlA4WAoAAAAQAAAAUwEAUwEAQ
 
 function ZetmeMark({ size = "sm" }) {
   const word = "zetme";
+  const showWord = size === "lg";
   return (
     <div className={"zmark zmark-" + size} aria-label="Zetme">
       <span className="zmark-zwrap">
         <span className="zmark-glow zg1" aria-hidden="true" />
-        <span className="zmark-glow zg2" aria-hidden="true" />
+        {showWord && <span className="zmark-glow zg2" aria-hidden="true" />}
         <img className="zmark-z" src={Z_LOGO} alt="Z" draggable="false" />
       </span>
-      <span className="zmark-word" aria-hidden="true">
-        {word.split("").map((ch, i) => (
-          <em key={i} style={{ animationDelay: `${i * 90}ms` }}>{ch}</em>
-        ))}
-      </span>
+      {showWord && (
+        <span className="zmark-word" aria-hidden="true">
+          {word.split("").map((ch, i) => (
+            <em key={i} style={{ animationDelay: `${i * 90}ms` }}>{ch}</em>
+          ))}
+        </span>
+      )}
     </div>
   );
 }
@@ -1897,7 +1900,7 @@ function App() {
         </header>
 
         <p className="eyebrow rv rv1">{tr("eyebrow")}</p>
-        <h1 className="htitle rv rv2">{tr("heroT1")} <em>{tr("heroEm")}</em> {tr("heroT2")}</h1>
+        <h1 className="htitle">{tr("heroT1")} <em>{tr("heroEm")}</em> {tr("heroT2")}</h1>
         <div className="h-ornament rv rv3" aria-hidden="true">
           <span className="h-line" /><Flower2 size={11} color={C.laiton} /><span className="h-line" />
         </div>
@@ -2416,7 +2419,13 @@ const buildCSS = () => `
 
 .eyebrow{position:relative;z-index:2;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:${C.laiton};text-align:center;margin:10px 0 6px}
 .htitle{position:relative;z-index:2;font-family:${FONT_DISPLAY};font-weight:500;text-align:center;font-size:clamp(30px,7.6vw,42px);
-  margin:0 0 10px;line-height:1.08;text-shadow:0 2px 24px #0006}
+  margin:0 0 10px;line-height:1.08;text-shadow:0 2px 24px #0006;
+  animation:htitleIn 1.15s cubic-bezier(.22,1,.36,1) .12s both}
+@keyframes htitleIn{
+  0%{opacity:0;transform:translateY(26px) scale(.93);filter:blur(9px)}
+  60%{filter:blur(0)}
+  100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+}
 .htitle em{font-style:italic;color:#E7D3A0;
   background:linear-gradient(90deg,${C.laiton},${C.laitonHi} 30%,#fff6dc 50%,${C.laitonHi} 70%,${C.laiton});
   background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
@@ -2534,10 +2543,10 @@ const buildCSS = () => `
 .ab-stat-sep{width:1px;height:28px;background:${C.line}}
 
 @media (prefers-reduced-motion: reduce){
-  .rv,.hero-glow,.petal,.htitle em,.cta-shine,.sh-chev,.genslot-box,.genslot-empty svg,
+  .rv,.hero-glow,.petal,.htitle,.htitle em,.cta-shine,.sh-chev,.genslot-box,.genslot-empty svg,
   .lotus-g,.ripple,.drop,.fire,.mist,.water-glow{animation:none!important}
   .ripple,.drop{opacity:0}
-  .rv{opacity:1;transform:none}
+  .rv,.htitle{opacity:1;transform:none;filter:none}
   .sw-tile,.ab-card,.sw-eyebrow,.sw-title,.sw-sub,.ab-title,.ab-lead,.ab-stats,.sw-glow{animation:none!important}
   .sw-tile:hover .sw-shine{animation:none}
   .sw-tile,.ab-card{opacity:1;transform:none}
