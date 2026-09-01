@@ -1925,15 +1925,7 @@ function App() {
               </div>
             )}
           </React.Fragment>
-        ) : (
-          /* AI montaj hozircha o'chirilgan — o'rniga nafis, davomiy animatsiyali
-             Zetme markasi turadi (tez orada qaytadi degan kayfiyatda). */
-          <div className="hero-center rv rv4" aria-hidden="false">
-            <div className="hc-ring hc-r1" />
-            <div className="hc-ring hc-r2" />
-            <ZetmeMark size="lg" />
-          </div>
-        )}
+        ) : null}
 
         <button className="scrollhint rv rv6" aria-label="Do'konlarga o'tish"
           onClick={() => { const el = document.getElementById("shops"); if (el) el.scrollIntoView({ behavior: "smooth" }); }}>
@@ -2420,10 +2412,11 @@ const buildCSS = () => `
 .eyebrow{position:relative;z-index:2;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:${C.laiton};text-align:center;margin:10px 0 6px}
 .htitle{position:relative;z-index:2;font-family:${FONT_DISPLAY};font-weight:500;text-align:center;font-size:clamp(30px,7.6vw,42px);
   margin:0 0 10px;line-height:1.08;text-shadow:0 2px 24px #0006;
-  animation:htitleIn 1.15s cubic-bezier(.22,1,.36,1) .12s both}
+  animation:htitleIn 1.9s cubic-bezier(.22,1,.36,1) .35s both}
 @keyframes htitleIn{
-  0%{opacity:0;transform:translateY(26px) scale(.93);filter:blur(9px)}
-  60%{filter:blur(0)}
+  0%{opacity:0;transform:translateY(40px) scale(.9);filter:blur(12px)}
+  55%{filter:blur(0)}
+  85%{transform:translateY(-3px) scale(1.01)}
   100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
 }
 .htitle em{font-style:italic;color:#E7D3A0;
