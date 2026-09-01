@@ -1564,7 +1564,7 @@ function App() {
         <header className="topbar">
           <ZetmeMark size="sm" />
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button className="prof-entry" onClick={() => setProfileOpen(true)}>
+            <button className="prof-entry" onClick={() => { setProfileOpen(true); setCartOpen(false); }}>
               <span className="prof-entry-ring" style={{ borderColor: tier.ring }}>
                 <User size={14} color={tier.color} />
               </span>
@@ -1891,20 +1891,25 @@ function App() {
       </section>
       )}
 
-      {/* bottom nav (mobile) — har doim ustida, qaysi oyna faolligini bo'yab ko'rsatadi */}
+      {/* bottom nav (mobile) — har doim ustida, qaysi oyna faolligini bo'yab ko'rsatadi.
+          Har safar faqat BITTA fullscreen oyna faol bo'lishi uchun boshqalari yopiladi. */}
       <nav className="bottomnav">
-        <button className={"bn-item" + (navActive === "studio" ? " active" : "")} onClick={() => setMainTab("studio")}>
+        <button className={"bn-item" + (navActive === "studio" ? " active" : "")}
+          onClick={() => { setMainTab("studio"); setCartOpen(false); setProfileOpen(false); }}>
           <Sparkles size={18} /><span>{tr("navStudio")}</span>
         </button>
-        <button className={"bn-item" + (navActive === "products" ? " active" : "")} onClick={() => setMainTab("products")}>
+        <button className={"bn-item" + (navActive === "products" ? " active" : "")}
+          onClick={() => { setMainTab("products"); setCartOpen(false); setProfileOpen(false); }}>
           <Store size={18} /><span>{tr("navProducts")}</span>
         </button>
-        <button className={"bn-item" + (navActive === "cart" ? " active" : "")} onClick={() => setCartOpen(true)} style={{ position: "relative" }}>
+        <button className={"bn-item" + (navActive === "cart" ? " active" : "")}
+          onClick={() => { setCartOpen(true); setProfileOpen(false); }} style={{ position: "relative" }}>
           <ShoppingBag size={18} />
           {cartCount > 0 && <span className="bn-badge">{cartCount}</span>}
           <span>{tr("navCart")}</span>
         </button>
-        <button className={"bn-item" + (navActive === "profile" ? " active" : "")} onClick={() => setProfileOpen(true)} style={{ position: "relative" }}>
+        <button className={"bn-item" + (navActive === "profile" ? " active" : "")}
+          onClick={() => { setProfileOpen(true); setCartOpen(false); }} style={{ position: "relative" }}>
           <User size={18} />
           {hasNews && !profileOpen && <span className="bn-dot" />}
           <span>{tr("navProfile")}</span>
