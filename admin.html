@@ -251,6 +251,17 @@
       <div id="sellersList"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
     </div>
 
+    <div class="card hidden" data-pane="profil" id="botMenuCard">
+      <h3>Telegram bot tugmasi</h3>
+      <div class="hint" style="margin-bottom:10px;">
+        @zetmeai_bot chatida, xabar yozish maydoni yonida doimiy "Zetme" tugmasi chiqishi uchun
+        bir marta bosing. Shundan keyin mijoz hech qanday havola yozmasdan, shu tugma orqali
+        saytga to'g'ridan-to'g'ri (Telegram ichida) kiraveradi.
+      </div>
+      <button type="button" class="addVariantBtn" id="botMenuBtn" onclick="setupBotMenuButton()">🤖 Bot tugmasini yoqish</button>
+      <div id="botMenuMsg" style="margin-top:8px; font-size:13px;"></div>
+    </div>
+
     <!-- MAHSULOTLAR: yangi mahsulot tugmasi -->
     <button class="newprodbtn" data-pane="mahsulot" id="newProdBtn" onclick="openNewProduct()">＋ Yangi mahsulot qo'shish</button>
     <div data-pane="mahsulot" id="paneMsg" style="margin:-6px 0 12px;"></div>
@@ -374,6 +385,29 @@
     return h;
   }
 
+  async function setupBotMenuButton() {
+    const btn = document.getElementById("botMenuBtn");
+    const msg = document.getElementById("botMenuMsg");
+    btn.disabled = true;
+    msg.style.color = "var(--inkDim)";
+    msg.textContent = "Sozlanmoqda...";
+    try {
+      const res = await fetch("/api/bot-menu-button", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-password": ME.password },
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Xatolik");
+      msg.style.color = "var(--accent)";
+      msg.textContent = "✅ Tayyor! Endi @zetmeai_bot chatida tugma chiqadi.";
+    } catch (e) {
+      msg.style.color = "var(--sale)";
+      msg.textContent = "❌ " + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   // ===================== kirish / ro'yxat =====================
   function gateTab(which) {
     document.getElementById("tabLogin").classList.toggle("active", which === "login");
@@ -477,6 +511,7 @@
     }
     if (ME.isSuper) {
       document.getElementById("sellersCard").classList.remove("hidden");
+      document.getElementById("botMenuCard").classList.remove("hidden");
       loadSellers();
     }
     resetForm();
