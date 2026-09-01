@@ -7,7 +7,9 @@ import { kv } from "@vercel/kv";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const OWNER_CHAT_ID = process.env.OWNER_CHAT_ID;
-const TG_WEBHOOK_SECRET = process.env.TG_WEBHOOK_SECRET;
+// .trim() — Vercel ENV maydoniga nusxa olishda ba'zan ko'rinmas bo'shliq/newline
+// qo'shilib qolishi mumkin; shu solishtirish shunga chidamli bo'lsin.
+const TG_WEBHOOK_SECRET = (process.env.TG_WEBHOOK_SECRET || "").trim();
 const API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 const REGIONS = [
@@ -77,7 +79,9 @@ export default async function handler(req, res) {
   // istalgan odam soxta update yuborib /stat kabi buyruqlarni ishlata olardi.
   // TG_WEBHOOK_SECRET Vercel ENV'da o'rnatilgandan so'ng, webhook shu qiymat bilan
   // qayta o'rnatilishi shart (setWebhook?...&secret_token=<TG_WEBHOOK_SECRET>).
-  if (TG_WEBHOOK_SECRET && req.headers["x-telegram-bot-api-secret-token"] !== TG_WEBHOOK_SECRET) {
+  const incomingSecret = String(req.headers["x-telegram-bot-api-secret-token"] || "").trim();
+  if (TG_WEBHOOK_SECRET && incomingSecret !== TG_WEBHOOK_SECRET) {
+    console.error("webhook secret mismatch", { gotLen: incomingSecret.length, wantLen: TG_WEBHOOK_SECRET.length });
     return res.status(401).send("unauthorized");
   }
 
