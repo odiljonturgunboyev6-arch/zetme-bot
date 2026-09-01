@@ -73,6 +73,212 @@ const C = {
 const FONT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
 const FONT_BODY = "'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif";
 
+/* ============ KUN / TUN palitralari ============
+   Kinematik hero har doim tungi (qora) qoladi — bu studiya imzosi.
+   Tun rejimi saytning "market" qismini ham to'q rangga o'tkazadi. */
+const THEMES = {
+  day:   { paper: "#F5F6F3", card: "#FFFFFF", ink: "#16211B", inkDim: "#69756D", mline: "#E4E7E1", accent: "#2F6B4F", price: "#16211B", sale: "#C6472E" },
+  night: { paper: "#0C1712", card: "#132119", ink: "#EDE9DC", inkDim: "#95A29A", mline: "#233529", accent: "#7FBF9E", price: "#F1ECDF", sale: "#E57A5F" },
+};
+let THEME = "day";
+try { if (localStorage.getItem("zetme_theme") === "night") THEME = "night"; } catch (e) {}
+Object.assign(C, THEMES[THEME]);
+function applyTheme(t) { THEME = t; Object.assign(C, THEMES[t]); try { localStorage.setItem("zetme_theme", t); } catch (e) {} }
+
+/* ============ UZ / RU tarjimalar ============ */
+const STR = {
+  uz: {
+    eyebrow: "AI botanik studiya", heroT1: "Gulingizni", heroEm: "tuvakda", heroT2: "ko'ring",
+    slotFlower: "Gul rasmi", slotPot: "Tuvak rasmi",
+    generating: "Yaratilmoqda…", generate: "Generatsiya qilish",
+    genDone: "Tayyor! Natija va moslik tahlili shu yerda ko'rinadi.",
+    seeShops: "Do'konlarni ko'rish",
+    srcCatalog: "Katalogdan tanlash", srcCatalogS: "Tuvaklar bo'limidan",
+    srcGallery: "Galereyadan yuklash", srcGalleryS: "Telefondagi rasm",
+    srcCamera: "Rasmga olish", srcCameraS: "Kamerani ochish",
+    srcPicked: "Katalogdan tanlandi",
+    partners: "Bizning hamkorlar", shopsTitle: "Do'konlar",
+    shopsSub: (n) => n + " ta tasdiqlangan do'kon · rasmga bosing",
+    shopsSoon: "Do'konlar tez orada", noActiveShop: "Hozircha faol do'kon yo'q",
+    hiwEyebrow: "Qanday ishlaydi", hiwTitle: "Uch qadam — bitta kadr",
+    hiw1t: "Gulni yuklang", hiw1d: "Sevimli gulingiz rasmini oling yoki galereyadan tanlang.",
+    hiw2t: "Tuvakni tanlang", hiw2d: "O'z tuvagingizni yuklang yoki katalogdagi tuvaklardan birini tanlang.",
+    hiw3t: "AI birlashtiradi", hiw3d: "Bir necha soniyada gul tuvakda qanday ko'rinishini va moslik bahosini ko'rasiz.",
+    inspEyebrow: "Ilhom galereyasi", inspTitle: "AI ko'zi bilan", inspSub: "Studiyada yaratilgan kadrlar — sizniki ham shunday chiqadi",
+    inspBadge: "AI bilan yaratilgan",
+    insp1: "Oltin barg tuvak · ranunculus", insp2: "Oltin barg tuvak · orxideya", insp3: "Sopol tuvak · ranunculus",
+    abT1: "Sotib olishdan", abEm: "oldin", abT2: "ko'ring",
+    abLead: "Zetme AI — gul va tuvakni bitta kadrda birlashtiradigan botanik studiya. Gulingiz qaysi tuvakda chiroyli ko'rinishini, qaysi rang xonangizga mos tushishini xariddan oldin bilib olasiz. Tanlov — taxmin emas, ko'rilgan natija.",
+    abC1t: "Avval ko'ring, keyin oling", abC1d: "Gul va tuvak rasmini yuklang — AI ularni birlashtiradi va moslikni baholab beradi.",
+    abC2t: "Bir necha soniyada", abC2d: "Dizayner kutish yo'q, o'lchov yo'q. Natija shu zahoti ekraningizda paydo bo'ladi.",
+    abC3t: "Tasdiqlangan do'konlar", abC3d: "Har bir sotuvchi administrator tomonidan tekshiriladi. Buyurtma to'g'ridan-to'g'ri do'konga boradi.",
+    abC4t: "Bonus va sovg'alar", abC4d: "1 mln so'mdan yuqori buyurtmalarga sovg'a, yirik xaridlarga esa pul bonuslari beriladi.",
+    statShop: "do'kon", statProd: "mahsulot", statOpen: "ochiq",
+    marketTitle: "Mahsulotlar", marketShopsN: (n) => n + " ta do'kon",
+    marketHint: "Do'konni tanlang — mahsulotlar bo'limlar bo'yicha ochiladi",
+    loading: "Yuklanmoqda…", loadFail: "Yuklab bo'lmadi: ", noShopsYet: "Hali do'kon yo'q. Tez orada to'ldiriladi.",
+    productN: (n) => n + " ta mahsulot",
+    allShops: "Barcha do'konlar", bonusGifts: " · ★ bonus va sovg'alar bor",
+    chakana: "Chakana", optom: "Optom",
+    optNote: (s) => "Optom narx — " + s + "+ savatda",
+    emptyShopOptom: "Bu do'kon mahsulotlariga hali optom narx kiritilmagan.",
+    emptyShop: "Bu do'konda hozircha mahsulot yo'q.",
+    navStudio: "Studiya", navProducts: "Mahsulotlar", navCart: "Savat", navProfile: "Profil",
+    pmOptom: "Optom narx", pmChakana: "Chakana narx", pmSize: "O'lcham", pmColor: "Rang",
+    addCart: "Savatga qo'shish — ",
+    pmStudioGul: "Bu gulni tuvakka AI bilan moslab ko'rish", pmStudioTuvak: "Shu tuvakka gulni AI bilan moslab ko'rish",
+    cartTitle: "Savat",
+    modeOptomCalc: "🏭 Optom narxda hisoblanmoqda", modeChakCalc: "🛍️ Chakana narxda hisoblanmoqda",
+    cartFrom1: "Buyurtma", cartFrom2: "do'konidan · bitta buyurtma = bitta do'kon",
+    cartEmpty: "Savat bo'sh. Tuvaklar bo'limidan mahsulot qo'shing.",
+    teaser: (s) => "🎁 Savatingizni to'ldiring — " + s + "lik chegaradan o'tsangiz, sirli sovg'a kutmoqda!",
+    bonusGift: "🎁 Bu buyurtmaga tuvak-sovg'a qo'shiladi (turi buyurtma bilan birga aniqlanadi)",
+    total: "Jami", payTotal: "To'lov summasi",
+    minOptom: "Optom narx uchun minimal buyurtma", minOrder: "Minimal buyurtma",
+    addMore: (s) => "Yana " + s + "lik mahsulot qo'shing, shunda buyurtma berish faollashadi.",
+    orChakana: " Yoki yuqoridagi \"Chakana\" tugmasiga o'ting.",
+    sending: "Yuborilmoqda…", placeOrder: "Buyurtma berish",
+    coTitle: "Buyurtmani rasmiylashtirish", coItems: (n) => n + " xil mahsulot",
+    coName: "Ismingiz", coPhone: "Telefon raqamingiz", coRegion: "Viloyat", coSelect: "Tanlang…",
+    coSend: "Buyurtmani yuborish",
+    coHint: "Buyurtma darhol do'konga tushadi. Holatini Profil bo'limida kuzatib borasiz — sotuvchi tayyorlab, yuborganida ko'rinadi.",
+    osTitle: "Buyurtma qabul qilindi!", shopSuffix: " do'koni",
+    osVoucher: (p, s) => "🎁 " + p + "% chegirma bonusingiz qo'llandi: −" + s,
+    osInfo: "Sotuvchi tez orada siz bilan bog'lanadi. Buyurtma holatini (tayyorlanmoqda, yuborildi) Profil bo'limida kuzatib borasiz.",
+    osTrack: "Profilda kuzatish", close: "Yopish",
+    confT: "Savatda boshqa do'kon mahsuloti bor",
+    confB1: "Savatingizda hozir", confB2: " do'konining mahsulotlari turibdi. Bitta buyurtmada faqat bitta do'kondan xarid qilinadi — avval joriy buyurtmani yakunlang, yoki savatni tozalab", confB3: " do'konidan boshlang.",
+    confFinish: "Joriy buyurtmani yakunlash", confClear1: "Savatni tozalash va", confClear2: "dan boshlash", cancel: "Bekor qilish",
+    stYangi: "🆕 Yangi", stTayyor: "📦 Tayyorlanmoqda", stYubor: "🚚 Yuborildi", stYetk: "✅ Yetkazildi", stQabul: "✅ Qabul qilindi", stBekor: "❌ Bekor",
+    guest: "Mehmon", edit: "✎ tahrirlash", fName: "Ism", lName: "Familiya", save: "Saqlash",
+    noPhone: "Telefon kiritilmagan", tgLinked: " · Telegram orqali ulangan",
+    photoLoading: "Rasm yuklanmoqda…", myOrders: "Buyurtmalarim", nPcs: (n) => n + " ta",
+    linkIntro: "Buyurtmalaringizni shu yerda ko'rish uchun profilni Telegram hisobingizga ulang:",
+    linkStep1a: "ga kirib", linkStep1b: "deb yozing", linkStep2: "Bot bergan 6 xonali kodni shu yerga kiriting",
+    link: "Ulash", openBot: "Botni ochish",
+    voucherLine: (p, shop) => "🎁 " + p + "% chegirma" + (shop ? " — " + shop + " do'konidan" : "") + " keyingi buyurtmangizga (1 mln so'mgacha qismiga). Botda tasdiqlaganingizda avtomatik qo'llanadi.",
+    noOrders: "Hali buyurtma yo'q. Do'konlardan xarid qilganingizda shu yerda ko'rinadi.",
+    moreN: (n) => "… yana " + n + " ta",
+    vdisc: (s) => " · 🎁 −" + s + " chegirma",
+    selfCancel: "Bu buyurtmani o'zingiz bekor qilgansiz.", reason: "Sabab: ", noReason: "ko'rsatilmagan",
+    sorryBonus1: "🎁 Uzr sifatida keyingi buyurtmangizga", sorryBonus2: "chegirma", sorryBonus3: "berildi.",
+    confirmCancel: "Rostdan bekor qilasizmi?", yesCancel: "Ha, bekor qilish", no: "Yo'q",
+    received: "✅ Buyurtmani qabul qildim",
+    payDone: "✅ To'lov qabul qilingan",
+    payWait1: "💸 To'lov qilganingizni aytdingiz", payWait2: " — sotuvchi tasdiqlashi kutilmoqda",
+    payAgree: "To'lov usulini sotuvchi bilan kelishasiz",
+    payPh: "Qanday to'ladingiz? (Payme, naqd...)", send: "Yuborish", paidBtn: "💸 To'lov qildim",
+    tokensLeft: "token qoldi", buyTokens: "Token sotib olish",
+    tierMore: (n, t) => "Yana " + n + " token — " + t + " darajasi",
+    badgeT: "Nishon (belgi)", badgeOn: "Faol — profilingizda ko'rinadi", badgeOff: "Token to'plamasdan ham alohida sotib olinadi", buy: "Sotib olish",
+    genHistory: "Generatsiyalar tarixi", genEmpty: "Hali generatsiya qilinmagan. Studiyadan boshlang.",
+    toNight: "Tun rejimi", toDay: "Kun rejimi",
+  },
+  ru: {
+    eyebrow: "AI ботаническая студия", heroT1: "Увидьте цветок", heroEm: "в горшке", heroT2: "",
+    slotFlower: "Фото цветка", slotPot: "Фото горшка",
+    generating: "Создаётся…", generate: "Сгенерировать",
+    genDone: "Готово! Результат и анализ сочетания появятся здесь.",
+    seeShops: "Смотреть магазины",
+    srcCatalog: "Выбрать из каталога", srcCatalogS: "Из раздела горшков",
+    srcGallery: "Загрузить из галереи", srcGalleryS: "Фото с телефона",
+    srcCamera: "Сфотографировать", srcCameraS: "Открыть камеру",
+    srcPicked: "Выбрано из каталога",
+    partners: "Наши партнёры", shopsTitle: "Магазины",
+    shopsSub: (n) => n + " проверенных магазинов · нажмите на фото",
+    shopsSoon: "Магазины скоро появятся", noActiveShop: "Пока нет активных магазинов",
+    hiwEyebrow: "Как это работает", hiwTitle: "Три шага — один кадр",
+    hiw1t: "Загрузите цветок", hiw1d: "Сфотографируйте любимый цветок или выберите из галереи.",
+    hiw2t: "Выберите горшок", hiw2d: "Загрузите свой горшок или выберите один из каталога.",
+    hiw3t: "ИИ объединит", hiw3d: "Через несколько секунд увидите цветок в горшке и оценку сочетания.",
+    inspEyebrow: "Галерея вдохновения", inspTitle: "Глазами ИИ", inspSub: "Кадры, созданные в студии — ваш получится таким же",
+    inspBadge: "Создано с ИИ",
+    insp1: "Золотое кашпо · ранункулюс", insp2: "Золотое кашпо · орхидея", insp3: "Керамическое кашпо · ранункулюс",
+    abT1: "Посмотрите", abEm: "до", abT2: "покупки",
+    abLead: "Zetme AI — ботаническая студия, которая объединяет цветок и горшок в одном кадре. Ещё до покупки вы узнаете, в каком горшке ваш цветок смотрится красивее и какой цвет подойдёт вашей комнате. Выбор — не догадка, а увиденный результат.",
+    abC1t: "Сначала посмотрите, потом купите", abC1d: "Загрузите фото цветка и горшка — ИИ объединит их и оценит сочетание.",
+    abC2t: "За несколько секунд", abC2d: "Не нужно ждать дизайнера и делать замеры. Результат сразу на вашем экране.",
+    abC3t: "Проверенные магазины", abC3d: "Каждый продавец проверяется администратором. Заказ идёт напрямую в магазин.",
+    abC4t: "Бонусы и подарки", abC4d: "К заказам свыше 1 млн сумов — подарок, к крупным покупкам — денежные бонусы.",
+    statShop: "магазинов", statProd: "товаров", statOpen: "открыто",
+    marketTitle: "Товары", marketShopsN: (n) => n + " магазинов",
+    marketHint: "Выберите магазин — товары откроются по разделам",
+    loading: "Загрузка…", loadFail: "Не удалось загрузить: ", noShopsYet: "Магазинов пока нет. Скоро появятся.",
+    productN: (n) => n + " товаров",
+    allShops: "Все магазины", bonusGifts: " · ★ бонусы и подарки",
+    chakana: "Розница", optom: "Опт",
+    optNote: (s) => "Оптовая цена — при корзине от " + s,
+    emptyShopOptom: "Для товаров этого магазина ещё не указана оптовая цена.",
+    emptyShop: "В этом магазине пока нет товаров.",
+    navStudio: "Студия", navProducts: "Товары", navCart: "Корзина", navProfile: "Профиль",
+    pmOptom: "Оптовая цена", pmChakana: "Розничная цена", pmSize: "Размер", pmColor: "Цвет",
+    addCart: "В корзину — ",
+    pmStudioGul: "Примерить этот цветок к горшку с ИИ", pmStudioTuvak: "Примерить цветок к этому горшку с ИИ",
+    cartTitle: "Корзина",
+    modeOptomCalc: "🏭 Расчёт по оптовой цене", modeChakCalc: "🛍️ Расчёт по розничной цене",
+    cartFrom1: "Заказ из магазина", cartFrom2: "· один заказ = один магазин",
+    cartEmpty: "Корзина пуста. Добавьте товары из раздела горшков.",
+    teaser: (s) => "🎁 Пополните корзину — перейдёте порог " + s + ", и вас ждёт тайный подарок!",
+    bonusGift: "🎁 К этому заказу добавится горшок в подарок (модель определится вместе с заказом)",
+    total: "Итого", payTotal: "К оплате",
+    minOptom: "Минимальный заказ для оптовой цены", minOrder: "Минимальный заказ",
+    addMore: (s) => "Добавьте товаров ещё на " + s + ", и оформление заказа станет доступно.",
+    orChakana: " Или переключитесь на \"Розницу\" выше.",
+    sending: "Отправка…", placeOrder: "Оформить заказ",
+    coTitle: "Оформление заказа", coItems: (n) => n + " видов товара",
+    coName: "Ваше имя", coPhone: "Ваш номер телефона", coRegion: "Регион", coSelect: "Выберите…",
+    coSend: "Отправить заказ",
+    coHint: "Заказ сразу поступит в магазин. Статус отслеживайте в разделе Профиль — увидите, когда продавец готовит и отправит его.",
+    osTitle: "Заказ принят!", shopSuffix: "",
+    osVoucher: (p, s) => "🎁 Применён ваш бонус " + p + "%: −" + s,
+    osInfo: "Продавец скоро свяжется с вами. Статус заказа (готовится, отправлен) отслеживайте в разделе Профиль.",
+    osTrack: "Отслеживать в профиле", close: "Закрыть",
+    confT: "В корзине товар другого магазина",
+    confB1: "Сейчас в корзине товары магазина", confB2: ". В одном заказе — только один магазин: сначала завершите текущий заказ, либо очистите корзину и начните с магазина", confB3: ".",
+    confFinish: "Завершить текущий заказ", confClear1: "Очистить корзину и начать с", confClear2: "", cancel: "Отмена",
+    stYangi: "🆕 Новый", stTayyor: "📦 Готовится", stYubor: "🚚 Отправлен", stYetk: "✅ Доставлен", stQabul: "✅ Получен", stBekor: "❌ Отменён",
+    guest: "Гость", edit: "✎ изменить", fName: "Имя", lName: "Фамилия", save: "Сохранить",
+    noPhone: "Телефон не указан", tgLinked: " · привязан через Telegram",
+    photoLoading: "Фото загружается…", myOrders: "Мои заказы", nPcs: (n) => n + " шт.",
+    linkIntro: "Привяжите профиль к Telegram, чтобы видеть здесь свои заказы:",
+    linkStep1a: "— зайдите и напишите", linkStep1b: "", linkStep2: "Введите сюда 6-значный код от бота",
+    link: "Привязать", openBot: "Открыть бот",
+    voucherLine: (p, shop) => "🎁 Скидка " + p + "%" + (shop ? " — от магазина " + shop : "") + " на следующий заказ (на часть до 1 млн сумов). Применится автоматически.",
+    noOrders: "Заказов пока нет. Они появятся здесь после покупки.",
+    moreN: (n) => "… ещё " + n,
+    vdisc: (s) => " · 🎁 −" + s + " скидка",
+    selfCancel: "Вы сами отменили этот заказ.", reason: "Причина: ", noReason: "не указана",
+    sorryBonus1: "🎁 В качестве извинения на следующий заказ дана", sorryBonus2: "скидка", sorryBonus3: ".",
+    confirmCancel: "Точно отменить?", yesCancel: "Да, отменить", no: "Нет",
+    received: "✅ Я получил заказ",
+    payDone: "✅ Оплата подтверждена",
+    payWait1: "💸 Вы сообщили об оплате", payWait2: " — ждём подтверждения продавца",
+    payAgree: "Способ оплаты согласуете с продавцом",
+    payPh: "Как оплатили? (Payme, наличные...)", send: "Отправить", paidBtn: "💸 Я оплатил",
+    tokensLeft: "токенов осталось", buyTokens: "Купить токены",
+    tierMore: (n, t) => "Ещё " + n + " токенов — уровень " + t,
+    badgeT: "Значок", badgeOn: "Активен — виден в вашем профиле", badgeOff: "Можно купить отдельно, не копя токены", buy: "Купить",
+    genHistory: "История генераций", genEmpty: "Генераций пока нет. Начните со студии.",
+    toNight: "Ночной режим", toDay: "Дневной режим",
+  },
+};
+let LANG = "uz";
+try { const sl = localStorage.getItem("zetme_lang"); if (sl === "ru" || sl === "uz") LANG = sl; } catch (e) {}
+const tr = (k, ...a) => {
+  const d = STR[LANG] || STR.uz;
+  let v = d[k] !== undefined ? d[k] : STR.uz[k];
+  if (typeof v === "function") return v(...a);
+  return v === undefined ? k : v;
+};
+function applyLang(l) { LANG = l; try { localStorage.setItem("zetme_lang", l); } catch (e) {} }
+
+/* Ilhom galereyasi — studiyada yaratilgan AI kadrlar */
+const INSP = [
+  { img: "https://d8j0ntlcm91z4.cloudfront.net/user_370qfkcxfpKcDA0sH662HyZQBGj/hf_20260831_190935_684762ca-e59a-4228-8391-43638302beae.png", cap: "insp1" },
+  { img: "https://d8j0ntlcm91z4.cloudfront.net/user_370qfkcxfpKcDA0sH662HyZQBGj/hf_20260831_191617_4e666bf6-d58a-43fa-876e-d56406c572fe.png", cap: "insp2" },
+  { img: "https://d8j0ntlcm91z4.cloudfront.net/user_370qfkcxfpKcDA0sH662HyZQBGj/hf_20260831_181842_9b08b8e8-38bb-464a-b77e-c01887dcd590.png", cap: "insp3" },
+];
+
 /* Studiya fonida suzib yuruvchi barg/gulbarg zarralari (deterministik) */
 const PETALS = [
   { l: 6,  d: 16, dl: 0,   s: 10, o: .35, k: 0 },
@@ -199,9 +405,9 @@ function thumbUrl(p) {
 /* ============================== Small UI bits ============================== */
 function SourceMenu({ accent, onPick }) {
   const opts = [
-    { id: "catalog", icon: ImageIcon, t: "Katalogdan tanlash", s: "Tuvaklar bo'limidan" },
-    { id: "gallery", icon: Upload, t: "Galereyadan yuklash", s: "Telefondagi rasm" },
-    { id: "camera", icon: Camera, t: "Rasmga olish", s: "Kamerani ochish" },
+    { id: "catalog", icon: ImageIcon, t: tr("srcCatalog"), s: tr("srcCatalogS") },
+    { id: "gallery", icon: Upload, t: tr("srcGallery"), s: tr("srcGalleryS") },
+    { id: "camera", icon: Camera, t: tr("srcCamera"), s: tr("srcCameraS") },
   ];
   return (
     <div className="src-menu" onClick={(e) => e.stopPropagation()}>
@@ -246,7 +452,7 @@ function GenSlot({ label, icon: Icon, accent, image, onSetImage }) {
       <div className="genslot-box" style={{ borderColor: image ? accent : C.line }}>
         {image ? (
           image === "catalog"
-            ? <div className="genslot-fill" style={{ color: accent }}><ImageIcon size={26} /><span>Katalogdan tanlandi</span></div>
+            ? <div className="genslot-fill" style={{ color: accent }}><ImageIcon size={26} /><span>{tr("srcPicked")}</span></div>
             : <img src={image} alt={label} className="genslot-img" />
         ) : (
           <div className="genslot-empty">
@@ -268,10 +474,10 @@ function PriceModeToggle({ mode, onChange }) {
   return (
     <div className="pmtoggle">
       <button className={"pmtoggle-btn" + (mode === "chakana" ? " active" : "")} onClick={() => onChange("chakana")}>
-        <Store size={13} /> Chakana
+        <Store size={13} /> {tr("chakana")}
       </button>
       <button className={"pmtoggle-btn" + (mode === "optom" ? " active" : "")} onClick={() => onChange("optom")}>
-        <Package size={13} /> Optom
+        <Package size={13} /> {tr("optom")}
       </button>
     </div>
   );
@@ -310,7 +516,7 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
         )}
         <div className="pm-body">
           <div className="pm-toprow">
-            <span className="pm-modebadge">{priceMode === "optom" ? "Optom narx" : "Chakana narx"}</span>
+            <span className="pm-modebadge">{priceMode === "optom" ? tr("pmOptom") : tr("pmChakana")}</span>
             <span className="pm-shop"><Store size={11} /> {p.shopName || "Tuvaklar"}</span>
           </div>
           <h3 className="pm-title">{displayName}</h3>
@@ -328,8 +534,8 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
 
           <div className="pm-specs">
             <div><span>{unitOf(p.unit).spec}</span><b>{v.litr ? `${v.litr} ${unitOf(p.unit).short}` : "—"}</b></div>
-            <div><span>O'lcham</span><b>{v.size || "—"}</b></div>
-            <div><span>Rang</span><b>{displayColor || "—"}</b></div>
+            <div><span>{tr("pmSize")}</span><b>{v.size || "—"}</b></div>
+            <div><span>{tr("pmColor")}</span><b>{displayColor || "—"}</b></div>
           </div>
           <div className="pm-qty">
             <button onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus size={15} /></button>
@@ -337,10 +543,10 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
             <button onClick={() => setQty((q) => q + 1)}><Plus size={15} /></button>
           </div>
           <button className="pm-add" onClick={() => { onAdd(p, v, qty); onClose(); }}>
-            <ShoppingBag size={16} /> Savatga qo'shish — {fmt(unitPrice * qty)}
+            <ShoppingBag size={16} /> {tr("addCart")}{fmt(unitPrice * qty)}
           </button>
           <button className="pm-studio" onClick={() => { onSendToStudio(p, v); onClose(); }}>
-            <Sparkles size={15} /> {p.category === "gul" ? "Bu gulni tuvakka AI bilan moslab ko'rish" : "Shu tuvakka gulni AI bilan moslab ko'rish"}
+            <Sparkles size={15} /> {p.category === "gul" ? tr("pmStudioGul") : tr("pmStudioTuvak")}
           </button>
         </div>
       </div>
@@ -366,17 +572,17 @@ function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, ch
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="cart">
         <div className="cart-head">
-          <span style={{ fontFamily: FONT_DISPLAY, fontSize: 20 }}>Savat</span>
+          <span style={{ fontFamily: FONT_DISPLAY, fontSize: 20 }}>{tr("cartTitle")}</span>
           <button className="pm-close" onClick={onClose}><X size={18} /></button>
         </div>
 
-        <div className="cart-modebadge">{priceMode === "optom" ? "🏭 Optom narxda hisoblanmoqda" : "🛍️ Chakana narxda hisoblanmoqda"}</div>
+        <div className="cart-modebadge">{priceMode === "optom" ? tr("modeOptomCalc") : tr("modeChakCalc")}</div>
         {cartShop && (
-          <div className="cart-shopline"><Store size={13} /> Buyurtma <b>{cartShop.shopName}</b> do'konidan · bitta buyurtma = bitta do'kon</div>
+          <div className="cart-shopline"><Store size={13} /> {tr("cartFrom1")} <b>{cartShop.shopName}</b> {tr("cartFrom2")}</div>
         )}
 
         {items.length === 0 ? (
-          <div className="cart-empty">Savat bo'sh. Tuvaklar bo'limidan mahsulot qo'shing.</div>
+          <div className="cart-empty">{tr("cartEmpty")}</div>
         ) : (
           <>
             <div className="cart-list">
@@ -397,10 +603,10 @@ function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, ch
             </div>
 
             {showTeaser && (
-              <div className="cart-teaser">🎁 Savatingizni to'ldiring — {fmt(TEASER_MAX)}lik chegaradan o'tsangiz, sirli sovg'a kutmoqda!</div>
+              <div className="cart-teaser">{tr("teaser", fmt(TEASER_MAX))}</div>
             )}
             {bonus && bonus.gift && (
-              <div className="cart-bonus">🎁 Bu buyurtmaga tuvak-sovg'a qo'shiladi (turi buyurtma bilan birga aniqlanadi)</div>
+              <div className="cart-bonus">{tr("bonusGift")}</div>
             )}
             {bonus && bonus.money > 0 && (
               <div className="cart-bonus">
@@ -409,9 +615,9 @@ function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, ch
             )}
 
             <div className="cart-totals">
-              <div className="cart-total"><span>Jami</span><b>{fmt(total)}</b></div>
+              <div className="cart-total"><span>{tr("total")}</span><b>{fmt(total)}</b></div>
               {payTotal !== total && (
-                <div className="cart-paytotal"><span>To'lov summasi</span><b>{fmt(payTotal)}</b></div>
+                <div className="cart-paytotal"><span>{tr("payTotal")}</span><b>{fmt(payTotal)}</b></div>
               )}
             </div>
 
@@ -420,18 +626,18 @@ function CartDrawer({ items, priceMode, onClose, onQty, onCheckout, checking, ch
                 <Lock size={14} />
                 <div>
                   <div style={{ fontWeight: 600 }}>
-                    {priceMode === "optom" ? "Optom narx uchun minimal buyurtma" : "Minimal buyurtma"} — {fmt(minRequired)}
+                    {priceMode === "optom" ? tr("minOptom") : tr("minOrder")} — {fmt(minRequired)}
                   </div>
                   <div style={{ fontSize: 11.5, marginTop: 2 }}>
-                    Yana {fmt(remaining)}lik mahsulot qo'shing, shunda buyurtma berish faollashadi.
-                    {priceMode === "optom" && " Yoki yuqoridagi \"Chakana\" tugmasiga o'ting."}
+                    {tr("addMore", fmt(remaining))}
+                    {priceMode === "optom" && tr("orChakana")}
                   </div>
                 </div>
               </div>
             ) : (
               <>
                 <button className="pm-add" disabled={checking} onClick={onCheckout}>
-                  <Send size={15} /> {checking ? "Yuborilmoqda…" : "Buyurtma berish"}
+                  <Send size={15} /> {checking ? tr("sending") : tr("placeOrder")}
                 </button>
                 {checkoutError && <div className="cart-err">{checkoutError}</div>}
               </>
@@ -460,25 +666,25 @@ function CheckoutForm({ initial, itemCount, payTotal, shopName, busy, error, onS
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="checkout">
         <button className="pm-close" onClick={onClose}><X size={18} /></button>
-        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, margin: "4px 0 4px" }}>Buyurtmani rasmiylashtirish</h3>
+        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, margin: "4px 0 4px" }}>{tr("coTitle")}</h3>
         <p style={{ color: C.inkDim, fontSize: 13, margin: "0 0 14px" }}>
-          {shopName ? `${shopName} do'koni · ` : ""}{itemCount} xil mahsulot · {fmt(payTotal)}
+          {shopName ? shopName + tr("shopSuffix") + " · " : ""}{tr("coItems", itemCount)} · {fmt(payTotal)}
         </p>
-        <label className="co-label">Ismingiz</label>
-        <input className="co-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ismingiz" />
-        <label className="co-label">Telefon raqamingiz</label>
+        <label className="co-label">{tr("coName")}</label>
+        <input className="co-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("coName")} />
+        <label className="co-label">{tr("coPhone")}</label>
         <input className="co-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+998 90 123 45 67" inputMode="tel" />
-        <label className="co-label">Viloyat</label>
+        <label className="co-label">{tr("coRegion")}</label>
         <select className="co-input" value={region} onChange={(e) => setRegion(e.target.value)}>
-          <option value="">Tanlang…</option>
+          <option value="">{tr("coSelect")}</option>
           {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
         {error && <div className="prof-err" style={{ marginTop: 8 }}>{error}</div>}
         <button className="pm-add" style={{ marginTop: 14 }} disabled={busy}
           onClick={() => onSubmit({ name: name.trim(), phone: phone.trim(), region })}>
-          {busy ? "Yuborilmoqda…" : "Buyurtmani yuborish"}
+          {busy ? tr("sending") : tr("coSend")}
         </button>
-        <p className="co-hint">Buyurtma darhol do'konga tushadi. Holatini Profil bo'limida kuzatib borasiz — sotuvchi tayyorlab, yuborganida ko'rinadi.</p>
+        <p className="co-hint">{tr("coHint")}</p>
       </div>
     </div>
   );
@@ -489,22 +695,21 @@ function OrderSuccess({ orderId, payTotal, shopName, voucherDiscount, voucherPer
     <div className="ov">
       <div className="checkout" style={{ textAlign: "center" }}>
         <div className="os-ic"><Check size={26} color="#fff" /></div>
-        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 23, margin: "12px 0 4px" }}>Buyurtma qabul qilindi!</h3>
+        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 23, margin: "12px 0 4px" }}>{tr("osTitle")}</h3>
         <p style={{ color: C.inkDim, fontSize: 13.5, margin: "0 0 6px" }}>
-          #{orderId}{shopName ? ` · ${shopName} do'koni` : ""}
+          #{orderId}{shopName ? " · " + shopName + tr("shopSuffix") : ""}
         </p>
         <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 4px" }}>{fmt(payTotal)}</p>
         {voucherDiscount > 0 && (
           <p style={{ color: C.laitonLo, fontSize: 12.5, margin: "0 0 8px" }}>
-            🎁 {voucherPercent}% chegirma bonusingiz qo'llandi: −{fmt(voucherDiscount)}
+            {tr("osVoucher", voucherPercent, fmt(voucherDiscount))}
           </p>
         )}
         <p style={{ color: C.inkDim, fontSize: 12.5, lineHeight: 1.6, margin: "8px 0 16px" }}>
-          Sotuvchi tez orada siz bilan bog'lanadi. Buyurtma holatini (tayyorlanmoqda, yuborildi)
-          Profil bo'limida kuzatib borasiz.
+          {tr("osInfo")}
         </p>
-        <button className="pm-add" onClick={onOpenProfile}><User size={15} /> Profilda kuzatish</button>
-        <button className="conflict-cancel" onClick={onClose}>Yopish</button>
+        <button className="pm-add" onClick={onOpenProfile}><User size={15} /> {tr("osTrack")}</button>
+        <button className="conflict-cancel" onClick={onClose}>{tr("close")}</button>
       </div>
     </div>
   );
@@ -555,7 +760,7 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
 
   const displayName = cust && (cust.firstName || cust.lastName)
     ? `${cust.firstName || ""} ${cust.lastName || ""}`.trim()
-    : (cust && cust.name) || profile.name || "Mehmon";
+    : (cust && cust.name) || profile.name || tr("guest");
   const displayPhone = (cust && cust.phone) || profile.phone || "";
 
   async function doLink() {
@@ -609,23 +814,23 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
                 {linked && (
                   <button className="prof-editbtn" onClick={() => {
                     setFn((cust && cust.firstName) || ""); setLn((cust && cust.lastName) || ""); setEditName(true);
-                  }}>✎ tahrirlash</button>
+                  }}>{tr("edit")}</button>
                 )}
               </div>
             ) : (
               <div className="prof-nameedit">
-                <input value={fn} placeholder="Ism" onChange={(e) => setFn(e.target.value)} />
-                <input value={ln} placeholder="Familiya" onChange={(e) => setLn(e.target.value)} />
-                <button onClick={doSaveName} disabled={nameBusy}>{nameBusy ? "…" : "Saqlash"}</button>
+                <input value={fn} placeholder={tr("fName")} onChange={(e) => setFn(e.target.value)} />
+                <input value={ln} placeholder={tr("lName")} onChange={(e) => setLn(e.target.value)} />
+                <button onClick={doSaveName} disabled={nameBusy}>{nameBusy ? "…" : tr("save")}</button>
               </div>
             )}
             <div className="prof-tier" style={{ color: tier.color }}>{tier.label}</div>
             <div className="prof-phone">
               {displayPhone
-                ? <>{displayPhone}{linked ? " · Telegram orqali ulangan" : ""}</>
-                : "Telefon kiritilmagan"}
+                ? <>{displayPhone}{linked ? tr("tgLinked") : ""}</>
+                : tr("noPhone")}
             </div>
-            {photoBusy && <div className="prof-phone">Rasm yuklanmoqda…</div>}
+            {photoBusy && <div className="prof-phone">{tr("photoLoading")}</div>}
             {photoErr && <div className="prof-err">{photoErr}</div>}
           </div>
         </div>
@@ -633,23 +838,23 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
         {/* ---------- Buyurtmalarim ---------- */}
         <div className="prof-histhead">
           <ShoppingBag size={14} color={C.inkDim} />
-          <span>Buyurtmalarim</span>
-          {linked && orders.length > 0 && <em className="prof-ordcount">{orders.length} ta</em>}
+          <span>{tr("myOrders")}</span>
+          {linked && orders.length > 0 && <em className="prof-ordcount">{tr("nPcs", orders.length)}</em>}
         </div>
 
         {!linked ? (
           <div className="prof-linkcard">
-            <p>Buyurtmalaringizni shu yerda ko'rish uchun profilni Telegram hisobingizga ulang:</p>
-            <div className="tg-step"><span>1</span><div><b>@zetmeai_bot</b> ga kirib <b>/kod</b> deb yozing</div></div>
-            <div className="tg-step"><span>2</span><div>Bot bergan 6 xonali kodni shu yerga kiriting</div></div>
+            <p>{tr("linkIntro")}</p>
+            <div className="tg-step"><span>1</span><div><b>@zetmeai_bot</b> {tr("linkStep1a")} <b>/kod</b> {tr("linkStep1b")}</div></div>
+            <div className="tg-step"><span>2</span><div>{tr("linkStep2")}</div></div>
             <div className="prof-linkrow">
               <input value={code} inputMode="numeric" maxLength={6} placeholder="123456"
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
-              <button disabled={linkBusy || code.length !== 6} onClick={doLink}>{linkBusy ? "…" : "Ulash"}</button>
+              <button disabled={linkBusy || code.length !== 6} onClick={doLink}>{linkBusy ? "…" : tr("link")}</button>
             </div>
             {linkErr && <div className="prof-err">{linkErr}</div>}
             <a className="prof-botlink" href={`https://t.me/${BOT_USERNAME}`} target="_blank" rel="noreferrer">
-              <Send size={13} /> Botni ochish
+              <Send size={13} /> {tr("openBot")}
             </a>
           </div>
         ) : (
@@ -658,15 +863,14 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
               <div className="prof-vouchers">
                 {vouchers.map((v, i) => (
                   <div key={i} className="prof-voucher">
-                    🎁 <b>{v.percent}% chegirma</b>{v.shopName ? ` — ${v.shopName} do'konidan` : ""} keyingi buyurtmangizga
-                    (1 mln so'mgacha qismiga). Botda tasdiqlaganingizda avtomatik qo'llanadi.
+                    {tr("voucherLine", v.percent, v.shopName)}
                   </div>
                 ))}
               </div>
             )}
             {cancelErr && <div className="prof-err" style={{ marginBottom: 8 }}>{cancelErr}</div>}
             {orders.length === 0 ? (
-              <div className="prof-empty">Hali buyurtma yo'q. Do'konlardan xarid qilganingizda shu yerda ko'rinadi.</div>
+              <div className="prof-empty">{tr("noOrders")}</div>
             ) : (
               <div className="prof-orders">
                 {orders.map((o, i) => (
@@ -674,7 +878,7 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
                     <div className="prof-order-top">
                       <span className="prof-order-date">{dateOf(o.ts)}</span>
                       <span className={"po-status po-" + (o.status || "yangi")}>
-                        {({ yangi: "🆕 Yangi", tayyorlanmoqda: "📦 Tayyorlanmoqda", yuborildi: "🚚 Yuborildi", yetkazildi: "✅ Yetkazildi", qabul: "✅ Qabul qilindi", bekor: "❌ Bekor" })[o.status || "yangi"]}
+                        {({ yangi: tr("stYangi"), tayyorlanmoqda: tr("stTayyor"), yuborildi: tr("stYubor"), yetkazildi: tr("stYetk"), qabul: tr("stQabul"), bekor: tr("stBekor") })[o.status || "yangi"]}
                       </span>
                     </div>
                     {o.shopName && <div className="prof-order-shop" style={{ marginBottom: 5 }}><Store size={10} /> {o.shopName}</div>}
@@ -682,31 +886,31 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
                       {(o.items || []).slice(0, 3).map((it, k) => (
                         <div key={k}>{it.qty} × {it.name}</div>
                       ))}
-                      {(o.items || []).length > 3 && <div>… yana {(o.items || []).length - 3} ta</div>}
+                      {(o.items || []).length > 3 && <div>{tr("moreN", (o.items || []).length - 3)}</div>}
                     </div>
                     <div className="prof-order-total">
                       {fmt(o.payTotal || o.total || 0)}
-                      {o.voucherDiscount > 0 && <span className="po-vdisc"> · 🎁 −{fmt(o.voucherDiscount)} chegirma</span>}
+                      {o.voucherDiscount > 0 && <span className="po-vdisc">{tr("vdisc", fmt(o.voucherDiscount))}</span>}
                     </div>
 
                     {(o.status || "yangi") === "bekor" && (
                       <div className="po-cancelinfo">
                         {o.cancelledBy === "mijoz"
-                          ? "Bu buyurtmani o'zingiz bekor qilgansiz."
-                          : <>Sabab: {o.cancelReason || "ko'rsatilmagan"}{o.bonusPercent ? <><br />🎁 Uzr sifatida keyingi buyurtmangizga <b>{o.bonusPercent}% chegirma</b> berildi.</> : null}</>}
+                          ? tr("selfCancel")
+                          : <>{tr("reason")}{o.cancelReason || tr("noReason")}{o.bonusPercent ? <><br />{tr("sorryBonus1")} <b>{o.bonusPercent}% {tr("sorryBonus2")}</b> {tr("sorryBonus3")}</> : null}</>}
                       </div>
                     )}
 
                     {(o.status || "yangi") === "yangi" && o.id && o.sellerId && (
                       cancelingId === o.id ? (
                         <div className="po-cancelask">
-                          <span>Rostdan bekor qilasizmi?</span>
-                          <button className="po-cbtn po-cyes" disabled={cancelBusy} onClick={() => doCancelOrder(o.id)}>{cancelBusy ? "…" : "Ha, bekor qilish"}</button>
-                          <button className="po-cbtn" onClick={() => setCancelingId(null)}>Yo'q</button>
+                          <span>{tr("confirmCancel")}</span>
+                          <button className="po-cbtn po-cyes" disabled={cancelBusy} onClick={() => doCancelOrder(o.id)}>{cancelBusy ? "…" : tr("yesCancel")}</button>
+                          <button className="po-cbtn" onClick={() => setCancelingId(null)}>{tr("no")}</button>
                         </div>
                       ) : (
                         <button className="po-cancelbtn" onClick={() => { setCancelErr(""); setCancelingId(o.id); }}>
-                          Bekor qilish
+                          {tr("cancel")}
                         </button>
                       )
                     )}
@@ -714,31 +918,31 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
                     {/* Buyurtma yuborilgan — mijoz qabul qilganda bosadi */}
                     {(o.status === "yuborildi") && o.id && o.sellerId && (
                       <button className="po-receivebtn" disabled={actBusy} onClick={() => doReceive(o.id)}>
-                        ✅ Buyurtmani qabul qildim
+                        {tr("received")}
                       </button>
                     )}
 
                     {/* To'lov chizig'i: sotuvchi bilan kelishib to'laysiz, keyin belgilaysiz */}
                     {(o.status || "yangi") !== "bekor" && o.id && o.sellerId && (
                       o.paymentStatus === "tolangan" ? (
-                        <div className="po-payrow po-pay-done">✅ To'lov qabul qilingan</div>
+                        <div className="po-payrow po-pay-done">{tr("payDone")}</div>
                       ) : o.paymentStatus === "mijoz_toladi" ? (
                         <div className="po-payrow po-pay-wait">
-                          💸 To'lov qilganingizni aytdingiz{o.paymentNote ? ` (${o.paymentNote})` : ""} — sotuvchi tasdiqlashi kutilmoqda
+                          {tr("payWait1")}{o.paymentNote ? ` (${o.paymentNote})` : ""}{tr("payWait2")}
                         </div>
                       ) : (
                         <div className="po-payrow po-pay-none">
-                          To'lov usulini sotuvchi bilan kelishasiz
+                          {tr("payAgree")}
                           {o.shopPhone && <a className="po-shoptel" href={"tel:" + o.shopPhone}>📞 {o.shopPhone}</a>}
                           <div style={{ marginTop: 7 }}>
                             {payFormId === o.id ? (
                               <div className="po-payform">
-                                <input value={payNote} placeholder="Qanday to'ladingiz? (Payme, naqd...)"
+                                <input value={payNote} placeholder={tr("payPh")}
                                   onChange={(e) => setPayNote(e.target.value)} />
-                                <button disabled={actBusy} onClick={() => doPaid(o.id)}>{actBusy ? "…" : "Yuborish"}</button>
+                                <button disabled={actBusy} onClick={() => doPaid(o.id)}>{actBusy ? "…" : tr("send")}</button>
                               </div>
                             ) : (
-                              <button className="po-paybtn" onClick={() => { setPayFormId(o.id); setPayNote(""); }}>💸 To'lov qildim</button>
+                              <button className="po-paybtn" onClick={() => { setPayFormId(o.id); setPayNote(""); }}>{tr("paidBtn")}</button>
                             )}
                           </div>
                         </div>
@@ -756,10 +960,10 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
             <Coins size={18} color={C.laiton} />
             <div>
               <div className="prof-token-n">{tokens}</div>
-              <div className="prof-token-l">token qoldi</div>
+              <div className="prof-token-l">{tr("tokensLeft")}</div>
             </div>
           </div>
-          <button className="prof-topup" onClick={onBuyTokens}>Token sotib olish</button>
+          <button className="prof-topup" onClick={onBuyTokens}>{tr("buyTokens")}</button>
         </div>
 
         {nextTier && (
@@ -768,7 +972,7 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
               <span>{tier.label}</span><span>{nextTier.label}</span>
             </div>
             <div className="prof-bar"><div className="prof-bar-fill" style={{ width: `${Math.min(100, (tokens / nextTier.min) * 100)}%`, background: nextTier.color }} /></div>
-            <div className="prof-progress-hint">Yana {Math.max(0, nextTier.min - tokens)} token — {nextTier.label} darajasi</div>
+            <div className="prof-progress-hint">{tr("tierMore", Math.max(0, nextTier.min - tokens), nextTier.label)}</div>
           </div>
         )}
 
@@ -778,20 +982,20 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
               <BadgeCheck size={16} color="#fff" />
             </span>
             <div>
-              <div style={{ fontWeight: 600, fontSize: 13.5 }}>Nishon (belgi)</div>
-              <div style={{ fontSize: 11.5, color: C.inkDim }}>{badgeOwned ? "Faol — profilingizda ko'rinadi" : "Token to'plamasdan ham alohida sotib olinadi"}</div>
+              <div style={{ fontWeight: 600, fontSize: 13.5 }}>{tr("badgeT")}</div>
+              <div style={{ fontSize: 11.5, color: C.inkDim }}>{badgeOwned ? tr("badgeOn") : tr("badgeOff")}</div>
             </div>
           </div>
-          {!badgeOwned && <button className="prof-badgebuy" onClick={onBuyBadge}>Sotib olish</button>}
+          {!badgeOwned && <button className="prof-badgebuy" onClick={onBuyBadge}>{tr("buy")}</button>}
           {badgeOwned && <Check size={18} color={C.accent} />}
         </div>
 
         <div className="prof-histhead">
           <Clock size={14} color={C.inkDim} />
-          <span>Generatsiyalar tarixi</span>
+          <span>{tr("genHistory")}</span>
         </div>
         {generations.length === 0 ? (
-          <div className="prof-empty">Hali generatsiya qilinmagan. Studiyadan boshlang.</div>
+          <div className="prof-empty">{tr("genEmpty")}</div>
         ) : (
           <div className="prof-grid">
             {generations.map((g, i) => (
@@ -811,8 +1015,28 @@ function ProfileScreen({ onClose, profile, tokens, badgeOwned, generations, onBu
 function App() {
   const [flower, setFlower] = useState(null);
   const [pot, setPot] = useState(null);
-  const [lang, setLang] = useState("uz");
-  const [langOpen, setLangOpen] = useState(false);
+  const [lang, setLang] = useState(LANG);
+  const [theme, setTheme] = useState(THEME);
+  const [langBurst, setLangBurst] = useState(0);
+  const switchLang = () => { const l = lang === "uz" ? "ru" : "uz"; applyLang(l); setLang(l); setLangBurst(Date.now()); };
+  const toggleTheme = () => { const t = theme === "day" ? "night" : "day"; applyTheme(t); setTheme(t); };
+
+  /* Hero video: ba'zi mobil brauzerlar (Telegram ichki brauzeri, iOS Low Power)
+     autoplay'ni bloklaydi — birinchi teginish/scrollda videoni qayta ishga tushiramiz */
+  useEffect(() => {
+    const kick = () => {
+      const v = document.querySelector(".hero-video");
+      if (v && v.paused) { v.muted = true; const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+    };
+    kick();
+    const evs = ["touchstart", "click", "scroll"];
+    evs.forEach((e) => window.addEventListener(e, kick, { once: true, passive: true }));
+    document.addEventListener("visibilitychange", kick);
+    return () => {
+      evs.forEach((e) => window.removeEventListener(e, kick));
+      document.removeEventListener("visibilitychange", kick);
+    };
+  }, []);
   const [genLoading, setGenLoading] = useState(false);
   const [genDone, setGenDone] = useState(false);
 
@@ -1223,7 +1447,7 @@ function App() {
 
   return (
     <div className="root">
-      <style>{CSS}</style>
+      <style>{buildCSS()}</style>
 
       {/* ===================== TOP: premium AI hero + studio ===================== */}
       <section className="hero">
@@ -1240,7 +1464,17 @@ function App() {
         {/* KINEMATIK SAHNA: qora tun, nurlanuvchi nilufar, suv sathi va halqa to'lqinlar */}
         <div className="hero-scene" aria-hidden="true">
           <video className="hero-video" src={HERO_VIDEO} poster={HERO_POSTER}
-            autoPlay muted loop playsInline preload="metadata" />
+            autoPlay muted loop playsInline preload="auto"
+            ref={(el) => {
+              if (!el) return;
+              /* React "muted" atributini DOMga yozmaydi (react#10389) — iOS/Telegram
+                 brauzerlari esa autoplay uchun aynan shu atributni talab qiladi */
+              el.muted = true;
+              el.setAttribute("muted", "");
+              el.setAttribute("webkit-playsinline", "");
+              const pr = el.play();
+              if (pr && pr.catch) pr.catch(() => {});
+            }} />
           <div className="hero-veil" />
           <div className="mist m1" />
           <div className="mist m2" />
@@ -1263,51 +1497,74 @@ function App() {
               </span>
               <span className="prof-entry-tok"><Coins size={11} color={C.laiton} /> {tokens}</span>
             </button>
-            <div className="lang-wrap">
-              <button className="lang-btn" onClick={() => setLangOpen((v) => !v)}>
-                <Globe size={14} /> {LANGS.find((l) => l.code === lang).label}
-              </button>
-              {langOpen && (
-                <div className="lang-menu">
-                  {LANGS.map((l) => (
-                    <button key={l.code} disabled={!l.active} className="lang-item"
-                      onClick={() => { if (l.active) { setLang(l.code); setLangOpen(false); } }}>
-                      {l.label} {!l.active && <span className="soon">tez orada</span>}
-                    </button>
+            {/* KUN/TUN — gul ochiladi (kun) / g'uncha bo'lib yumiladi (tun) */}
+            <button className={"bloom-toggle " + (theme === "day" ? "bt-day" : "bt-night")}
+              onClick={toggleTheme} aria-label="Kun/Tun" title={theme === "day" ? tr("toNight") : tr("toDay")}>
+              <span className="bt-sky" />
+              <svg className="bt-flower" viewBox="0 0 40 40" aria-hidden="true">
+                <g className="bt-rays">
+                  {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
+                    <line key={a} x1="20" y1="3.5" x2="20" y2="7" transform={`rotate(${a} 20 20)`} />
                   ))}
-                </div>
+                </g>
+                <g className="bt-petals">
+                  {[0, 72, 144, 216, 288].map((a) => (
+                    <ellipse key={a} className="bt-petal" cx="20" cy="12.6" rx="4.4" ry="7.2" transform={`rotate(${a} 20 20)`} />
+                  ))}
+                </g>
+                <circle className="bt-core" cx="20" cy="20" r="4.2" />
+                <path className="bt-moon" d="M26 11.5a9.8 9.8 0 1 0 2.6 15.8A8 8 0 0 1 26 11.5z" />
+                <circle className="bt-star bs1" cx="11" cy="12.5" r="1.1" />
+                <circle className="bt-star bs2" cx="29.5" cy="28" r="0.9" />
+                <circle className="bt-star bs3" cx="13.5" cy="28.5" r="0.8" />
+              </svg>
+            </button>
+            {/* UZ/RU — oltin barg slayder + gulbarg portlashi */}
+            <button className={"lang-petal " + (lang === "ru" ? "lp-ru" : "lp-uz")} onClick={switchLang} aria-label="Til / Язык">
+              <span className="lp-knob">
+                <svg viewBox="0 0 20 20" className="lp-leaf" aria-hidden="true">
+                  <path d="M10 1 C15.5 6 16.5 12 10 19 C3.5 12 4.5 6 10 1 Z" />
+                  <path className="lp-vein" d="M10 3 L10 17" />
+                </svg>
+              </span>
+              <span className={"lp-opt" + (lang === "uz" ? " on" : "")}>UZ</span>
+              <span className={"lp-opt" + (lang === "ru" ? " on" : "")}>RU</span>
+              {langBurst > 0 && (
+                <span className="lp-burst" key={langBurst} aria-hidden="true">
+                  {[0, 60, 120, 180, 240, 300].map((a) => <i key={a} style={{ "--a": a + "deg" }} />)}
+                </span>
               )}
-            </div>
+            </button>
           </div>
         </header>
 
-        <p className="eyebrow rv rv1">AI botanik studiya</p>
-        <h1 className="htitle rv rv2">Gulingizni <em>tuvakda</em> ko'ring</h1>
+        <p className="eyebrow rv rv1">{tr("eyebrow")}</p>
+        <h1 className="htitle rv rv2">{tr("heroT1")} <em>{tr("heroEm")}</em> {tr("heroT2")}</h1>
         <div className="h-ornament rv rv3" aria-hidden="true">
           <span className="h-line" /><Flower2 size={11} color={C.laiton} /><span className="h-line" />
         </div>
 
         <div className="genrow rv rv4">
-          <GenSlot label="Gul rasmi" icon={Flower2} accent={C.bloom} image={flower} onSetImage={setFlower} />
+          <GenSlot label={tr("slotFlower")} icon={Flower2} accent={C.bloom} image={flower} onSetImage={setFlower} />
           <div className="plus-sep"><Plus size={16} color={C.laiton} /></div>
-          <GenSlot label="Tuvak rasmi" icon={Sprout} accent={C.laiton} image={pot} onSetImage={setPot} />
+          <GenSlot label={tr("slotPot")} icon={Sprout} accent={C.laiton} image={pot} onSetImage={setPot} />
         </div>
 
         <button className="gen-cta rv rv5" disabled={!canGenerate || genLoading} onClick={generate}>
           <span className="cta-shine" aria-hidden="true" />
-          <Sparkles size={17} /> {genLoading ? "Yaratilmoqda…" : "Generatsiya qilish"}
+          <Sparkles size={17} /> {genLoading ? tr("generating") : tr("generate")}
         </button>
 
         {genDone && !genLoading && (
           <div className="gen-result">
             <Sparkles size={15} color={C.laiton} />
-            <span>Tayyor! Natija va moslik tahlili shu yerda ko'rinadi.</span>
+            <span>{tr("genDone")}</span>
           </div>
         )}
 
         <button className="scrollhint rv rv6" aria-label="Do'konlarga o'tish"
           onClick={() => { const el = document.getElementById("shops"); if (el) el.scrollIntoView({ behavior: "smooth" }); }}>
-          <span>Do'konlarni ko'rish</span>
+          <span>{tr("seeShops")}</span>
           <span className="sh-chev"><ChevronRight size={15} /></span>
         </button>
       </section>
@@ -1316,12 +1573,10 @@ function App() {
       <section className="shopwall" id="shops">
         <div className="sw-glow" />
         <div className="sw-inner">
-          <p className="sw-eyebrow">Bizning hamkorlar</p>
-          <h2 className="sw-title">Do'konlar</h2>
+          <p className="sw-eyebrow">{tr("partners")}</p>
+          <h2 className="sw-title">{tr("shopsTitle")}</h2>
           <p className="sw-sub">
-            {studioShops.length > 0
-              ? `${studioShops.length} ta tasdiqlangan do'kon · rasmga bosing`
-              : "Do'konlar tez orada"}
+            {studioShops.length > 0 ? tr("shopsSub", studioShops.length) : tr("shopsSoon")}
           </p>
 
           {shopsLoading ? (
@@ -1329,7 +1584,7 @@ function App() {
               {[0, 1, 2, 3].map((i) => <div key={i} className="sw-tile sw-skel" style={{ animationDelay: `${i * 90}ms` }} />)}
             </div>
           ) : studioShops.length === 0 ? (
-            <div className="sw-empty"><Store size={16} color={C.laitonLo} /> Hozircha faol do'kon yo'q</div>
+            <div className="sw-empty"><Store size={16} color={C.laitonLo} /> {tr("noActiveShop")}</div>
           ) : (
             <div className="sw-grid">
               {studioShops.map((s, i) => (
@@ -1351,23 +1606,61 @@ function App() {
         </div>
       </section>
 
+      {/* ===================== STUDIYA: Qanday ishlaydi ===================== */}
+      <section className="hiw">
+        <div className="hiw-inner">
+          <p className="sw-eyebrow">{tr("hiwEyebrow")}</p>
+          <h2 className="ab-title">{tr("hiwTitle")}</h2>
+          <div className="hiw-row">
+            {[
+              { ic: Flower2,  t: tr("hiw1t"), d: tr("hiw1d") },
+              { ic: Sprout,   t: tr("hiw2t"), d: tr("hiw2d") },
+              { ic: Sparkles, t: tr("hiw3t"), d: tr("hiw3d") },
+            ].map((s, i) => {
+              const Ic = s.ic;
+              return (
+                <div key={i} className="hiw-step" style={{ animationDelay: `${i * 130}ms` }}>
+                  <div className="hiw-num"><span className="hiw-n">{i + 1}</span><Ic size={17} color={C.laitonHi} /></div>
+                  <div className="hiw-t">{s.t}</div>
+                  <div className="hiw-d">{s.d}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== STUDIYA: Ilhom galereyasi ===================== */}
+      <section className="insp">
+        <div className="insp-inner">
+          <p className="sw-eyebrow">{tr("inspEyebrow")}</p>
+          <h2 className="ab-title">{tr("inspTitle")}</h2>
+          <p className="insp-sub">{tr("inspSub")}</p>
+        </div>
+        <div className="insp-row">
+          {INSP.map((g, i) => (
+            <figure key={i} className="insp-card" style={{ animationDelay: `${i * 110}ms` }}>
+              <img src={g.img} alt={tr(g.cap)} loading="lazy" />
+              <span className="insp-badge"><Sparkles size={10} /> {tr("inspBadge")}</span>
+              <figcaption>{tr(g.cap)}</figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+
       {/* ===================== STUDIYA: Zetme AI haqida ===================== */}
       <section className="about" id="about">
         <div className="ab-inner">
           <p className="sw-eyebrow">Zetme AI</p>
-          <h2 className="ab-title">Sotib olishdan <em>oldin</em> ko'ring</h2>
-          <p className="ab-lead">
-            Zetme AI — gul va tuvakni bitta kadrda birlashtiradigan botanik studiya.
-            Gulingiz qaysi tuvakda chiroyli ko'rinishini, qaysi rang xonangizga mos tushishini
-            xariddan oldin bilib olasiz. Tanlov — taxmin emas, ko'rilgan natija.
-          </p>
+          <h2 className="ab-title">{tr("abT1")} <em>{tr("abEm")}</em> {tr("abT2")}</h2>
+          <p className="ab-lead">{tr("abLead")}</p>
 
           <div className="ab-grid">
             {[
-              { ic: Sparkles, t: "Avval ko'ring, keyin oling", d: "Gul va tuvak rasmini yuklang — AI ularni birlashtiradi va moslikni baholab beradi." },
-              { ic: Clock,    t: "Bir necha soniyada",         d: "Dizayner kutish yo'q, o'lchov yo'q. Natija shu zahoti ekraningizda paydo bo'ladi." },
-              { ic: Store,    t: "Tasdiqlangan do'konlar",     d: "Har bir sotuvchi administrator tomonidan tekshiriladi. Buyurtma to'g'ridan-to'g'ri do'konga boradi." },
-              { ic: Coins,    t: "Bonus va sovg'alar",         d: "1 mln so'mdan yuqori buyurtmalarga sovg'a, yirik xaridlarga esa pul bonuslari beriladi." },
+              { ic: Sparkles, t: tr("abC1t"), d: tr("abC1d") },
+              { ic: Clock,    t: tr("abC2t"), d: tr("abC2d") },
+              { ic: Store,    t: tr("abC3t"), d: tr("abC3d") },
+              { ic: Coins,    t: tr("abC4t"), d: tr("abC4d") },
             ].map((f, i) => (
               <div key={f.t} className="ab-card" style={{ animationDelay: `${120 + i * 90}ms` }}>
                 <div className="ab-ic"><f.ic size={19} color={C.laitonHi} /></div>
@@ -1378,11 +1671,11 @@ function App() {
           </div>
 
           <div className="ab-stats">
-            <div className="ab-stat"><b>{studioShops.length || "—"}</b><span>do'kon</span></div>
+            <div className="ab-stat"><b>{studioShops.length || "—"}</b><span>{tr("statShop")}</span></div>
             <div className="ab-stat-sep" />
-            <div className="ab-stat"><b>{products.length || "—"}</b><span>mahsulot</span></div>
+            <div className="ab-stat"><b>{products.length || "—"}</b><span>{tr("statProd")}</span></div>
             <div className="ab-stat-sep" />
-            <div className="ab-stat"><b>24/7</b><span>ochiq</span></div>
+            <div className="ab-stat"><b>24/7</b><span>{tr("statOpen")}</span></div>
           </div>
         </div>
       </section>
@@ -1393,15 +1686,15 @@ function App() {
           /* ---------- 1-qadam: faqat do'konlar ro'yxati ---------- */
           <>
             <div className="market-head">
-              <h2 className="market-title">Mahsulotlar</h2>
-              <span className="market-sub">{shopWall.length} ta do'kon</span>
+              <h2 className="market-title">{tr("marketTitle")}</h2>
+              <span className="market-sub">{tr("marketShopsN", shopWall.length)}</span>
             </div>
-            <p className="market-hint">Do'konni tanlang — mahsulotlar bo'limlar bo'yicha ochiladi</p>
+            <p className="market-hint">{tr("marketHint")}</p>
 
-            {(productsLoading || shopsLoading) && <div className="market-state">Yuklanmoqda…</div>}
-            {!productsLoading && productsError && <div className="market-state err">Yuklab bo'lmadi: {productsError}</div>}
+            {(productsLoading || shopsLoading) && <div className="market-state">{tr("loading")}</div>}
+            {!productsLoading && productsError && <div className="market-state err">{tr("loadFail")}{productsError}</div>}
             {!productsLoading && !shopsLoading && !productsError && shopWall.length === 0 && (
-              <div className="market-state">Hali do'kon yo'q. Tez orada to'ldiriladi.</div>
+              <div className="market-state">{tr("noShopsYet")}</div>
             )}
 
             <div className="mshop-grid">
@@ -1413,7 +1706,7 @@ function App() {
                   </div>
                   <div className="mshop-body">
                     <div className="mshop-name">{s.name}</div>
-                    <div className="mshop-count">{s.count} ta mahsulot <ChevronRight size={12} /></div>
+                    <div className="mshop-count">{tr("productN", s.count)} <ChevronRight size={12} /></div>
                   </div>
                 </button>
               ))}
@@ -1423,7 +1716,7 @@ function App() {
           /* ---------- 2-qadam: do'kon ichi — bo'limlar menyusi ---------- */
           <>
             <button className="shopback" onClick={() => setShopFilter(null)}>
-              <ArrowLeft size={15} /> Barcha do'konlar
+              <ArrowLeft size={15} /> {tr("allShops")}
             </button>
 
             <div className="shophead">
@@ -1435,8 +1728,8 @@ function App() {
               <div>
                 <h2 className="shophead-name">{shopFilter.name}</h2>
                 <div className="shophead-meta">
-                  {visibleProducts.length} ta mahsulot
-                  {currentShopTile && currentShopTile.bonus ? " · ★ bonus va sovg'alar bor" : ""}
+                  {tr("productN", visibleProducts.length)}
+                  {currentShopTile && currentShopTile.bonus ? tr("bonusGifts") : ""}
                 </div>
               </div>
             </div>
@@ -1444,7 +1737,7 @@ function App() {
             <div className="market-toolbar">
               <PriceModeToggle mode={priceMode} onChange={changePriceMode} />
               {priceMode === "optom" && (
-                <span className="market-optnote">Optom narx — {fmt(OPT_MIN_ORDER)}+ savatda</span>
+                <span className="market-optnote">{tr("optNote", fmt(OPT_MIN_ORDER))}</span>
               )}
             </div>
 
@@ -1460,9 +1753,7 @@ function App() {
 
             {visibleProducts.length === 0 && (
               <div className="market-state">
-                {priceMode === "optom"
-                  ? "Bu do'kon mahsulotlariga hali optom narx kiritilmagan."
-                  : "Bu do'konda hozircha mahsulot yo'q."}
+                {priceMode === "optom" ? tr("emptyShopOptom") : tr("emptyShop")}
               </div>
             )}
 
@@ -1494,20 +1785,20 @@ function App() {
       {/* bottom nav (mobile) */}
       <nav className="bottomnav">
         <button className="bn-item active" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-          <Sparkles size={18} /><span>Studiya</span>
+          <Sparkles size={18} /><span>{tr("navStudio")}</span>
         </button>
         <button className="bn-item" onClick={() => { const el = document.getElementById("market"); if (el) el.scrollIntoView({ behavior: "smooth" }); }}>
-          <Store size={18} /><span>Mahsulotlar</span>
+          <Store size={18} /><span>{tr("navProducts")}</span>
         </button>
         <button className="bn-item" onClick={() => setCartOpen(true)} style={{ position: "relative" }}>
           <ShoppingBag size={18} />
           {cartCount > 0 && <span className="bn-badge">{cartCount}</span>}
-          <span>Savat</span>
+          <span>{tr("navCart")}</span>
         </button>
         <button className="bn-item" onClick={() => setProfileOpen(true)} style={{ position: "relative" }}>
           <User size={18} />
           {hasNews && !profileOpen && <span className="bn-dot" />}
-          <span>Profil</span>
+          <span>{tr("navProfile")}</span>
         </button>
       </nav>
 
@@ -1556,19 +1847,17 @@ function App() {
         <div className="ov" onClick={(e) => e.target === e.currentTarget && resolveShopConflict(false)}>
           <div className="conflict">
             <div className="conflict-ic"><Store size={22} color={C.laitonLo} /></div>
-            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 20, margin: "0 0 6px" }}>Savatda boshqa do'kon mahsuloti bor</h3>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 20, margin: "0 0 6px" }}>{tr("confT")}</h3>
             <p style={{ fontSize: 13.5, color: C.inkDim, margin: "0 0 16px", lineHeight: 1.55 }}>
-              Savatingizda hozir <b>{shopConflict.currentShop}</b> do'konining mahsulotlari turibdi.
-              Bitta buyurtmada faqat bitta do'kondan xarid qilinadi — avval joriy buyurtmani yakunlang,
-              yoki savatni tozalab <b>{shopConflict.newShop}</b> do'konidan boshlang.
+              {tr("confB1")} <b>{shopConflict.currentShop}</b>{tr("confB2")} <b>{shopConflict.newShop}</b>{tr("confB3")}
             </p>
             <button className="pm-add" onClick={() => { resolveShopConflict(false); setCartOpen(true); }}>
-              <ShoppingBag size={15} /> Joriy buyurtmani yakunlash ({shopConflict.currentShop})
+              <ShoppingBag size={15} /> {tr("confFinish")} ({shopConflict.currentShop})
             </button>
             <button className="conflict-clear" onClick={() => resolveShopConflict(true)}>
-              Savatni tozalash va {shopConflict.newShop} dan boshlash
+              {tr("confClear1")} {shopConflict.newShop} {tr("confClear2")}
             </button>
-            <button className="conflict-cancel" onClick={() => resolveShopConflict(false)}>Bekor qilish</button>
+            <button className="conflict-cancel" onClick={() => resolveShopConflict(false)}>{tr("cancel")}</button>
           </div>
         </div>
       )}
@@ -1585,7 +1874,7 @@ function App() {
 }
 
 /* ============================== CSS ============================== */
-const CSS = `
+const buildCSS = () => `
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500;600&display=swap');
 *{box-sizing:border-box}
 .root{font-family:${FONT_BODY};background:${C.paper};min-height:100vh;padding-bottom:74px}
@@ -2084,6 +2373,100 @@ const CSS = `
 
 @media (min-width:640px){
   .genslot{width:190px}
+}
+
+/* ============ KUN/TUN gul tugmasi — gul ochiladi (kun), g'uncha yumiladi (tun) ============ */
+.bloom-toggle{position:relative;width:38px;height:38px;border-radius:50%;border:1px solid #C6A05B66;cursor:pointer;
+  overflow:hidden;padding:0;background:transparent;flex:0 0 auto;transition:box-shadow .5s,transform .3s}
+.bloom-toggle:active{transform:scale(.92)}
+.bt-day{box-shadow:0 0 14px #E7D3A045}
+.bt-night{box-shadow:0 0 14px #4A6E8A40}
+.bt-sky{position:absolute;inset:0;border-radius:50%;transition:background .9s ease}
+.bt-day .bt-sky{background:radial-gradient(circle at 50% 40%,#F7E7B8 0%,#E4C377 50%,#B98F44 100%)}
+.bt-night .bt-sky{background:radial-gradient(circle at 64% 30%,#27455C 0%,#0E2233 55%,#081420 100%)}
+.bt-flower{position:absolute;inset:4px;width:30px;height:30px}
+.bt-rays{transform-origin:20px 20px}
+.bt-day .bt-rays{animation:btSpin 16s linear infinite}
+.bt-rays line{stroke:#8A5F1E;stroke-width:1.5;stroke-linecap:round;transition:opacity .5s}
+.bt-night .bt-rays line{opacity:0}
+.bt-petals{transform-origin:20px 20px;transition:transform .9s cubic-bezier(.68,-.15,.32,1.15),opacity .55s ease}
+.bt-night .bt-petals{transform:scale(.12) rotate(80deg);opacity:0}
+.bt-petal{fill:#E7A8BE;stroke:#C87897;stroke-width:.5}
+.bt-core{fill:#F0D48A;stroke:#B98F44;stroke-width:.6;transform-origin:20px 20px;transition:transform .8s,fill .8s}
+.bt-night .bt-core{fill:#3E5A4C;transform:scale(.7)}
+.bt-moon{fill:#EAD9A8;opacity:0;transform:translate(5px,-4px) scale(.5) rotate(-30deg);transform-origin:20px 20px;
+  transition:opacity .7s ease .15s,transform .9s cubic-bezier(.65,0,.35,1)}
+.bt-night .bt-moon{opacity:1;transform:none}
+.bt-star{fill:#EAD9A8;opacity:0;transition:opacity .6s}
+.bt-night .bt-star{animation:btTwinkle 2.6s ease-in-out infinite}
+.bt-night .bs1{opacity:.9}
+.bt-night .bs2{opacity:.7;animation-delay:.9s}
+.bt-night .bs3{opacity:.6;animation-delay:1.6s}
+@keyframes btSpin{to{transform:rotate(360deg)}}
+@keyframes btTwinkle{0%,100%{opacity:.25}50%{opacity:.95}}
+
+/* ============ UZ/RU — oltin barg slayder + gulbarg portlashi ============ */
+.lang-petal{position:relative;display:flex;align-items:center;width:76px;height:34px;border-radius:20px;
+  border:1px solid #C6A05B80;background:#0B211B8C;backdrop-filter:blur(8px);cursor:pointer;padding:3px;flex:0 0 auto}
+.lp-opt{flex:1;text-align:center;font-family:${FONT_BODY};font-size:11px;letter-spacing:.14em;font-weight:600;
+  color:#F1ECDF59;transition:color .45s;position:relative;z-index:1}
+.lp-opt.on{color:#0B211B}
+.lp-knob{position:absolute;top:2px;left:3px;width:34px;height:28px;border-radius:15px;
+  background:linear-gradient(135deg,#E7D3A0,#C6A05B);display:flex;align-items:center;justify-content:center;
+  transition:transform .55s cubic-bezier(.65,0,.35,1);box-shadow:0 2px 10px #C6A05B73;z-index:0}
+.lp-ru .lp-knob{transform:translateX(34px)}
+.lp-leaf{width:12px;height:12px;fill:#0B211BC0;transition:transform .55s cubic-bezier(.65,0,.35,1)}
+.lp-leaf .lp-vein{stroke:#E7D3A0;stroke-width:.9;fill:none}
+.lp-ru .lp-leaf{transform:rotate(180deg)}
+.lp-burst{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;z-index:2}
+.lp-burst i{position:absolute;left:-2.5px;top:-4px;width:5px;height:8px;background:#D98BA6;
+  border-radius:60% 60% 60% 60% / 72% 72% 46% 46%;opacity:0;animation:lpBurst .75s ease-out forwards}
+@keyframes lpBurst{
+  0%{opacity:.95;transform:rotate(var(--a)) translateY(-4px) scale(.5)}
+  100%{opacity:0;transform:rotate(var(--a)) translateY(-30px) scale(1.15)}
+}
+
+/* ============ Studiya: Qanday ishlaydi ============ */
+.hiw{background:${C.vert};color:${C.ivoire};padding:30px 16px 8px;position:relative}
+.hiw-inner{max-width:860px;margin:0 auto}
+.hiw-row{display:grid;grid-template-columns:1fr;gap:14px;margin-top:18px}
+.hiw-step{position:relative;text-align:center;padding:16px 14px 18px;border:1px solid #C6A05B2E;border-radius:16px;
+  background:linear-gradient(160deg,#FFFFFF08,#FFFFFF02);animation:swFade .6s ease both}
+.hiw-num{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:9px}
+.hiw-n{width:26px;height:26px;border-radius:50%;border:1px solid #C6A05B99;color:#E7D3A0;font-size:12.5px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;font-family:${FONT_DISPLAY};background:#C6A05B1A}
+.hiw-t{font-family:${FONT_DISPLAY};font-size:17.5px;margin-bottom:5px;color:#F1ECDF}
+.hiw-d{font-size:12.5px;line-height:1.55;color:${C.ivoireDim}}
+@media (min-width:640px){
+  .hiw-row{grid-template-columns:repeat(3,1fr)}
+}
+
+/* ============ Studiya: Ilhom galereyasi ============ */
+.insp{background:linear-gradient(180deg,${C.vert} 0%,${C.noir} 60%);color:${C.ivoire};padding:28px 0 34px}
+.insp-inner{max-width:860px;margin:0 auto;padding:0 16px}
+.insp-sub{font-size:12px;color:${C.ivoireDim};text-align:center;margin:0 0 4px}
+.insp-row{display:flex;gap:14px;overflow-x:auto;padding:18px 18px 10px;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;justify-content:flex-start}
+.insp-row::-webkit-scrollbar{display:none}
+.insp-card{position:relative;flex:0 0 200px;height:320px;margin:0;border-radius:18px;overflow:hidden;
+  border:1px solid #C6A05B40;background:#000;scroll-snap-align:center;animation:swFade .7s ease both;
+  box-shadow:0 14px 34px #00000066}
+.insp-card img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .9s cubic-bezier(.2,.6,.2,1)}
+.insp-card:hover img{transform:scale(1.07)}
+.insp-badge{position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:4px;font-size:9.5px;
+  letter-spacing:.08em;text-transform:uppercase;color:#E7D3A0;background:#0B211BB3;border:1px solid #C6A05B59;
+  border-radius:20px;padding:3px 8px;backdrop-filter:blur(6px)}
+.insp-card figcaption{position:absolute;left:0;right:0;bottom:0;padding:26px 12px 10px;font-size:11.5px;color:#F1ECDF;
+  background:linear-gradient(180deg,transparent,#000000C7 68%)}
+@media (min-width:720px){
+  .insp-row{justify-content:center}
+  .insp-card{flex:0 0 220px;height:352px}
+}
+@media (prefers-reduced-motion: reduce){
+  .bt-day .bt-rays{animation:none}
+  .bt-night .bt-star{animation:none}
+  .lp-burst i{animation:none}
+  .insp-card img{transition:none}
 }
 `;
 
