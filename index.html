@@ -114,6 +114,7 @@ const STR = {
     abC3t: "Tasdiqlangan do'konlar", abC3d: "Har bir sotuvchi administrator tomonidan tekshiriladi. Buyurtma to'g'ridan-to'g'ri do'konga boradi.",
     abC4t: "Bonus va sovg'alar", abC4d: "1 mln so'mdan yuqori buyurtmalarga sovg'a, yirik xaridlarga esa pul bonuslari beriladi.",
     statShop: "do'kon", statProd: "mahsulot", statOpen: "ochiq",
+    statShopN: () => "do'kon", statProdN: () => "mahsulot",
     marketTitle: "Mahsulotlar", marketShopsN: (n) => n + " ta do'kon",
     marketHint: "Do'konni tanlang — mahsulotlar bo'limlar bo'yicha ochiladi",
     loading: "Yuklanmoqda…", loadFail: "Yuklab bo'lmadi: ", noShopsYet: "Hali do'kon yo'q. Tez orada to'ldiriladi.",
@@ -185,7 +186,7 @@ const STR = {
     srcCamera: "Сфотографировать", srcCameraS: "Открыть камеру",
     srcPicked: "Выбрано из каталога",
     partners: "Наши партнёры", shopsTitle: "Магазины",
-    shopsSub: (n) => n + " проверенных магазинов · нажмите на фото",
+    shopsSub: (n) => n + " " + plural(n, "проверенный магазин", "проверенных магазина", "проверенных магазинов") + " · нажмите на фото",
     shopsSoon: "Магазины скоро появятся", noActiveShop: "Пока нет активных магазинов",
     hiwEyebrow: "Как это работает", hiwTitle: "Три шага — один кадр",
     hiw1t: "Загрузите цветок", hiw1d: "Сфотографируйте любимый цветок или выберите из галереи.",
@@ -201,10 +202,11 @@ const STR = {
     abC3t: "Проверенные магазины", abC3d: "Каждый продавец проверяется администратором. Заказ идёт напрямую в магазин.",
     abC4t: "Бонусы и подарки", abC4d: "К заказам свыше 1 млн сумов — подарок, к крупным покупкам — денежные бонусы.",
     statShop: "магазинов", statProd: "товаров", statOpen: "открыто",
-    marketTitle: "Товары", marketShopsN: (n) => n + " магазинов",
+    statShopN: (n) => plural(n, "магазин", "магазина", "магазинов"), statProdN: (n) => plural(n, "товар", "товара", "товаров"),
+    marketTitle: "Товары", marketShopsN: (n) => n + " " + plural(n, "магазин", "магазина", "магазинов"),
     marketHint: "Выберите магазин — товары откроются по разделам",
     loading: "Загрузка…", loadFail: "Не удалось загрузить: ", noShopsYet: "Магазинов пока нет. Скоро появятся.",
-    productN: (n) => n + " товаров",
+    productN: (n) => n + " " + plural(n, "товар", "товара", "товаров"),
     allShops: "Все магазины", bonusGifts: " · ★ бонусы и подарки",
     chakana: "Розница", optom: "Опт",
     optNote: (s) => "Оптовая цена — при корзине от " + s,
@@ -225,7 +227,7 @@ const STR = {
     addMore: (s) => "Добавьте товаров ещё на " + s + ", и оформление заказа станет доступно.",
     orChakana: " Или переключитесь на \"Розницу\" выше.",
     sending: "Отправка…", placeOrder: "Оформить заказ",
-    coTitle: "Оформление заказа", coItems: (n) => n + " видов товара",
+    coTitle: "Оформление заказа", coItems: (n) => n + " " + plural(n, "вид", "вида", "видов") + " товара",
     coName: "Ваше имя", coPhone: "Ваш номер телефона", coRegion: "Регион", coSelect: "Выберите…",
     coSend: "Отправить заказ",
     coHint: "Заказ сразу поступит в магазин. Статус отслеживайте в разделе Профиль — увидите, когда продавец готовит и отправит его.",
@@ -256,11 +258,18 @@ const STR = {
     payAgree: "Способ оплаты согласуете с продавцом",
     payPh: "Как оплатили? (Payme, наличные...)", send: "Отправить", paidBtn: "💸 Я оплатил",
     tokensLeft: "токенов осталось", buyTokens: "Купить токены",
-    tierMore: (n, t) => "Ещё " + n + " токенов — уровень " + t,
+    tierMore: (n, t) => "Ещё " + n + " " + plural(n, "токен", "токена", "токенов") + " — уровень " + t,
     badgeT: "Значок", badgeOn: "Активен — виден в вашем профиле", badgeOff: "Можно купить отдельно, не копя токены", buy: "Купить",
     genHistory: "История генераций", genEmpty: "Генераций пока нет. Начните со студии.",
     toNight: "Ночной режим", toDay: "Дневной режим",
   },
+};
+/* Ruscha son shakllari: 1 магазин / 2 магазина / 5 магазинов */
+const plural = (n, a, b, c) => {
+  const n10 = n % 10, n100 = n % 100;
+  if (n10 === 1 && n100 !== 11) return a;
+  if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return b;
+  return c;
 };
 let LANG = "uz";
 try { const sl = localStorage.getItem("zetme_lang"); if (sl === "ru" || sl === "uz") LANG = sl; } catch (e) {}
@@ -1671,9 +1680,9 @@ function App() {
           </div>
 
           <div className="ab-stats">
-            <div className="ab-stat"><b>{studioShops.length || "—"}</b><span>{tr("statShop")}</span></div>
+            <div className="ab-stat"><b>{studioShops.length || "—"}</b><span>{tr("statShopN", studioShops.length)}</span></div>
             <div className="ab-stat-sep" />
-            <div className="ab-stat"><b>{products.length || "—"}</b><span>{tr("statProd")}</span></div>
+            <div className="ab-stat"><b>{products.length || "—"}</b><span>{tr("statProdN", products.length)}</span></div>
             <div className="ab-stat-sep" />
             <div className="ab-stat"><b>24/7</b><span>{tr("statOpen")}</span></div>
           </div>
@@ -2411,12 +2420,13 @@ const buildCSS = () => `
 .lp-opt{flex:1;text-align:center;font-family:${FONT_BODY};font-size:11px;letter-spacing:.14em;font-weight:600;
   color:#F1ECDF59;transition:color .45s;position:relative;z-index:1}
 .lp-opt.on{color:#0B211B}
-.lp-knob{position:absolute;top:2px;left:3px;width:34px;height:28px;border-radius:15px;
-  background:linear-gradient(135deg,#E7D3A0,#C6A05B);display:flex;align-items:center;justify-content:center;
+.lp-knob{position:absolute;top:2px;left:3px;width:34px;height:28px;border-radius:15px;overflow:hidden;
+  background:linear-gradient(135deg,#E7D3A0,#C6A05B);
   transition:transform .55s cubic-bezier(.65,0,.35,1);box-shadow:0 2px 10px #C6A05B73;z-index:0}
 .lp-ru .lp-knob{transform:translateX(34px)}
-.lp-leaf{width:12px;height:12px;fill:#0B211BC0;transition:transform .55s cubic-bezier(.65,0,.35,1)}
-.lp-leaf .lp-vein{stroke:#E7D3A0;stroke-width:.9;fill:none}
+.lp-leaf{position:absolute;top:-3px;left:7px;width:20px;height:34px;opacity:.26;fill:#0B211B;
+  transition:transform .55s cubic-bezier(.65,0,.35,1)}
+.lp-leaf .lp-vein{stroke:#0B211B;stroke-width:.7;fill:none;opacity:.55}
 .lp-ru .lp-leaf{transform:rotate(180deg)}
 .lp-burst{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;z-index:2}
 .lp-burst i{position:absolute;left:-2.5px;top:-4px;width:5px;height:8px;background:#D98BA6;
