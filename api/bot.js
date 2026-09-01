@@ -93,10 +93,13 @@ export default async function handler(req, res) {
       const msg = update.message;
       const chatId = msg.chat.id;
       const text = (msg.text || "").trim();
+      // Buyruqlarni katta/kichik harfga bog'liq bo'lmasin deb solishtiramiz
+      // (masalan, telefon avtomatik katta harf bilan "/Kod" deb yozib qo'yishi mumkin).
+      const cmd = text.toLowerCase();
 
       // --- /kod: saytdagi profilni Telegram hisobiga ulash uchun 6 xonali kod ---
       // Sayt api/customer.js action:"link" bilan shu kodni chatId ga aylantiradi.
-      if (text === "/kod" || text === "/code") {
+      if (cmd === "/kod" || cmd === "/code") {
         const code = String(Math.floor(100000 + Math.random() * 900000));
         await kv.set(`link:${code}`, String(chatId), { ex: 600 });
         await sendMessage(
@@ -107,7 +110,7 @@ export default async function handler(req, res) {
       }
 
       // --- /myid: sotuvchilar o'z Chat ID sini olishi uchun (admin panel profiliga yoziladi) ---
-      if (text === "/myid") {
+      if (cmd === "/myid") {
         await sendMessage(
           chatId,
           `Sizning Chat ID raqamingiz:\n\`${chatId}\`\n\nAgar siz sotuvchi bo'lsangiz, shu raqamni admin paneldagi profilingizga yozing — buyurtmalar shu yerga keladi.`
@@ -116,7 +119,7 @@ export default async function handler(req, res) {
       }
 
       // --- /stat: FAQAT egasi (OWNER_CHAT_ID) uchun umumiy statistika ---
-      if (text === "/stat" && String(chatId) === String(OWNER_CHAT_ID)) {
+      if (cmd === "/stat" && String(chatId) === String(OWNER_CHAT_ID)) {
         const sellers = (await kv.get("sellers")) || [];
         const WEEK = 7 * 24 * 3600 * 1000, now = Date.now();
         let lines = [], tOrders = 0, tSum = 0, w7 = 0, s7 = 0;
@@ -139,7 +142,7 @@ export default async function handler(req, res) {
       }
 
       // --- /start with an order id coming from the site (see api/checkout.js) ---
-      if (text.startsWith("/start")) {
+      if (cmd.startsWith("/start")) {
         const orderId = (text.split(" ")[1] || "").trim();
 
         if (!orderId) {
