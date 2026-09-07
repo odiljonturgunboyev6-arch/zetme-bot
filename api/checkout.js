@@ -3,7 +3,7 @@
 // Body: {
 //   priceMode: "chakana"|"optom",
 //   items: [{ id, variantId, qty }, ...],
-//   customer: { name, phone, region },          // saytdagi forma
+//   customer: { name, phone, region, address?, note? },  // saytdagi forma
 //   auth?: { chatId, token }                    // mavjud mijoz hisobi (ixtiyoriy)
 // }
 // Nima bo'ladi:
@@ -84,6 +84,9 @@ export default async function handler(req, res) {
     const cName = String(cust.name || "").trim().slice(0, 60);
     const cPhone = String(cust.phone || "").trim().slice(0, 25);
     const cRegion = String(cust.region || "").trim().slice(0, 40);
+    // manzil va kuryerga izoh — ixtiyoriy (profil "Mening ma'lumotlarim"dan avtomatik keladi)
+    const cAddress = String(cust.address || "").trim().slice(0, 160);
+    const cNote = String(cust.note || "").trim().slice(0, 200);
     if (cName.length < 2) return res.status(400).json({ ok: false, error: "Ismingizni kiriting" });
     if (cPhone.replace(/\D/g, "").length < 7) return res.status(400).json({ ok: false, error: "Telefon raqamingizni to'g'ri kiriting" });
     if (!cRegion) return res.status(400).json({ ok: false, error: "Viloyatingizni tanlang" });
@@ -170,6 +173,9 @@ export default async function handler(req, res) {
     if (!cRec.firstName && !cRec.lastName) cRec.name = cName;
     cRec.phone = cPhone;
     cRec.region = cRegion;
+    if (cAddress) cRec.address = cAddress;
+    if (cNote) cRec.note = cNote;
+    if (!cRec.createdAt) cRec.createdAt = Date.now();
     await kv.set(`customer:${custId}`, cRec);
 
     // --- bekor kompensatsiyasi vaucheri (bo'lsa avtomatik) ---
@@ -205,7 +211,7 @@ export default async function handler(req, res) {
 
     const okey = `orders:${orderSellerId}`;
     const arr = (await kv.get(okey)) || [];
-    arr.unshift({ ...base, customer: { chatId: custId, name: cName, phone: cPhone, region: cRegion } });
+    arr.unshift({ ...base, customer: { chatId: custId, name: cName, phone: cPhone, region: cRegion, address: cAddress, note: cNote } });
     if (arr.length > 500) arr.length = 500;
     await kv.set(okey, arr);
 
@@ -224,7 +230,10 @@ export default async function handler(req, res) {
       (vDisc ? `\n🎁 Chegirma bonusi (${vPct}%): −${fmt(vDisc)}` : "") +
       `\nTo'lov summasi: ${fmt(payTotal)}` +
       (bonus && bonus.gift ? `\n🎁 Sovg'a: tuvak` : "") +
-      `\n\n👤 ${cName}\n📞 ${cPhone}\n📍 ${cRegion}\n\nAdmin panel > Buyurtmalar bo'limida boshqaring.`;
+      `\n\n👤 ${cName}\n📞 ${cPhone}\n📍 ${cRegion}` +
+      (cAddress ? `\n🏠 ${cAddress}` : "") +
+      (cNote ? `\n📝 ${cNote}` : "") +
+      `\n\nAdmin panel > Buyurtmalar bo'limida boshqaring.`;
     if (sellerChatId && sellerChatId !== String(OWNER_CHAT_ID)) {
       await tgSend(sellerChatId, orderText);
       await tgSend(OWNER_CHAT_ID, `📋 Nazorat nusxasi\n\n${orderText}`);

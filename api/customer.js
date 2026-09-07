@@ -9,7 +9,8 @@
 //           javob: { ok, chatId, token, profile, orders }
 //   { action:"me", chatId, token }
 //        -> profil + buyurtmalar tarixi (myorders:<chatId>, bot.js yozadi)
-//   { action:"updateProfile", chatId, token, firstName?, lastName? }
+//   { action:"updateProfile", chatId, token, firstName?, lastName?, phone?, email?,
+//                              region?, address?, birthday?, note? }  <- sayt "Mening ma'lumotlarim"
 //   { action:"setPhoto", chatId, token, dataBase64, contentType? }
 //        -> rasm Vercel Blob'ga yuklanadi (har mijozga bitta, eskisi almashtiriladi)
 //
@@ -36,7 +37,11 @@ function publicProfile(chatId, c) {
     phone: c.phone || "",
     email: c.email || "",
     region: c.region || "",
+    address: c.address || "",
+    birthday: c.birthday || "",
+    note: c.note || "",
     photo: c.photo || "",
+    createdAt: c.createdAt || 0,
   };
 }
 
@@ -165,7 +170,7 @@ export default async function handler(req, res) {
       const newId = "w" + Date.now().toString(36) + randomBytes(4).toString("hex");
       const newToken = randomBytes(24).toString("hex");
       await kv.set(`ctoken:${newId}`, newToken);
-      const c = { name, firstName: name, phone, email };
+      const c = { name, firstName: name, phone, email, createdAt: Date.now() };
       await kv.set(`customer:${newId}`, c);
       return res.status(200).json({ ok: true, chatId: newId, token: newToken, profile: publicProfile(newId, c), orders: [], vouchers: [] });
     }
@@ -242,10 +247,29 @@ export default async function handler(req, res) {
 
     if (action === "updateProfile") {
       const c = (await kv.get(`customer:${chatId}`)) || {};
-      if (body.firstName !== undefined) c.firstName = String(body.firstName).trim().slice(0, 40);
-      if (body.lastName !== undefined) c.lastName = String(body.lastName).trim().slice(0, 40);
+      // sayt "Mening ma'lumotlarim" bo'limi shu amal orqali saqlaydi.
+      // Har maydon alohida ixtiyoriy: yuborilmagani o'zgarmaydi.
+      const set = (key, max) => {
+        if (body[key] === undefined) return;
+        c[key] = String(body[key] == null ? "" : body[key]).trim().slice(0, max);
+      };
+      set("firstName", 40);
+      set("lastName", 40);
+      set("phone", 25);
+      set("email", 80);
+      set("region", 40);
+      set("address", 160);
+      set("birthday", 12);
+      set("note", 200);
+      if (c.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email)) {
+        return res.status(400).json({ ok: false, error: "Email noto'g'ri yozilgan" });
+      }
+      if (c.phone && c.phone.replace(/\D/g, "").length < 7) {
+        return res.status(400).json({ ok: false, error: "Telefon raqami to'liq emas" });
+      }
       // ism-familiya kiritilsa botdagi umumiy "name" ham chiroyli bo'lib yangilanadi
       if (c.firstName || c.lastName) c.name = `${c.firstName || ""} ${c.lastName || ""}`.trim();
+      if (!c.createdAt) c.createdAt = Date.now();
       await kv.set(`customer:${chatId}`, c);
       return res.status(200).json({ ok: true, profile: publicProfile(chatId, c) });
     }
