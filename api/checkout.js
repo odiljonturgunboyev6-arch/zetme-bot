@@ -97,6 +97,7 @@ export default async function handler(req, res) {
     const UNIT_SHORT = { litr: "L", gramm: "g", olcham: "sm", dona: "dona" };
 
     const resolved = [];
+    const stockOps = [];
     let orderSellerId = null;
     for (const it of items) {
       const fam = byId[it && it.id];
@@ -116,11 +117,27 @@ export default async function handler(req, res) {
       }
       const qty = Math.max(1, Math.min(999, Math.floor(Number(it.qty) || 1)));
 
-      // mijoz tanlagan rang — faqat shu mahsulot uchun ro'yxatdagi ranglardan
-      // biri bo'lsa qabul qilinadi (soxta/qalbaki qiymatlardan himoya)
-      const famColors = Array.isArray(fam.colors) && fam.colors.length ? fam.colors : (fam.color ? [fam.color] : []);
+      // mijoz tanlagan rang — endi VARIANT (hajm) darajasidagi ro'yxatdan
+      // tanlanadi (2026-09-09 — avval mahsulot darajasida edi, shu sabab
+      // boshqa hajmga tegishli rang ham qabul qilinardi). Eski mahsulotlar
+      // uchun (variant.colors bo'sh) mahsulot darajasiga tushamiz.
+      const vColors = Array.isArray(variant.colors) && variant.colors.length
+        ? variant.colors
+        : (Array.isArray(fam.colors) && fam.colors.length ? fam.colors : (fam.color ? [fam.color] : []));
       const reqColor = String((it && it.color) || "").trim().slice(0, 24);
-      const color = famColors.find((c) => c.toLowerCase() === reqColor.toLowerCase()) || "";
+      const color = vColors.find((c) => c.toLowerCase() === reqColor.toLowerCase()) || "";
+      const colorKey = color || "";
+
+      // ostatka (agar kuzatilayotgan bo'lsa) — darhol tekshiramiz, lekin
+      // haqiqiy kamaytirish quyida eng yangi products bilan qilinadi (poyga holati kamroq bo'lishi uchun)
+      if (variant.stock && typeof variant.stock === "object" && typeof variant.stock[colorKey] === "number") {
+        if (variant.stock[colorKey] < qty) {
+          return res.status(400).json({
+            ok: false,
+            error: `"${variant.name || fam.name}${color ? " — " + color : ""}" tugagan yoki yetarli emas (${variant.stock[colorKey]} dona qoldi)`,
+          });
+        }
+      }
 
       resolved.push({
         name: `${variant.name || fam.name} — ${variant.litr} ${UNIT_SHORT[fam.unit] || "L"}${color ? ` (${color})` : ""}`,
@@ -128,6 +145,7 @@ export default async function handler(req, res) {
         qty,
         color,
       });
+      stockOps.push({ famId: fam.id, variantId: variant.id, colorKey, qty, label: `${variant.name || fam.name}${color ? " — " + color : ""}` });
     }
 
     // --- sotuvchi ---
@@ -193,6 +211,28 @@ export default async function handler(req, res) {
         payTotal = Math.max(0, payTotal - vDisc);
       }
     } catch (e) { console.error("voucher:", e); }
+
+    // --- ostatkani yakuniy tekshirish + avtomatik kamaytirish ---
+    // Eng yangi products bilan qayta o'qiymiz (poyga holati — ikki mijoz bir
+    // vaqtda oxirgi donani sotib olishi ehtimolini kamaytirish uchun).
+    if (stockOps.length) {
+      const freshProducts = (await kv.get("products")) || [];
+      const freshById = Object.fromEntries(freshProducts.map((p) => [p.id, p]));
+      let stockChanged = false;
+      for (const op of stockOps) {
+        const fam2 = freshById[op.famId];
+        const variant2 = fam2 && (fam2.variants || []).find((v) => v.id === op.variantId);
+        if (!variant2 || !variant2.stock || typeof variant2.stock !== "object") continue;
+        const have = variant2.stock[op.colorKey];
+        if (typeof have !== "number") continue; // kuzatilmaydi — cheksiz
+        if (have < op.qty) {
+          return res.status(400).json({ ok: false, error: `"${op.label}" endi omborda yetarli emas (${have} dona qoldi). Savatni yangilang.` });
+        }
+        variant2.stock[op.colorKey] = have - op.qty;
+        stockChanged = true;
+      }
+      if (stockChanged) await kv.set("products", freshProducts);
+    }
 
     // --- buyurtmani yozamiz (status: yangi) ---
     const orderId = genOrderId();

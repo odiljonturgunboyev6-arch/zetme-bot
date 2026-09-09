@@ -120,12 +120,35 @@ async function resolveSection(sellerId, sectionId) {
   return secs.some((x) => x.id === sid) ? sid : "";
 }
 
+// Ostatka (sklad) — har bir variant, har bir rang uchun alohida son.
+// Kalit — rang nomi (kichik-katta harfsiz solishtirilmaydi, aynan saqlanadi);
+// rang yo'q variantlarda kalit "" (bo'sh satr). Qiymat yo'q/berilmagan bo'lsa —
+// o'sha rang/variant KUZATILMAYDI (cheksiz hisoblanadi, eski mahsulotlar buzilmasin).
+function normalizeStock(stock, colorKeys) {
+  const out = {};
+  if (!stock || typeof stock !== "object") return out;
+  for (const key of colorKeys) {
+    const raw = stock[key];
+    if (raw === undefined || raw === null || raw === "") continue;
+    const n = Math.floor(Number(raw));
+    if (!Number.isFinite(n)) continue;
+    out[key] = Math.max(0, Math.min(999999, n));
+  }
+  return out;
+}
+
 function normalizeVariants(variants) {
   return variants.map((v, i) => {
     // har variantda ko'pi bilan 3 ta rasm
     const images = (Array.isArray(v.images) && v.images.length > 0
       ? v.images.map((u) => String(u))
       : (v.image ? [String(v.image)] : [])).filter(Boolean).slice(0, 3);
+    // 2026-09-09: ranglar endi VARIANT darajasida (har hajm/o'lcham o'z rang
+    // ro'yxatiga ega bo'ladi — avval mahsulot darajasida edi, shu sababli
+    // barcha variantlarga bitta rang ro'yxati "sirg'alib" ketardi).
+    const colors = sanitizeColors(v.colors);
+    const colorKeys = colors.length ? colors : [""];
+    const stock = normalizeStock(v.stock, colorKeys);
     return {
       id: v.id || `v${Date.now()}${i}${Math.random().toString(36).slice(2, 5)}`,
       litr: String(v.litr).trim(),
@@ -135,7 +158,10 @@ function normalizeVariants(variants) {
       image: v.image ? String(v.image) : (images[0] || ""),
       images,
       name: v.name ? String(v.name).trim() : "",
-      color: v.color ? String(v.color).trim() : "",
+      colors,
+      stock,
+      // orqaga moslik uchun: birinchi rang (eski kod/ko'rsatuvlar shuni o'qishi mumkin)
+      color: colors[0] || (v.color ? String(v.color).trim() : ""),
     };
   });
 }
@@ -193,7 +219,12 @@ export default async function handler(req, res) {
         ? (String(body.sellerId || MAIN_SELLER_ID))
         : actor.id;
 
-      const colorList = sanitizeColors(colors);
+      const normVariants = normalizeVariants(variants);
+      // mahsulot darajasidagi color/colors — VARIANTLAR ittifoqidan hisoblanadi
+      // (ko'rsatuv/eski kod uchun); haqiqiy manba endi har bir variant.colors.
+      // Agar birorta variantda ham rang bo'lmasa — eski uslubdagi body.colors'ga tayanamiz.
+      const unionColors = [...new Set(normVariants.flatMap((v) => v.colors || []))].slice(0, 8);
+      const colorList = unionColors.length ? unionColors : sanitizeColors(colors);
       const list = (await kv.get(KEY)) || [];
       const product = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -204,7 +235,7 @@ export default async function handler(req, res) {
         sectionId: await resolveSection(sellerId, body.sectionId),
         color: colorList[0] || (color ? String(color) : ""),
         colors: colorList,
-        variants: normalizeVariants(variants),
+        variants: normVariants,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
@@ -236,7 +267,9 @@ export default async function handler(req, res) {
         return res.status(403).json({ ok: false, error: "Bu mahsulot sizning do'koningizga tegishli emas" });
       }
 
-      const colorList = sanitizeColors(colors);
+      const normVariants = normalizeVariants(variants);
+      const unionColors = [...new Set(normVariants.flatMap((v) => v.colors || []))].slice(0, 8);
+      const colorList = unionColors.length ? unionColors : sanitizeColors(colors);
       const updated = {
         ...list[idx],
         sellerId: ownerId,
@@ -246,7 +279,7 @@ export default async function handler(req, res) {
         sectionId: await resolveSection(ownerId, body.sectionId),
         color: colorList[0] || (color ? String(color) : ""),
         colors: colorList,
-        variants: normalizeVariants(variants),
+        variants: normVariants,
         updatedAt: Date.now(),
       };
       list[idx] = updated;
