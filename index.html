@@ -178,6 +178,7 @@ const STR = {
     installBodyTelegram: "O'rnatish uchun Chrome yoki Safari'da oching",
     installBtn: "O'rnatish", installBtnBrowser: "Brauzerda ochish",
     pmOptom: "Optom narx", pmChakana: "Chakana narx", pmSize: "O'lcham", pmColor: "Rang",
+    pmOut: "Tugagan", pmOutNote: "Afsuski, bu hozircha omborda yo'q.",
     addCart: "Savatga qo'shish — ",
     pmStudioGul: "Bu gulni tuvakka AI bilan moslab ko'rish", pmStudioTuvak: "Shu tuvakka gulni AI bilan moslab ko'rish",
     cartTitle: "Savat",
@@ -291,6 +292,7 @@ const STR = {
     installBodyTelegram: "Откройте в Chrome или Safari, чтобы установить",
     installBtn: "Установить", installBtnBrowser: "Открыть в браузере",
     pmOptom: "Оптовая цена", pmChakana: "Розничная цена", pmSize: "Размер", pmColor: "Цвет",
+    pmOut: "Раскуплено", pmOutNote: "К сожалению, сейчас нет в наличии.",
     addCart: "В корзину — ",
     pmStudioGul: "Примерить этот цветок к горшку с ИИ", pmStudioTuvak: "Примерить цветок к этому горшку с ИИ",
     cartTitle: "Корзина",
@@ -596,6 +598,34 @@ function thumbUrl(p) {
   return variantImg(p.variants && p.variants[0]) || "";
 }
 
+/* ============ Ostatka (stock) helperlari ============
+   variant.stock — { [rang yoki ""]: son }. Kalit kuzatilmasa (undefined) —
+   cheksiz hisoblanadi (eski mahsulotlar buzilmasin). */
+function stockFor(v, color) {
+  if (!v || !v.stock || typeof v.stock !== "object") return Infinity;
+  const val = v.stock[color || ""];
+  return typeof val === "number" ? val : Infinity;
+}
+function isVariantOut(v) {
+  if (!v || !v.stock || typeof v.stock !== "object") return false;
+  const colors = (Array.isArray(v.colors) && v.colors.length) ? v.colors : [""];
+  let trackedAny = false;
+  for (const c of colors) {
+    const val = v.stock[c || ""];
+    if (typeof val === "number") {
+      trackedAny = true;
+      if (val > 0) return false;
+    }
+  }
+  return trackedAny;
+}
+function isProductOut(p) {
+  const vs = p.variants || [];
+  if (vs.length === 0) return false;
+  if (!vs.some((v) => v.stock && Object.keys(v.stock).length)) return false;
+  return vs.every(isVariantOut);
+}
+
 /* ============================== Small UI bits ============================== */
 function SourceMenu({ accent, onPick }) {
   const opts = [
@@ -709,14 +739,21 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
   const [colorIdx, setColorIdx] = useState(0);
   const v = variants[vi] || variants[0] || {};
   const displayName = v.name || p.name;
-  const colorList = (Array.isArray(p.colors) && p.colors.length) ? p.colors : (p.color ? [p.color] : []);
+  // ranglar endi VARIANT (hajm) darajasida — har birining o'z ro'yxati bor;
+  // eski mahsulotlar uchun mahsulot darajasiga tushamiz (orqaga moslik)
+  const colorList = (Array.isArray(v.colors) && v.colors.length) ? v.colors
+    : ((Array.isArray(p.colors) && p.colors.length) ? p.colors : (p.color ? [p.color] : []));
   const selectedColor = colorList[colorIdx] || colorList[0] || v.color || p.color || "";
   const displayColor = selectedColor || v.color || p.color;
   const unitPrice = priceOf(v, priceMode);
   const imgs = variantImgs(v);
   const heroImg = imgs[imgIdx] || imgs[0] || "";
+  const stockLeft = stockFor(v, selectedColor);
+  const outOfStock = stockLeft <= 0;
+  const cappedQty = stockLeft === Infinity ? qty : Math.max(1, Math.min(qty, stockLeft));
 
-  function pickVariant(i) { setVi(i); setImgIdx(0); }
+  function pickVariant(i) { setVi(i); setImgIdx(0); setColorIdx(0); setQty(1); }
+  function pickColor(i) { setColorIdx(i); setQty(1); }
 
   return (
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -744,21 +781,27 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
 
           {variants.length > 1 && (
             <div className="pm-litrrow">
-              {variants.map((vv, i) => (
-                <button key={vv.id || i} className={"pm-litrchip" + (i === vi ? " active" : "")} onClick={() => pickVariant(i)}>
-                  {vv.litr} {unitOf(p.unit).short}
-                </button>
-              ))}
+              {variants.map((vv, i) => {
+                const vOut = isVariantOut(vv);
+                return (
+                  <button key={vv.id || i} className={"pm-litrchip" + (i === vi ? " active" : "") + (vOut ? " out" : "")} onClick={() => pickVariant(i)}>
+                    {vv.litr} {unitOf(p.unit).short}{vOut ? ` · ${tr("pmOut")}` : ""}
+                  </button>
+                );
+              })}
             </div>
           )}
 
           {colorList.length > 1 && (
             <div className="pm-litrrow">
-              {colorList.map((c, i) => (
-                <button key={c + i} className={"pm-litrchip" + (i === colorIdx ? " active" : "")} onClick={() => setColorIdx(i)}>
-                  {c}
-                </button>
-              ))}
+              {colorList.map((c, i) => {
+                const cOut = stockFor(v, c) <= 0;
+                return (
+                  <button key={c + i} className={"pm-litrchip" + (i === colorIdx ? " active" : "") + (cOut ? " out" : "")} onClick={() => pickColor(i)}>
+                    {c}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -767,13 +810,18 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
             <div><span>{tr("pmSize")}</span><b>{v.size || "—"}</b></div>
             <div><span>{tr("pmColor")}</span><b>{displayColor || "—"}</b></div>
           </div>
-          <div className="pm-qty">
-            <button onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus size={15} /></button>
-            <span>{qty}</span>
-            <button onClick={() => setQty((q) => q + 1)}><Plus size={15} /></button>
-          </div>
-          <button className="pm-add" onClick={() => { onAdd(p, v, qty, selectedColor); onClose(); }}>
-            <ShoppingBag size={16} /> {tr("addCart")}{fmt(unitPrice * qty)}
+          {outOfStock ? (
+            <div className="pm-outnote">{tr("pmOutNote")}</div>
+          ) : (
+            <div className="pm-qty">
+              <button onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus size={15} /></button>
+              <span>{cappedQty}</span>
+              <button disabled={stockLeft !== Infinity && cappedQty >= stockLeft}
+                onClick={() => setQty((q) => (stockLeft === Infinity ? q + 1 : Math.min(q + 1, stockLeft)))}><Plus size={15} /></button>
+            </div>
+          )}
+          <button className="pm-add" disabled={outOfStock} onClick={() => { onAdd(p, v, cappedQty, selectedColor); onClose(); }}>
+            {outOfStock ? tr("pmOut") : (<><ShoppingBag size={16} /> {tr("addCart")}{fmt(unitPrice * cappedQty)}</>)}
           </button>
           {AI_STUDIO_ENABLED && (
             <button className="pm-studio" onClick={() => { onSendToStudio(p, v); onClose(); }}>
@@ -2436,18 +2484,22 @@ function App() {
                   <h3 className="sec-title">{g.name} <span className="sec-count">{g.items.length}</span></h3>
                 )}
                 <div className="grid">
-                  {g.items.map((p) => (
-                    <div key={p.id} className="pcard" onClick={() => setActiveProduct(p)}>
-                      <div className="pcard-img">
-                        {thumbUrl(p) ? <img src={thumbUrl(p)} alt={p.name} /> : <span style={{ fontSize: 34 }}>🪴</span>}
+                  {g.items.map((p) => {
+                    const pOut = isProductOut(p);
+                    return (
+                      <div key={p.id} className={"pcard" + (pOut ? " pcard-out" : "")} onClick={() => setActiveProduct(p)}>
+                        <div className="pcard-img">
+                          {thumbUrl(p) ? <img src={thumbUrl(p)} alt={p.name} /> : <span style={{ fontSize: 34 }}>🪴</span>}
+                          {pOut && <span className="pcard-outbadge">{tr("pmOut")}</span>}
+                        </div>
+                        <div className="pcard-body">
+                          <div className="pcard-name">{p.name}</div>
+                          <div className="pcard-meta">{litrRangeText(p)}{p.color ? ` · ${p.color}` : ""}</div>
+                          <div className="pcard-price">{priceRangeText(p, priceMode)}</div>
+                        </div>
                       </div>
-                      <div className="pcard-body">
-                        <div className="pcard-name">{p.name}</div>
-                        <div className="pcard-meta">{litrRangeText(p)}{p.color ? ` · ${p.color}` : ""}</div>
-                        <div className="pcard-price">{priceRangeText(p, priceMode)}</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -2894,8 +2946,11 @@ const buildCSS = () => `
 .pcard-shop{display:inline-flex;align-items:center;gap:4px;background:transparent;border:none;padding:0;
   font-size:10.5px;font-weight:700;color:${C.laitonLo};cursor:pointer;font-family:${FONT_BODY};text-align:left}
 .pcard-shop:hover{text-decoration:underline}
-.pcard-img{background:${C.paper};border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pcard-img{background:${C.paper};border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
 .pcard-img img{width:100%;height:100%;object-fit:cover}
+.pcard-out{opacity:.55}
+.pcard-outbadge{position:absolute;top:6px;left:6px;background:${C.sale};color:#fff;font-size:10px;font-weight:700;
+  padding:3px 8px;border-radius:20px;letter-spacing:.02em}
 .pcard-name{font-size:12.5px;font-weight:600;color:${C.ink};line-height:1.3}
 .pcard-meta{font-size:11px;color:${C.inkDim}}
 .pcard-price{font-size:13.5px;font-weight:700;color:${C.price};margin-top:2px}
@@ -2970,6 +3025,7 @@ const buildCSS = () => `
 .pm-litrchip{border:1.5px solid ${C.mline};background:${C.paper};color:${C.ink};border-radius:20px;padding:7px 14px;
   font-size:12.5px;font-weight:600;cursor:pointer;font-family:${FONT_BODY}}
 .pm-litrchip.active{border-color:${C.accent};background:${C.accent};color:#fff}
+.pm-litrchip.out{opacity:.45;text-decoration:line-through;text-decoration-color:${C.sale}}
 .pm-specs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .pm-specs div{background:${C.paper};border-radius:10px;padding:8px;text-align:center}
 .pm-specs span{display:block;font-size:10px;color:${C.inkDim}}
@@ -2977,7 +3033,10 @@ const buildCSS = () => `
 .pm-qty{display:flex;align-items:center;gap:14px;justify-content:center;margin-bottom:14px}
 .pm-qty button{width:34px;height:34px;border-radius:10px;border:1px solid ${C.mline};background:${C.paper};cursor:pointer;
   display:flex;align-items:center;justify-content:center}
+.pm-qty button:disabled{opacity:.4;cursor:not-allowed}
 .pm-qty span{font-size:16px;font-weight:600;min-width:22px;text-align:center}
+.pm-outnote{background:${C.sale}18;color:${C.sale};border-radius:10px;padding:10px 12px;text-align:center;
+  font-size:12.5px;font-weight:600;margin-bottom:14px}
 .pm-add{width:100%;background:${C.accent};color:#fff;border:none;border-radius:14px;padding:14px;font-weight:600;
   font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:${FONT_BODY}}
 .pm-add:disabled{opacity:.5;cursor:not-allowed}

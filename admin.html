@@ -150,20 +150,37 @@
   .addVariantBtn:disabled { opacity:.4; cursor:not-allowed; border-color:var(--inkDim); color:var(--inkDim); }
   .hint { font-size:11.5px; color:var(--inkDim); margin-top:6px; line-height:1.5; }
 
+  /* variant — ranglar + ostatka */
+  .vcolorsBlock { margin-top:12px; padding-top:12px; border-top:1px dashed var(--mline); }
+  .vcolorsBlock > label { margin:0 0 6px; }
+  .vcolorList { display:flex; flex-direction:column; gap:7px; margin-top:9px; }
+  .vcolorRow { display:flex; align-items:center; gap:8px; }
+  .vcolorRow .colorChip { flex-shrink:0; margin:0; }
+  .vcolorRow input[type=number] { width:78px; flex-shrink:0; padding:7px 8px; margin:0; text-align:center; }
+  .vcolorRow .stockUnit { font-size:11px; color:var(--inkDim); flex-shrink:0; }
+  .vstockSolo { max-width:150px; }
+
   /* list */
   .plist { display:flex; flex-direction:column; gap:10px; }
-  .prow { display:flex; gap:12px; align-items:center; background:#fff; border:1px solid var(--mline); border-radius:12px; padding:10px; }
+  .prow { display:flex; gap:12px; align-items:center; background:#fff; border:1px solid var(--mline); border-radius:12px; padding:10px; flex-wrap:wrap; }
+  .prow.out { opacity:.6; }
   .prow img { width:52px; height:52px; border-radius:8px; object-fit:cover; background:var(--paper); }
   .prow .info { flex:1; min-width:0; }
   .prow .name { font-weight:600; font-size:13.5px; }
   .prow .meta { font-size:11.5px; color:var(--inkDim); }
   .prow .meta.opt { color:var(--laitonLo); }
+  .prow .meta.stock { font-weight:700; color:var(--accent); }
+  .prow .meta.stock.zero { color:var(--sale); }
   .prow .shop { font-size:10.5px; color:var(--laitonLo); font-weight:700; }
   .prow .price { font-weight:700; font-size:12.5px; white-space:nowrap; }
   .prow .btns { display:flex; flex-direction:column; gap:6px; }
   .prow button { background:transparent; border:1px solid var(--mline); border-radius:8px; padding:6px 10px; font-size:11.5px; cursor:pointer; white-space:nowrap; }
   .prow .editBtn { color:var(--accent); border-color:var(--accent); }
+  .prow .stockBtn { color:#B5711A; border-color:#B5711A; }
   .prow .delBtn { color:var(--sale); }
+  .quickStock { flex-basis:100%; margin-top:4px; padding:10px; background:var(--paper); border:1px dashed var(--mline); border-radius:10px; }
+  .qsRow { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 0; font-size:12.5px; }
+  .qsRow input { width:78px; padding:6px 8px; border:1px solid var(--mline); border-radius:7px; font-size:13px; text-align:center; }
 
   /* sellers (super-admin) */
   .srow { display:flex; gap:10px; align-items:center; background:#fff; border:1px solid var(--mline); border-radius:12px; padding:12px; margin-bottom:10px; flex-wrap:wrap; }
@@ -278,14 +295,6 @@
       <label>Umumiy nomi (masalan: Gul tuvak rombik)</label>
       <input type="text" id="fName" placeholder="Gul tuvak rombik" />
 
-      <label style="margin-top:14px;">Ranglar (ixtiyoriy — bir nechtasini qo'shsangiz, mijoz saytda rangni tanlab buyurtma beradi)</label>
-      <div class="colorAddRow">
-        <input type="text" id="fColorInput" maxlength="20" placeholder="Masalan: Oq"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();addColor();}" />
-        <button type="button" id="addColorBtn" onclick="addColor()">+ Qo'shish</button>
-      </div>
-      <div class="colorChips" id="colorChips"></div>
-
       <label style="margin-top:14px;">O'lchov birligi — variantlar shu birlikda kiritiladi</label>
       <div class="tabs">
         <div class="tab active" data-unit="litr" onclick="setUnit('litr')">Litr</div>
@@ -294,10 +303,10 @@
         <div class="tab" data-unit="dona" onclick="setUnit('dona')">Dona</div>
       </div>
 
-      <label style="margin-top:16px;" id="variantsLabel">Hajm (litr) variantlari — har birida 3 tagacha rasm, chakana va optom narxi bo'ladi (1 tadan 10 tagacha variant)</label>
+      <label style="margin-top:16px;" id="variantsLabel">Hajm (litr) variantlari — har birida 3 tagacha rasm, narxi, ranglari va ostatkasi bo'ladi (1 tadan 10 tagacha variant)</label>
       <div class="variantsWrap" id="variantsWrap"></div>
       <button type="button" class="addVariantBtn" id="addVariantBtn" onclick="addVariant()">+ Yana variant qo'shish</button>
-      <div class="hint">Rasmlar avtomatik siqiladi — katta telefon rasmlarini ham bemalol yuklashingiz mumkin. Birinchi rasm asosiy bo'lib, katalogda ko'rinadi. Optom narx — mijoz 5 000 000 so'mdan yuqori xarid qilganda ko'radigan narx.</div>
+      <div class="hint">Rasmlar avtomatik siqiladi — katta telefon rasmlarini ham bemalol yuklashingiz mumkin. Birinchi rasm asosiy bo'lib, katalogda ko'rinadi. Optom narx — mijoz 5 000 000 so'mdan yuqori xarid qilganda ko'radigan narx. Har variantning rangi va ostatkasi (necha dona qolgani) ENDI SHU VARIANT ICHIDA — boshqa hajmga aralashmaydi. Ostatkani bo'sh qoldirsangiz — cheksiz hisoblanadi, tugashi kuzatilmaydi.</div>
 
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFile(event)" />
 
@@ -893,7 +902,7 @@
   // ===================== mahsulot formasi =====================
   // v.imgs — 3 tagacha rasm: { url } (saqlangan) yoki { dataUrl, name, type } (yangi)
   function blankVariant() {
-    return { id: uid(), litr: "", price: "", optPrice: "", size: "", imgs: [], name: "", color: "", overrideOpen: false };
+    return { id: uid(), litr: "", price: "", optPrice: "", size: "", imgs: [], name: "", colors: [], colorInput: "", stock: {}, overrideOpen: false };
   }
 
   function resetForm() {
@@ -905,8 +914,6 @@
     document.getElementById("cancelBtn").classList.add("hidden");
     document.getElementById("submitBtn").textContent = "Saqlash";
     document.getElementById("fName").value = "";
-    colors = [];
-    renderColorChips();
     renderSectionSelect();
     document.getElementById("fSection").value = "";
     variants = [blankVariant()];
@@ -959,28 +966,42 @@
     renderSections();
     renderSectionSelect();
   }
-  // ===================== ranglar (bir nechta, mijoz saytda tanlaydi) =====================
-  let colors = [];
-  function renderColorChips() {
-    const wrap = document.getElementById("colorChips");
-    wrap.innerHTML = colors.map((c, i) => `
-      <span class="colorChip">${escHtml(c)}<button type="button" onclick="removeColor(${i})" title="O'chirish">✕</button></span>
-    `).join("");
-    document.getElementById("addColorBtn").disabled = colors.length >= 8;
+  // ===================== ranglar — ENDI HAR VARIANT O'ZINING ranglariga ega =====================
+  // (2026-09-09: avval bitta umumiy ro'yxat edi — barcha hajmlarga bir xil rang
+  // qo'llanardi, shu sabab boshqa hajmga tegishli rang ham qabul bo'lardi.)
+  function updateVariantColorInput(idx, val) {
+    variants[idx].colorInput = val;
   }
-  function addColor() {
-    if (colors.length >= 8) return;
-    const inp = document.getElementById("fColorInput");
-    const val = inp.value.trim();
+  function addVariantColor(idx) {
+    const v = variants[idx];
+    if (v.colors.length >= 8) return;
+    const val = (v.colorInput || "").trim().slice(0, 20);
     if (!val) return;
-    if (colors.some(c => c.toLowerCase() === val.toLowerCase())) { inp.value = ""; return; }
-    colors.push(val);
-    inp.value = "";
-    renderColorChips();
+    if (v.colors.some(c => c.toLowerCase() === val.toLowerCase())) { v.colorInput = ""; renderVariants(); return; }
+    v.colors.push(val);
+    v.colorInput = "";
+    renderVariants();
   }
-  function removeColor(i) {
-    colors.splice(i, 1);
-    renderColorChips();
+  function removeVariantColor(idx, ci) {
+    const v = variants[idx];
+    const removed = v.colors[ci];
+    v.colors.splice(ci, 1);
+    if (removed != null && v.stock) delete v.stock[removed];
+    renderVariants();
+  }
+  function updateVariantStock(idx, colorKey, val) {
+    const v = variants[idx];
+    if (!v.stock) v.stock = {};
+    if (val === "") { delete v.stock[colorKey]; return; }
+    const n = Math.max(0, Math.floor(Number(val)) || 0);
+    v.stock[colorKey] = n;
+  }
+  // Rang matnini (apostrof/qo'shtirnoq bo'lishi mumkin) inline HTML attributega
+  // xavfsiz qo'yish uchun — indeks orqali ishlaymiz, qiymatning o'zini emas.
+  function updateVariantStockAt(idx, ci, val) {
+    const key = (variants[idx].colors || [])[ci];
+    if (key == null) return;
+    updateVariantStock(idx, key, val);
   }
 
   function renderSectionSelect() {
@@ -1013,7 +1034,7 @@
   function renderVariants() {
     const wrap = document.getElementById("variantsWrap");
     wrap.innerHTML = variants.map((v, idx) => {
-      const hasOverride = v.name || v.color;
+      const hasOverride = v.name;
       const openClass = (v.overrideOpen || hasOverride) ? " open" : "";
       const imgsHtml = [0, 1, 2].map((k) => {
         const im = (v.imgs || [])[k];
@@ -1059,15 +1080,37 @@
               <input type="text" placeholder="Ø22.5 × 21" value="${escAttr(v.size)}" oninput="updateVariant(${idx}, 'size', this.value)" />
             </div>`}
           </div>
-          <button type="button" class="vOverrideToggle" onclick="toggleOverride(${idx})">${(v.overrideOpen || hasOverride) ? "▾" : "▸"} Bu variant uchun boshqa nom/rang (ixtiyoriy)</button>
+
+          <div class="vcolorsBlock">
+            <label>Ranglar va ostatka (ixtiyoriy — rang qo'shsangiz, mijoz shu hajm uchun rang tanlaydi)</label>
+            <div class="colorAddRow">
+              <input type="text" maxlength="20" placeholder="Masalan: Oq" value="${escAttr(v.colorInput || "")}"
+                oninput="updateVariantColorInput(${idx}, this.value)"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();addVariantColor(${idx});}" />
+              <button type="button" onclick="addVariantColor(${idx})" ${(v.colors || []).length >= 8 ? "disabled" : ""}>+ Qo'shish</button>
+            </div>
+            ${(v.colors && v.colors.length) ? `
+            <div class="vcolorList">
+              ${v.colors.map((c, ci) => `
+                <div class="vcolorRow">
+                  <span class="colorChip">${escHtml(c)}<button type="button" onclick="removeVariantColor(${idx},${ci})" title="O'chirish">✕</button></span>
+                  <input type="number" min="0" placeholder="cheksiz" value="${(v.stock && v.stock[c] != null) ? v.stock[c] : ""}"
+                    oninput="updateVariantStockAt(${idx}, ${ci}, this.value)" />
+                  <span class="stockUnit">dona qoldi</span>
+                </div>
+              `).join("")}
+            </div>` : `
+            <label style="margin-top:10px;">Ostatka, dona (ixtiyoriy — bo'sh = cheksiz)</label>
+            <input type="number" min="0" class="vstockSolo" placeholder="cheksiz" value="${(v.stock && v.stock[""] != null) ? v.stock[""] : ""}"
+              oninput="updateVariantStock(${idx}, '', this.value)" />
+            `}
+          </div>
+
+          <button type="button" class="vOverrideToggle" onclick="toggleOverride(${idx})">${(v.overrideOpen || hasOverride) ? "▾" : "▸"} Bu variant uchun boshqa nom (ixtiyoriy)</button>
           <div class="vOverrideWrap${openClass}">
             <div>
               <label style="margin:0 0 4px;">Nomi (bo'sh — umumiy nomdan)</label>
               <input type="text" value="${escAttr(v.name)}" oninput="updateVariant(${idx}, 'name', this.value)" />
-            </div>
-            <div>
-              <label style="margin:0 0 4px;">Rangi (bo'sh — umumiy rangdan)</label>
-              <input type="text" value="${escAttr(v.color)}" oninput="updateVariant(${idx}, 'color', this.value)" />
             </div>
           </div>
         </div>
@@ -1251,13 +1294,13 @@
         outVariants.push({
           id: v.id, litr: v.litr.trim(), price: Number(v.price), optPrice: Number(v.optPrice),
           size: v.size.trim(), image: images[0] || "", images,
-          name: (v.name || "").trim(), color: (v.color || "").trim(),
+          name: (v.name || "").trim(), colors: (v.colors || []).slice(0, 8), stock: { ...(v.stock || {}) },
         });
       }
       msgEl.innerHTML = '<div class="msg ok">Saqlanmoqda…</div>';
 
       const payload = {
-        name, category, color: colors[0] || "", colors: colors.slice(), unit,
+        name, category, unit,
         sectionId: document.getElementById("fSection").value || "",
         variants: outVariants,
       };
@@ -1309,17 +1352,22 @@
     document.getElementById("submitBtn").textContent = "Yangilash";
 
     document.getElementById("fName").value = p.name || "";
-    colors = Array.isArray(p.colors) && p.colors.length ? p.colors.slice(0, 8) : (p.color ? [p.color] : []);
-    renderColorChips();
     renderSectionSelect();
     document.getElementById("fSection").value =
       sections.some(s => s.id === p.sectionId) ? p.sectionId : "";
+
+    // eski mahsulotlarda ranglar hali MAHSULOT darajasida bo'lishi mumkin
+    // (2026-09-09'dan oldin qo'shilgan) — variant.colors bo'sh bo'lsa,
+    // shulardan boshlanadi (sotuvchi keyin har variant uchun moslashtiradi).
+    const legacyColors = Array.isArray(p.colors) && p.colors.length ? p.colors.slice(0, 8) : (p.color ? [p.color] : []);
 
     if (Array.isArray(p.variants) && p.variants.length > 0) {
       variants = p.variants.map(v => {
         // eski mahsulotlarda rasm `images` massivida, yangilarida `image`da bo'lishi mumkin
         const urls = (Array.isArray(v.images) && v.images.length ? v.images : (v.image ? [v.image] : []))
           .filter(Boolean).slice(0, 3);
+        const vColors = Array.isArray(v.colors) && v.colors.length ? v.colors.slice(0, 8) : legacyColors.slice();
+        const vStock = (v.stock && typeof v.stock === "object") ? { ...v.stock } : {};
         return {
           id: v.id || uid(),
           litr: v.litr || "",
@@ -1328,14 +1376,16 @@
           size: v.size || "",
           imgs: urls.map(u => ({ url: u })),
           name: v.name || "",
-          color: v.color || "",
-          overrideOpen: !!(v.name || v.color),
+          colors: vColors,
+          colorInput: "",
+          stock: vStock,
+          overrideOpen: !!(v.name),
         };
       });
     } else {
       const urls = (Array.isArray(p.images) ? p.images : []).filter(Boolean).slice(0, 3);
       variants = [
-        { id: uid(), litr: p.capacity || "", price: p.price || "", optPrice: "", size: p.size || "", imgs: urls.map(u => ({ url: u })), name: "", color: "", overrideOpen: false },
+        { id: uid(), litr: p.capacity || "", price: p.price || "", optPrice: "", size: p.size || "", imgs: urls.map(u => ({ url: u })), name: "", colors: legacyColors.slice(), colorInput: "", stock: {}, overrideOpen: false },
       ];
     }
     setUnit(p.unit || "litr");   // renderVariants ni ham chaqiradi
@@ -1381,6 +1431,81 @@
     return (p.images && p.images[0]) || "";
   }
 
+  // ===================== ostatka — ro'yxatda xulosa + tezkor tahrirlash =====================
+  // tracked=true bo'lsa — kamida bitta variant/rangda son kiritilgan (kuzatiladi).
+  function stockSummary(p) {
+    let tracked = false, sum = 0;
+    for (const v of (p.variants || [])) {
+      if (v.stock && typeof v.stock === "object") {
+        for (const k in v.stock) { tracked = true; sum += Number(v.stock[k]) || 0; }
+      }
+    }
+    return { tracked, sum };
+  }
+
+  let quickStockDraft = {}; // productId -> tahrirlanayotgan variants massivi (chuqur nusxa)
+
+  function toggleQuickStock(id) {
+    document.querySelectorAll(".quickStock").forEach(w => { if (w.id !== "qs-" + id) w.classList.add("hidden"); });
+    const wrap = document.getElementById("qs-" + id);
+    if (!wrap) return;
+    const willOpen = wrap.classList.contains("hidden");
+    wrap.classList.toggle("hidden");
+    if (willOpen) {
+      const p = productsCache.find(x => x.id === id);
+      if (!p) return;
+      quickStockDraft[id] = JSON.parse(JSON.stringify(p.variants || []));
+      renderQuickStock(id, p.unit || "litr");
+    }
+  }
+
+  function renderQuickStock(id, unit) {
+    const wrap = document.getElementById("qs-" + id);
+    if (!wrap) return;
+    const short = (UNIT_META[unit] || UNIT_META.litr).short;
+    const vs = quickStockDraft[id] || [];
+    const rows = vs.map((v, vi) => {
+      const keys = (Array.isArray(v.colors) && v.colors.length) ? v.colors : [""];
+      return keys.map(k => `
+        <div class="qsRow">
+          <span>${escHtml(v.litr || "")} ${short}${k ? " · " + escHtml(k) : ""}</span>
+          <input type="number" min="0" placeholder="cheksiz" value="${(v.stock && v.stock[k] != null) ? v.stock[k] : ""}"
+            oninput="qsUpdate('${id}', ${vi}, ${JSON.stringify(keys.indexOf(k))}, this.value)" data-k="${escAttr(k)}" />
+        </div>`).join("");
+    }).join("");
+    wrap.innerHTML = rows + `<button type="button" class="submitbtn" style="margin-top:8px;padding:9px;" onclick="qsSave('${id}')">Ostatkani saqlash</button>`;
+  }
+
+  function qsUpdate(id, vi, ki, val) {
+    const vs = quickStockDraft[id];
+    if (!vs || !vs[vi]) return;
+    const v = vs[vi];
+    const keys = (Array.isArray(v.colors) && v.colors.length) ? v.colors : [""];
+    const key = keys[ki];
+    if (key === undefined) return;
+    if (!v.stock) v.stock = {};
+    if (val === "") delete v.stock[key];
+    else v.stock[key] = Math.max(0, Math.floor(Number(val)) || 0);
+  }
+
+  async function qsSave(id) {
+    const p = productsCache.find(x => x.id === id);
+    if (!p || !quickStockDraft[id]) return;
+    const payload = {
+      id: p.id, name: p.name, category: p.category, unit: p.unit || "litr",
+      sectionId: p.sectionId || "", variants: quickStockDraft[id],
+    };
+    const res = await fetch("/api/products", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!data.ok) { alert(data.error || "Xatolik"); return; }
+    document.getElementById("qs-" + id).classList.add("hidden");
+    loadProducts();
+  }
+
   async function loadProducts() {
     const res = await fetch("/api/products");
     const data = await res.json();
@@ -1397,8 +1522,11 @@
       list.innerHTML = '<p style="color:var(--inkDim); font-size:13px;">Hali mahsulot yo\'q. Yuqoridagi forma orqali birinchi mahsulotingizni qo\'shing.</p>';
       return;
     }
-    list.innerHTML = items.map(p => `
-      <div class="prow">
+    list.innerHTML = items.map(p => {
+      const st = stockSummary(p);
+      const isOut = st.tracked && st.sum <= 0;
+      return `
+      <div class="prow${isOut ? " out" : ""}">
         <img src="${thumbUrl(p)}" />
         <div class="info">
           ${ME.isSuper ? `<div class="shop">🏪 ${escHtml(p.shopName || "Tuvaklar")}</div>` : ""}
@@ -1406,13 +1534,17 @@
           <div class="meta">${sectionNameOf(p) ? escHtml(sectionNameOf(p)) : 'Boshqalar'}${p.color ? ' · ' + escHtml(p.color) : ''} · ${litrRangeText(p)}</div>
           <div class="price">Chakana: ${priceRangeText(p)}</div>
           ${optPriceRangeText(p) ? `<div class="meta opt">Optom: ${optPriceRangeText(p)}</div>` : ''}
+          ${st.tracked ? `<div class="meta stock${st.sum <= 0 ? ' zero' : ''}">${st.sum <= 0 ? '⛔ Tugadi' : '📦 ' + st.sum + ' dona qoldi'}</div>` : ''}
         </div>
         <div class="btns">
           <button class="editBtn" onclick="editProduct('${p.id}')">Tahrirlash</button>
+          <button class="stockBtn" onclick="toggleQuickStock('${p.id}')">📦 Ostatka</button>
           <button class="delBtn" onclick="deleteProduct('${p.id}')">O'chirish</button>
         </div>
+        <div class="quickStock hidden" id="qs-${p.id}"></div>
       </div>
-    `).join("");
+    `;
+    }).join("");
   }
 
   async function deleteProduct(id) {
