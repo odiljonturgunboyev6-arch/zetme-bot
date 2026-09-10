@@ -164,6 +164,8 @@ const STR = {
     statShopN: () => "do'kon", statProdN: () => "mahsulot",
     marketTitle: "Mahsulotlar", marketShopsN: (n) => n + " ta do'kon",
     marketHint: "Do'konni tanlang — mahsulotlar bo'limlar bo'yicha ochiladi",
+    catAll: "Barchasi", catEmpty: "Bu bo'limda hali do'kon yo'q — tez orada qo'shiladi.",
+    qtyMax: (n) => "Omborda faqat " + n + " dona bor",
     loading: "Yuklanmoqda…", loadFail: "Yuklab bo'lmadi: ", noShopsYet: "Hali do'kon yo'q. Tez orada to'ldiriladi.",
     productN: (n) => n + " ta mahsulot",
     allShops: "Barcha do'konlar", bonusGifts: " · ★ bonus va sovg'alar bor",
@@ -278,6 +280,8 @@ const STR = {
     statShopN: (n) => plural(n, "магазин", "магазина", "магазинов"), statProdN: (n) => plural(n, "товар", "товара", "товаров"),
     marketTitle: "Товары", marketShopsN: (n) => n + " " + plural(n, "магазин", "магазина", "магазинов"),
     marketHint: "Выберите магазин — товары откроются по разделам",
+    catAll: "Все", catEmpty: "В этом разделе пока нет магазинов — скоро появятся.",
+    qtyMax: (n) => "На складе только " + n + " шт.",
     loading: "Загрузка…", loadFail: "Не удалось загрузить: ", noShopsYet: "Магазинов пока нет. Скоро появятся.",
     productN: (n) => n + " " + plural(n, "товар", "товара", "товаров"),
     allShops: "Все магазины", bonusGifts: " · ★ бонусы и подарки",
@@ -606,6 +610,45 @@ function stockFor(v, color) {
   const val = v.stock[color || ""];
   return typeof val === "number" ? val : Infinity;
 }
+/* Miqdor tanlagich:  −  [ 4 ]  +   — o'rtadagi sonni mijoz QO'LDA ham yozadi (2026-09-10).
+   Telefonda raqamli klaviatura ochiladi. max — ombordagi qoldiq (Infinity = kuzatilmaydi).
+   Qoldiqdan oshirib yozsa — max'ga tushiriladi va pastda qisqa ogohlantirish chiqadi. */
+function QtyInput({ value, min = 1, max = Infinity, onChange, size = "md" }) {
+  const [text, setText] = useState(String(value));
+  const [note, setNote] = useState("");
+  useEffect(() => { setText(String(value)); }, [value]);
+  useEffect(() => {
+    if (!note) return;
+    const t = setTimeout(() => setNote(""), 2600);
+    return () => clearTimeout(t);
+  }, [note]);
+  const hardMax = max === Infinity ? 99999 : max;
+  const clamp = (n) => Math.max(min, Math.min(n, hardMax));
+  function hitMax() { if (max !== Infinity) setNote(tr("qtyMax", max)); }
+  function commit(raw) {
+    const n = parseInt(String(raw).replace(/\D/g, ""), 10);
+    if (!n || n < min) { setText(String(value)); return; }
+    const c = clamp(n);
+    if (n > c) hitMax();
+    setText(String(c));
+    if (c !== value) onChange(c);
+  }
+  const ic = size === "sm" ? 13 : 15;
+  return (
+    <div className={"qtyin " + size + (note ? " warn" : "")}>
+      <button type="button" aria-label="−" disabled={value <= min} onClick={() => onChange(clamp(value - 1))}><Minus size={ic} /></button>
+      <input
+        type="text" inputMode="numeric" pattern="[0-9]*" value={text} aria-label="soni"
+        onChange={(e) => setText(e.target.value.replace(/\D/g, "").slice(0, 5))}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+        onFocus={(e) => e.currentTarget.select()}
+      />
+      <button type="button" aria-label="+" className={value >= hardMax ? "atmax" : ""} onClick={() => { if (value >= hardMax) { hitMax(); return; } onChange(clamp(value + 1)); }}><Plus size={ic} /></button>
+      {note && <div className="qtyin-note">{note}</div>}
+    </div>
+  );
+}
 function isVariantOut(v) {
   if (!v || !v.stock || typeof v.stock !== "object") return false;
   const colors = (Array.isArray(v.colors) && v.colors.length) ? v.colors : [""];
@@ -814,10 +857,7 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
             <div className="pm-outnote">{tr("pmOutNote")}</div>
           ) : (
             <div className="pm-qty">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus size={15} /></button>
-              <span>{cappedQty}</span>
-              <button disabled={stockLeft !== Infinity && cappedQty >= stockLeft}
-                onClick={() => setQty((q) => (stockLeft === Infinity ? q + 1 : Math.min(q + 1, stockLeft)))}><Plus size={15} /></button>
+              <QtyInput value={cappedQty} max={stockLeft} onChange={setQty} />
             </div>
           )}
           <button className="pm-add" disabled={outOfStock} onClick={() => { onAdd(p, v, cappedQty, selectedColor); onClose(); }}>
@@ -904,11 +944,7 @@ function CartShopGroup({ group, priceMode, onQty, onCheckout, index }) {
               <div style={{ fontWeight: 600, fontSize: 13.5 }}>{it.name}</div>
               <div style={{ fontSize: 12, color: C.inkDim }}>{it.litr} {unitOf(it.unit).short}{it.color ? ` · ${it.color}` : ""} · {fmt(priceOf(it, priceMode))}</div>
             </div>
-            <div className="qty-mini">
-              <button onClick={() => onQty(it.key, -1)}><Minus size={13} /></button>
-              <span>{it.qty}</span>
-              <button onClick={() => onQty(it.key, 1)}><Plus size={13} /></button>
-            </div>
+            <QtyInput size="sm" value={it.qty} max={typeof it.stock === "number" ? it.stock : Infinity} onChange={(n) => onQty(it.key, n)} />
           </div>
         ))}
       </div>
@@ -1640,6 +1676,8 @@ function App() {
   const [productsError, setProductsError] = useState(null);
   const [shops, setShops] = useState([]);              // studiyadagi do'konlar devori
   const [shopsLoading, setShopsLoading] = useState(true);
+  const [categories, setCategories] = useState([]);      // marketplace bo'limlari: [{id,name,nameRu,emoji}] (super-admin yaratadi)
+  const [catFilter, setCatFilter] = useState(null);      // null = Barchasi | category id
   const [priceMode, setPriceMode] = useState("chakana"); // "chakana" | "optom"
   const [shopFilter, setShopFilter] = useState(null);    // null | { id, name } — do'kon sahifasi
 
@@ -1907,7 +1945,12 @@ function App() {
   useEffect(() => {
     fetch(`${API_BASE}/api/sellers`)
       .then((r) => r.json())
-      .then((data) => { if (data.ok) setShops(data.sellers || []); })
+      .then((data) => {
+        if (data.ok) {
+          setShops(data.sellers || []);
+          setCategories(Array.isArray(data.categories) ? data.categories : []);
+        }
+      })
       .catch(() => {})
       .finally(() => setShopsLoading(false));
   }, []);
@@ -1931,10 +1974,26 @@ function App() {
         img: s.shopLogo || firstImg[s.id] || "",
         count: count[s.id] || 0,
         bonus: !!s.bonusEnabled,
+        categoryIds: Array.isArray(s.categoryIds) ? s.categoryIds : [],
       }))
       .filter((s) => s.count > 0)
       .sort((a, b) => b.count - a.count);
   }, [shops, products]);
+
+  // Marketplace bo'limi tanlangan bo'lsa — faqat shu bo'limga biriktirilgan do'konlar.
+  // Faqat mahsuloti bor do'konlari bor bo'limlar chip sifatida ko'rsatiladi + "Barchasi".
+  const catChips = useMemo(() => {
+    const valid = categories.filter((c) => c && c.id && c.name);
+    return valid.map((c) => ({
+      ...c,
+      label: (LANG === "ru" && c.nameRu) ? c.nameRu : c.name,
+      count: shopWall.filter((s) => s.categoryIds.includes(c.id)).length,
+    }));
+  }, [categories, shopWall, lang]);
+  const wallShown = useMemo(
+    () => (catFilter ? shopWall.filter((s) => s.categoryIds.includes(catFilter)) : shopWall),
+    [shopWall, catFilter]
+  );
 
   // STUDIYA devori uchun: MAHSULOTGA OID HECH NARSA KO'RSATILMAYDI —
   // faqat sotuvchi o'zi yuklagan do'kon rasmi (bo'lmasa nomining bosh harfi) va nomi.
@@ -2025,14 +2084,18 @@ function App() {
   // tegishli qatorlarnigina yuboradi — buni server ham talab qiladi).
   function doAddToCart(fam, variant, qty, color) {
     const key = `${fam.id}_${variant.id}_${color || ""}`;
+    // ombordagi qoldiq (rang bo'yicha) — savatda undan oshirib bo'lmasin; kuzatilmasa null
+    const st = stockFor(variant, color || "");
+    const stock = st === Infinity ? null : st;
+    const cap = (n) => (stock === null ? n : Math.max(1, Math.min(n, stock)));
     setCart((c) => {
       const ex = c.find((i) => i.key === key);
-      if (ex) return c.map((i) => (i.key === key ? { ...i, qty: i.qty + qty } : i));
+      if (ex) return c.map((i) => (i.key === key ? { ...i, qty: cap(i.qty + qty), stock } : i));
       return [...c, {
         key, id: fam.id, variantId: variant.id,
         name: variant.name || fam.name, litr: variant.litr, unit: fam.unit || "litr",
         price: Number(variant.price), optPrice: Number(variant.optPrice),
-        image: variantImg(variant), qty, color: color || "",
+        image: variantImg(variant), qty: cap(qty), color: color || "", stock,
         sellerId: fam.sellerId || "zetme",
         shopName: fam.shopName || "Tuvaklar",
         bonusEnabled: fam.bonusEnabled !== false,
@@ -2046,8 +2109,15 @@ function App() {
     setShopFilter({ id: p.sellerId || "zetme", name: p.shopName || "Tuvaklar" });
     setActiveProduct(null);
   }
-  function changeQty(key, d) {
-    setCart((c) => c.map((i) => (i.key === key ? { ...i, qty: Math.max(1, i.qty + d) } : i)).filter((i) => i.qty > 0));
+  // Savatdagi sonni ANIQ qiymatga o'rnatish (− / + tugmalari ham, qo'lda yozilgan son ham
+  // shu yerga keladi). 1 dan kam bo'lmaydi, ombordagi qoldiqdan oshmaydi.
+  function changeQty(key, n) {
+    setCart((c) => c.map((i) => {
+      if (i.key !== key) return i;
+      let q = Math.max(1, Math.floor(Number(n) || 1));
+      if (typeof i.stock === "number") q = Math.min(q, Math.max(1, i.stock));
+      return { ...i, qty: q };
+    }));
   }
   function sendPotToStudio(p, variant) {
     const img = variantImg(variant) || "catalog";
@@ -2408,18 +2478,40 @@ function App() {
           <>
             <div className="market-head">
               <h2 className="market-title">{tr("marketTitle")}</h2>
-              <span className="market-sub">{tr("marketShopsN", shopWall.length)}</span>
+              <span className="market-sub">{tr("marketShopsN", wallShown.length)}</span>
             </div>
             <p className="market-hint">{tr("marketHint")}</p>
+
+            {/* Marketplace bo'limlari: Barchasi / Tuvaklar / Sun'iy gullar / ... (super-admin yaratadi) */}
+            {catChips.length > 0 && (
+              <div className="mcats">
+                <button className={"mcat" + (catFilter === null ? " active" : "")} onClick={() => setCatFilter(null)}>
+                  {tr("catAll")} <span className="mcat-n">{shopWall.length}</span>
+                </button>
+                {catChips.map((c) => (
+                  <button key={c.id} className={"mcat" + (catFilter === c.id ? " active" : "") + (c.count === 0 ? " empty" : "")} onClick={() => setCatFilter(c.id)}>
+                    {c.emoji ? <span className="mcat-emoji">{c.emoji}</span> : null}{c.label}
+                    {c.count > 0 && <span className="mcat-n">{c.count}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {(productsLoading || shopsLoading) && <div className="market-state">{tr("loading")}</div>}
             {!productsLoading && productsError && <div className="market-state err">{tr("loadFail")}{productsError}</div>}
             {!productsLoading && !shopsLoading && !productsError && shopWall.length === 0 && (
               <div className="market-state">{tr("noShopsYet")}</div>
             )}
+            {!productsLoading && !shopsLoading && !productsError && shopWall.length > 0 && wallShown.length === 0 && (
+              <div className="market-state catempty">
+                <div className="catempty-emoji">🌱</div>
+                <div>{tr("catEmpty")}</div>
+                <button className="catempty-btn" onClick={() => setCatFilter(null)}>{tr("catAll")}</button>
+              </div>
+            )}
 
             <div className="mshop-grid">
-              {shopWall.map((s, i) => (
+              {wallShown.map((s, i) => (
                 <button key={s.id} className="mshop-card" style={{ animationDelay: `${i * 60}ms` }} onClick={() => openShopById(s)}>
                   <div className="mshop-img">
                     {s.img ? <img src={s.img} alt={s.name} loading="lazy" /> : <span className="mshop-letter">{(s.name || "?").trim().charAt(0).toUpperCase()}</span>}
@@ -2903,6 +2995,21 @@ const buildCSS = () => `
 
 /* ---------- MARKET: do'konlar ro'yxati (1-qadam) ---------- */
 .market-hint{font-size:12.5px;color:${C.inkDim};margin:0 0 14px}
+/* marketplace bo'limlari chip qatori (Barchasi / Tuvaklar / Sun'iy gullar ...) */
+.mcats{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;margin:-2px -2px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.mcats::-webkit-scrollbar{display:none}
+.mcat{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;border:1.5px solid ${C.mline};background:${C.card};color:${C.ink};
+  border-radius:22px;padding:8px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;
+  transition:border-color .2s,background .2s,color .2s,transform .2s}
+.mcat:hover{border-color:${C.laiton}}
+.mcat.active{border-color:${C.accent};background:${C.accent};color:#fff}
+.mcat.empty{opacity:.55}
+.mcat-emoji{font-size:15px;line-height:1}
+.mcat-n{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;background:rgba(127,127,127,.14)}
+.mcat.active .mcat-n{background:rgba(255,255,255,.22)}
+.market-state.catempty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:26px 18px}
+.catempty-emoji{font-size:34px;line-height:1}
+.catempty-btn{margin-top:4px;border:1.5px solid ${C.accent};background:transparent;color:${C.accent};border-radius:20px;padding:7px 16px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
 .mshop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
 .mshop-card{text-align:left;padding:0;background:${C.card};border:1px solid ${C.mline};border-radius:16px;overflow:hidden;
   cursor:pointer;font-family:inherit;animation:swFade .5s cubic-bezier(.22,1,.36,1) both;
@@ -3030,11 +3137,28 @@ const buildCSS = () => `
 .pm-specs div{background:${C.paper};border-radius:10px;padding:8px;text-align:center}
 .pm-specs span{display:block;font-size:10px;color:${C.inkDim}}
 .pm-specs b{font-size:12px;color:${C.ink}}
-.pm-qty{display:flex;align-items:center;gap:14px;justify-content:center;margin-bottom:14px}
-.pm-qty button{width:34px;height:34px;border-radius:10px;border:1px solid ${C.mline};background:${C.paper};cursor:pointer;
-  display:flex;align-items:center;justify-content:center}
-.pm-qty button:disabled{opacity:.4;cursor:not-allowed}
-.pm-qty span{font-size:16px;font-weight:600;min-width:22px;text-align:center}
+.pm-qty{display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+/* QtyInput: − [ son ] + — son qo'lda yoziladi. md (mahsulot oynasi) / sm (savat) */
+.qtyin{position:relative;display:inline-flex;align-items:center;gap:10px}
+.qtyin button{width:34px;height:34px;border-radius:10px;border:1px solid ${C.mline};background:${C.paper};color:${C.ink};cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:border-color .2s,opacity .2s}
+.qtyin button:hover{border-color:${C.laiton}}
+.qtyin button:disabled{opacity:.35;cursor:not-allowed}
+.qtyin button.atmax{opacity:.5}
+.qtyin input{width:54px;height:34px;text-align:center;font-size:16px;font-weight:700;font-family:inherit;color:${C.ink};
+  background:${C.card};border:1.5px solid ${C.mline};border-radius:10px;outline:none;padding:0 4px;-moz-appearance:textfield;
+  transition:border-color .2s,box-shadow .2s}
+.qtyin input:focus{border-color:${C.accent};box-shadow:0 0 0 3px ${C.accent}22}
+.qtyin.warn input{border-color:${C.sale};animation:qtyShake .35s}
+.qtyin-note{position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);white-space:nowrap;z-index:3;
+  font-size:11px;font-weight:600;color:${C.sale};background:#FBEFEA;border-radius:8px;padding:4px 9px;box-shadow:0 4px 12px rgba(0,0,0,.12);
+  animation:qtyNote .25s both}
+.qtyin.sm{gap:6px}
+.qtyin.sm button{width:26px;height:26px;border-radius:7px}
+.qtyin.sm input{width:40px;height:26px;font-size:13px;border-radius:7px}
+.qtyin.sm .qtyin-note{left:auto;right:0;transform:none}
+@keyframes qtyNote{from{opacity:0}to{opacity:1}}
+@keyframes qtyShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 .pm-outnote{background:${C.sale}18;color:${C.sale};border-radius:10px;padding:10px 12px;text-align:center;
   font-size:12.5px;font-weight:600;margin-bottom:14px}
 .pm-add{width:100%;background:${C.accent};color:#fff;border:none;border-radius:14px;padding:14px;font-weight:600;
@@ -3086,10 +3210,6 @@ const buildCSS = () => `
 .cart-row{display:flex;align-items:center;gap:10px}
 .cart-emoji{width:44px;height:44px;background:${C.paper};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden}
 .cart-emoji img{width:100%;height:100%;object-fit:cover}
-.qty-mini{display:flex;align-items:center;gap:8px}
-.qty-mini button{width:24px;height:24px;border-radius:7px;border:1px solid ${C.mline};background:${C.paper};cursor:pointer;
-  display:flex;align-items:center;justify-content:center}
-.qty-mini span{font-size:13px;font-weight:600;min-width:16px;text-align:center}
 .cart-teaser{background:#FBEFEA;color:${C.sale};font-size:12px;font-weight:600;border-radius:10px;padding:9px 12px;margin-bottom:10px}
 .cart-bonus{background:#FCF3E2;color:${C.laitonLo};font-size:12px;font-weight:600;border-radius:10px;padding:9px 12px;margin-bottom:10px}
 .cart-totals{border-top:1px dashed ${C.mline};padding-top:10px;margin-bottom:14px}
