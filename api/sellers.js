@@ -6,10 +6,22 @@
 //        -> yangi sotuvchi arizasi (status: "pending" — super-admin tasdiqlaydi)
 //   { action:"login", login, password }
 //        -> sotuvchi kirishini tekshirish (faqat status "active" bo'lsa kiradi)
-//   { action:"updateProfile", login, password, shopName?, shopLogo?, sections?, telegramChatId?, bonusEnabled?, newPassword? }
+//   { action:"updateProfile", login, password, shopName?, shopLogo?, sections?, categoryIds?, telegramChatId?, bonusEnabled?, newPassword? }
 //        sections: [{id?,name}] — do'kon bo'limlari, 5 tagacha (Gullar, Toshlar, ...)
+//        categoryIds: ["c1",...] — do'kon MARKETPLACE bo'limlari (Tuvaklar / Sun'iy gullar / ...)
 //        -> sotuvchi o'z profilini yangilaydi
 //   Super-admin (x-admin-password header bilan):
+//   { action:"adminList" }               -> barcha sotuvchilar (pending ham) + categories
+//   { action:"catSave", categories:[{id?,name,nameRu?,emoji?}] }
+//        -> marketplace bo'limlari ro'yxatini butunlay almashtiradi (12 tagacha).
+//           O'chirilgan bo'lim id'lari sotuvchilardan ham olib tashlanadi.
+//   { action:"setSellerCategories", id, categoryIds } -> sotuvchiga bo'lim biriktirish
+//
+// MARKETPLACE BO'LIMLARI (2026-09-10): "categories" KV kaliti — super-admin yaratadi
+// (masalan Tuvaklar, Sun'iy gullar, Jonli gullar). Har do'kon bir yoki bir nechta
+// bo'limga tegishli bo'ladi; saytda mijoz bo'limni bossa faqat shu bo'limdagi
+// do'konlar ko'rinadi. Do'konning ICHKI "sections" (Gullar/Toshlar...) bilan
+// adashtirmang — u do'kon ichidagi mahsulot guruhlari.
 //   { action:"adminList" }               -> barcha sotuvchilar (pending ham)
 //   { action:"approve", id }             -> arizani tasdiqlash (status -> active)
 //   { action:"block", id }               -> bloklash / { action:"unblock", id }
@@ -26,6 +38,7 @@ import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG } from "./_lib/se
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const KEY = "sellers";
+const CAT_KEY = "categories";
 const MAIN_SELLER_ID = "zetme";
 const AUTH_SCOPE = "auth";
 const AUTH_LIMIT = 8;
@@ -68,7 +81,50 @@ function publicSeller(s) {
     bonusEnabled: !!s.bonusEnabled,
     shopLogo: s.shopLogo || "", // do'kon logotipi (sotuvchi admin panelda o'zi yuklaydi)
     sections: normalizeSections(s.sections), // do'kon bo'limlari (5 tagacha): [{id,name}]
+    categoryIds: Array.isArray(s.categoryIds) ? s.categoryIds : [], // marketplace bo'limlari
   };
+}
+
+// ---------- Marketplace bo'limlari (super-admin boshqaradi) ----------
+// Ko'pi bilan 12 ta. name (uz) 1-24 belgi, nameRu ixtiyoriy (24), emoji 4 belgigacha.
+const MAX_CATEGORIES = 12;
+function normalizeCategories(arr) {
+  if (!Array.isArray(arr)) return [];
+  const out = [];
+  for (const c of arr) {
+    const name = String((c && c.name) || "").trim().slice(0, 24);
+    if (!name) continue;
+    if (out.some((x) => x.name.toLowerCase() === name.toLowerCase())) continue;
+    const nameRu = String((c && c.nameRu) || "").trim().slice(0, 24);
+    // emoji: faqat qisqa belgi — HTML/skript kirmasin
+    const emoji = String((c && c.emoji) || "").trim().replace(/[<>&"'`]/g, "").slice(0, 4);
+    const rawId = String((c && c.id) || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
+    out.push({
+      id: rawId || `c${Date.now().toString(36)}${out.length}${Math.random().toString(36).slice(2, 5)}`,
+      name, nameRu, emoji,
+    });
+    if (out.length >= MAX_CATEGORIES) break;
+  }
+  return out;
+}
+async function loadCategories() {
+  try {
+    return normalizeCategories((await kv.get(CAT_KEY)) || []);
+  } catch (e) {
+    console.error("loadCategories:", e);
+    return [];
+  }
+}
+// sotuvchi yuborgan categoryIds ichidan faqat MAVJUD bo'limlar qoladi (takrorsiz)
+function cleanCategoryIds(ids, categories) {
+  if (!Array.isArray(ids)) return [];
+  const valid = new Set(categories.map((c) => c.id));
+  const out = [];
+  for (const raw of ids) {
+    const id = String(raw || "");
+    if (valid.has(id) && !out.includes(id)) out.push(id);
+  }
+  return out;
 }
 
 // Do'kon bo'limlari — sotuvchi o'zi nomlaydi (Gullar, Toshlar, Sovg'alar...).
@@ -106,9 +162,9 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      const list = await loadSellers();
+      const [list, categories] = await Promise.all([loadSellers(), loadCategories()]);
       const active = list.filter((s) => s.status === "active").map(publicSeller);
-      return res.status(200).json({ ok: true, sellers: active });
+      return res.status(200).json({ ok: true, sellers: active, categories });
     }
 
     if (req.method !== "POST") {
@@ -208,6 +264,7 @@ export default async function handler(req, res) {
       if (body.phone !== undefined && String(body.phone).trim()) updated.phone = String(body.phone).trim();
       if (body.shopLogo !== undefined) updated.shopLogo = String(body.shopLogo).trim().slice(0, 600);
       if (body.sections !== undefined) updated.sections = normalizeSections(body.sections);
+      if (body.categoryIds !== undefined) updated.categoryIds = cleanCategoryIds(body.categoryIds, await loadCategories());
       if (body.shopName !== undefined) {
         const newName = String(body.shopName).trim();
         if (newName.length < 2) return res.status(400).json({ ok: false, error: "Do'kon nomi kamida 2 ta belgi bo'lsin" });
@@ -234,7 +291,23 @@ export default async function handler(req, res) {
     await clearFailures(AUTH_SCOPE, req);
 
     if (action === "adminList") {
-      return res.status(200).json({ ok: true, sellers: list.map(adminSeller) });
+      return res.status(200).json({ ok: true, sellers: list.map(adminSeller), categories: await loadCategories() });
+    }
+
+    // Marketplace bo'limlari ro'yxatini saqlash (butunlay almashtiradi)
+    if (action === "catSave") {
+      const categories = normalizeCategories(body.categories);
+      await kv.set(CAT_KEY, categories);
+      // o'chirilgan bo'limlar sotuvchilardan ham tushib qolsin
+      let changed = false;
+      list = list.map((s) => {
+        if (!Array.isArray(s.categoryIds) || !s.categoryIds.length) return s;
+        const cleaned = cleanCategoryIds(s.categoryIds, categories);
+        if (cleaned.length !== s.categoryIds.length) { changed = true; return { ...s, categoryIds: cleaned }; }
+        return s;
+      });
+      if (changed) await kv.set(KEY, list);
+      return res.status(200).json({ ok: true, categories, sellers: list.map(adminSeller) });
     }
 
     const id = String(body.id || "");
@@ -261,6 +334,9 @@ export default async function handler(req, res) {
     } else if (action === "allowBrandChange") {
       // super-admin sotuvchiga nom/rasmni muddatidan oldin o'zgartirishga ruxsat beradi
       delete list[idx].brandChangedAt;
+    } else if (action === "setSellerCategories") {
+      // super-admin do'konni marketplace bo'limlariga biriktiradi
+      list[idx].categoryIds = cleanCategoryIds(body.categoryIds, await loadCategories());
     } else if (action === "remove") {
       const removedId = list[idx].id;
       list.splice(idx, 1);
