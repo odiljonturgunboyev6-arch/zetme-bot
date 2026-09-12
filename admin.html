@@ -20,12 +20,12 @@
   .wrap { max-width: 640px; margin: 0 auto; padding: 24px 18px 60px; }
 
   /* login gate */
-  #gate { max-width: 380px; margin: 50px auto; padding: 0 16px; }
+  #gate, #bioGate { max-width: 380px; margin: 50px auto; padding: 0 16px; }
   .gate-tabs { display:flex; gap:8px; margin:20px 0 14px; }
   .gate-tab { flex:1; padding:11px; border:1px solid var(--mline); border-radius:10px; text-align:center; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--inkDim); background:#fff; }
   .gate-tab.active { background: var(--accent); color:#fff; border-color:var(--accent); }
   #gate input { width:100%; padding:12px 14px; border:1px solid var(--mline); border-radius:10px; font-size:15px; margin-top:10px; font-family:inherit; }
-  #gate button.mainbtn { width:100%; margin-top:14px; padding:12px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; font-size:14px; cursor:pointer; }
+  #gate button.mainbtn, #bioGate button.mainbtn { width:100%; margin-top:14px; padding:12px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; font-size:14px; cursor:pointer; }
   #gate .err { color:var(--sale); font-size:12.5px; margin-top:10px; min-height:16px; }
   #gate .okmsg { color:var(--accent); font-size:13px; margin-top:10px; background:#EAF3EC; border-radius:10px; padding:10px 12px; }
   .gate-hint { font-size:11.5px; color:var(--inkDim); margin-top:10px; line-height:1.5; }
@@ -181,6 +181,15 @@
   .vcolorRow .stockUnit { font-size:11px; color:var(--inkDim); flex-shrink:0; }
   .vstockSolo { max-width:150px; }
 
+  .analizbtn { width:100%; margin:0 0 12px; padding:11px; background:#fff; border:1px solid var(--mline); border-radius:12px; font-size:14px; font-weight:600; cursor:pointer; color:var(--accent); font-family:inherit; }
+  .analizbtn.open { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .neworder-banner { margin:0 0 12px; padding:12px 14px; background:#FFF4E5; border:1px solid #F0B96B; border-radius:12px; font-size:13.5px; cursor:pointer; animation: bpulse 1.2s ease-in-out 3; }
+  @keyframes bpulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.02); } }
+  .ord-day { margin:14px 0 8px; padding:8px 12px; background:var(--paper); border-radius:10px; font-size:12.5px; font-weight:700; display:flex; justify-content:space-between; color:var(--inkDim); }
+  .ord-day:first-child { margin-top:0; }
+  .ord-day b { color:var(--accent); }
+  .notifrow { margin:0 0 10px; }
+  .notifrow button { background:#fff; border:1px solid var(--mline); border-radius:9px; padding:7px 11px; font-size:12px; cursor:pointer; font-family:inherit; color:var(--accent); }
   /* list */
   .plist { display:flex; flex-direction:column; gap:10px; }
   .prow { display:flex; gap:12px; align-items:center; background:#fff; border:1px solid var(--mline); border-radius:12px; padding:10px; flex-wrap:wrap; }
@@ -198,6 +207,10 @@
   .prow button { background:transparent; border:1px solid var(--mline); border-radius:8px; padding:6px 10px; font-size:11.5px; cursor:pointer; white-space:nowrap; }
   .prow .editBtn { color:var(--accent); border-color:var(--accent); }
   .prow .stockBtn { color:#B5711A; border-color:#B5711A; }
+  .prow .pauseBtn { color:#5B6B7A; border-color:#5B6B7A; }
+  .prow.paused .pauseBtn { color:var(--accent); border-color:var(--accent); background:#EAF4EE; }
+  .prow.paused { background:#F4F5F7; }
+  .prow .meta.paused { font-weight:700; color:#5B6B7A; }
   .prow .delBtn { color:var(--sale); }
   .quickStock { flex-basis:100%; margin-top:4px; padding:10px; background:var(--paper); border:1px dashed var(--mline); border-radius:10px; }
   .qsRow { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 0; font-size:12.5px; }
@@ -253,6 +266,15 @@
   </div>
 </div>
 
+<!-- ======================= FaceID qulfi ======================= -->
+<div id="bioGate" class="hidden">
+  <h2 style="text-align:center;">🔐 Zetme Business</h2>
+  <p class="gate-hint" style="text-align:center;">Panelni ochish uchun FaceID / Touch ID bilan tasdiqlang</p>
+  <button class="mainbtn" onclick="tryBioUnlock()">FaceID bilan ochish</button>
+  <div class="err" id="bioErr"></div>
+  <button type="button" onclick="bioFallbackLogout()" style="margin-top:10px;width:100%;background:transparent;border:1px solid var(--mline);border-radius:9px;padding:9px;font-size:12.5px;cursor:pointer;color:var(--inkDim);">Parol bilan kirish</button>
+</div>
+
 <!-- ======================= PANEL ======================= -->
 <div id="app" class="hidden">
   <div class="topbar">
@@ -271,7 +293,10 @@
     </div>
 
     <!-- PROFIL: sotuvlar va analitika -->
-    <div class="card" data-pane="profil" id="statsCard">
+    <div id="newOrderBanner" class="neworder-banner hidden" data-pane="profil" onclick="dismissNewOrderBanner()">🔔 <b>Yangi buyurtma keldi!</b> <span id="newOrderBannerTxt"></span></div>
+
+    <button type="button" class="analizbtn" data-pane="profil" id="analizBtn" onclick="toggleAnaliz()">📊 Analiz</button>
+    <div class="card hidden" data-pane="profil" id="statsCard">
       <h3>Sotuvlar va analitika <span class="badge" id="statsBadge"></span></h3>
       <div id="statsBody"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
     </div>
@@ -281,6 +306,7 @@
       <h3>Buyurtmalar <span class="badge" id="ordBadge"></span>
         <button type="button" class="ord-refresh" onclick="loadAnalytics()" title="Yangilash">⟳ Yangilash</button></h3>
       <div class="ordfilters" id="ordFilters"></div>
+      <div id="notifRow"></div>
       <div id="ordList"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
     </div>
 
@@ -385,6 +411,8 @@
         <input type="checkbox" id="profBonus" />
         <span>Bonus/sovg'a tizimi yoqilsin (1 mln+ buyurtmalarga sovg'a va pul bonuslari — bonusni do'kon o'z hisobidan beradi)</span>
       </div>
+      <label style="margin-top:16px;">Xavfsizlik</label>
+      <div id="bioRow"></div>
       <label style="margin-top:14px;" id="newPwLabel">Yangi parol (o'zgartirmoqchi bo'lsangizgina to'ldiring)</label>
       <input type="password" id="profNewPw" placeholder="Yangi parol" />
       <button class="submitbtn" onclick="saveProfile()">Sozlamalarni saqlash</button>
@@ -396,7 +424,10 @@
 
 <script>
   // ===================== sessiya =====================
-  let ME = null;           // { login, password, isSuper, seller:{id, shopName, ...} }
+  let ME = null;           // { login, token, isSuper, seller:{id, shopName, ...} } — PAROL saqlanmaydi, faqat 30 kunlik token
+  const AUTH_KEY = "zetme_seller_auth";
+  function saveAuth() { try { localStorage.setItem(AUTH_KEY, JSON.stringify({ login: ME.login, token: ME.token })); } catch (e) {} }
+  function loadAuth() { try { return JSON.parse(localStorage.getItem(AUTH_KEY) || "null"); } catch (e) { return null; } }
   let category = "tuvak";
   let productsCache = [];
   let editingId = null;
@@ -428,12 +459,7 @@
   }
 
   function authHeaders() {
-    const h = {
-      "x-seller-login": ME.login,
-      "x-seller-password": ME.password,
-    };
-    if (ME.isSuper) h["x-admin-password"] = ME.password;
-    return h;
+    return { "x-seller-login": ME.login, "x-seller-token": ME.token };
   }
 
   async function setupBotMenuButton() {
@@ -445,7 +471,7 @@
     try {
       const res = await fetch("/api/bot-menu-button", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-password": ME.password },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Xatolik");
@@ -481,8 +507,9 @@
       });
       const data = await res.json();
       if (!data.ok) { errEl.textContent = data.error || "Kirish amalga oshmadi"; return; }
-      ME = { login, password, isSuper: !!data.isSuper, seller: data.seller };
-      sessionStorage.setItem("zetme_seller_session", JSON.stringify({ login, password }));
+      ME = { login, token: data.token, isSuper: !!data.isSuper, seller: data.seller };
+      saveAuth();
+      sessionStorage.removeItem("zetme_seller_session");
       enterPanel();
     } catch (e) {
       errEl.textContent = "Tarmoq xatosi — qayta urinib ko'ring";
@@ -516,34 +543,107 @@
     }
   }
 
-  function logout() {
+  async function logout() {
+    const a = loadAuth();
+    try { localStorage.removeItem(AUTH_KEY); } catch (e) {}
     sessionStorage.removeItem("zetme_seller_session");
+    if (a && a.token) {
+      try { await fetch("/api/sellers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout", token: a.token }) }); } catch (e) {}
+    }
     location.reload();
   }
 
+  // Sessiya 30 kun saqlanadi — har safar login/parol so'ralmaydi.
   window.addEventListener("DOMContentLoaded", async () => {
-    const saved = sessionStorage.getItem("zetme_seller_session");
-    if (!saved) return;
+    const saved = loadAuth();
+    if (!saved || !saved.token) return;
     try {
-      const { login, password } = JSON.parse(saved);
       const res = await fetch("/api/sellers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "login", login, password }),
+        body: JSON.stringify({ action: "session", login: saved.login, token: saved.token }),
       });
       const data = await res.json();
       if (data.ok) {
-        ME = { login, password, isSuper: !!data.isSuper, seller: data.seller };
+        ME = { login: saved.login, token: saved.token, isSuper: !!data.isSuper, seller: data.seller };
+        if (bioLockEnabled()) { showBioLock(); return; }
         enterPanel();
       } else {
-        sessionStorage.removeItem("zetme_seller_session");
+        try { localStorage.removeItem(AUTH_KEY); } catch (e) {}
       }
     } catch (e) {}
   });
 
+  // ===================== FaceID / Touch ID qulfi (WebAuthn) =====================
+  // Faqat Safari/Chrome'da ishlaydi (Telegram ichidagi brauzerda yo'q). Sessiya
+  // token bilan ochiq; qulf — panelni ochishdan oldin telefon egasini tasdiqlash.
+  const BIO_KEY = "zetme_bio_cred";
+  function bioLockEnabled() { return !!localStorage.getItem(BIO_KEY); }
+  async function bioAvailable() {
+    try {
+      return !!(window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
+    } catch (e) { return false; }
+  }
+  function b64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+  function unb64(str) { const b = atob(str.replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, c => c.charCodeAt(0)); }
+  async function enableBioLock() {
+    const msg = document.getElementById("bioMsg");
+    try {
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const cred = await navigator.credentials.create({ publicKey: {
+        challenge, rp: { name: "Zetme Business" },
+        user: { id: new TextEncoder().encode(ME.login), name: ME.login, displayName: ME.seller.shopName || ME.login },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+        timeout: 60000,
+      } });
+      localStorage.setItem(BIO_KEY, b64(cred.rawId));
+      renderBioRow();
+      msg.style.color = "var(--accent)"; msg.textContent = "✅ Yoqildi — keyingi safar FaceID/Touch ID so'raladi.";
+    } catch (e) {
+      msg.style.color = "var(--sale)"; msg.textContent = "❌ Bo'lmadi: " + (e.message || e);
+    }
+  }
+  function disableBioLock() { localStorage.removeItem(BIO_KEY); renderBioRow(); }
+  async function renderBioRow() {
+    const row = document.getElementById("bioRow");
+    if (!row) return;
+    if (!(await bioAvailable())) {
+      row.innerHTML = `<div class="hint">🔐 FaceID/Touch ID qulfi bu brauzerda ishlamaydi (Telegram ichida ochilgan). Safari'da <b>zetme-bot.vercel.app/admin.html</b> ni ochsangiz — shu yerda yoqiladi. Sessiya baribir 30 kun saqlanadi, parol qayta so'ralmaydi.</div>`;
+      return;
+    }
+    row.innerHTML = bioLockEnabled()
+      ? `<button type="button" class="addVariantBtn" onclick="disableBioLock()">🔓 FaceID qulfini o'chirish</button><div class="hint">Panel ochilganda FaceID/Touch ID so'raladi.</div>`
+      : `<button type="button" class="addVariantBtn" onclick="enableBioLock()">🔐 FaceID / Touch ID qulfini yoqish</button><div class="hint">Yoqilsa — panel har ochilganda telefon FaceID/Touch ID bilan tasdiqlaydi, parol so'ralmaydi.</div>`;
+    row.insertAdjacentHTML("beforeend", `<div id="bioMsg" style="font-size:12.5px;margin-top:6px;"></div>`);
+  }
+  function showBioLock() {
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("bioGate").classList.remove("hidden");
+    tryBioUnlock();
+  }
+  async function tryBioUnlock() {
+    const err = document.getElementById("bioErr"); err.textContent = "";
+    try {
+      const id = unb64(localStorage.getItem(BIO_KEY));
+      await navigator.credentials.get({ publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: [{ type: "public-key", id }],
+        userVerification: "required", timeout: 60000,
+      } });
+      document.getElementById("bioGate").classList.add("hidden");
+      enterPanel();
+    } catch (e) {
+      err.textContent = "Tasdiqlanmadi — qayta urinib ko'ring";
+    }
+  }
+  function bioFallbackLogout() { localStorage.removeItem(BIO_KEY); logout(); }
+
   function enterPanel() {
     document.getElementById("gate").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
+    startOrderPolling();
+    renderBioRow();
     document.getElementById("topShopName").textContent =
       ME.seller.shopName + (ME.isSuper ? " · Super-admin" : " · Sotuvchi paneli");
     document.getElementById("plistTitle").textContent = ME.isSuper ? "Barcha mahsulotlar" : "Mahsulotlarim";
@@ -589,12 +689,91 @@
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Xatolik");
       ordersCache = data.orders || [];
+      knownOrderIds = new Set(ordersCache.filter(o => o.id).map(o => o.id));
       renderAnalytics(ordersCache);
       renderOrders();
     } catch (err) {
       el.innerHTML = `<p style="color:var(--inkDim);font-size:13px;">Analitikani yuklab bo'lmadi: ${escHtml(err.message)}</p>`;
       document.getElementById("ordList").innerHTML = `<p style="color:var(--inkDim);font-size:13px;">Buyurtmalarni yuklab bo'lmadi</p>`;
     }
+  }
+
+  // ===================== Analiz bo'limi (yashirin, tugma bilan ochiladi) =====================
+  function toggleAnaliz() {
+    const c = document.getElementById("statsCard"), b = document.getElementById("analizBtn");
+    const open = c.classList.toggle("hidden") === false;
+    b.classList.toggle("open", open);
+    b.textContent = open ? "📊 Analizni yopish" : "📊 Analiz";
+  }
+
+  // ===================== yangi buyurtma bildirishnomasi =====================
+  // Panel ochiq bo'lsa har 20 soniyada tekshiradi: yangi buyurtma kelsa —
+  // banner, ovoz, sarlavha va (ruxsat bo'lsa) telefon bildirishnomasi.
+  let knownOrderIds = null;
+  let pollTimer = null;
+  function beep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.18].forEach(t => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "sine"; o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.4, ctx.currentTime + t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.16);
+        o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.18);
+      });
+    } catch (e) {}
+    if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+  }
+  function notifyNewOrders(fresh) {
+    const n = fresh.length, sum = fresh.reduce((a, o) => a + (o.payTotal || o.total || 0), 0);
+    const first = fresh[0] || {}; const c = first.customer || {};
+    document.getElementById("newOrderBannerTxt").textContent = n === 1
+      ? `${c.name || "Mijoz"} · ${fmtSum(sum)}` : `${n} ta · ${fmtSum(sum)}`;
+    document.getElementById("newOrderBanner").classList.remove("hidden");
+    document.title = `(${n}) Yangi buyurtma — Zetme`;
+    beep();
+    if ("Notification" in window && Notification.permission === "granted") {
+      try { new Notification("🔔 Yangi buyurtma — Zetme", { body: n === 1 ? `${c.name || "Mijoz"} · ${fmtSum(sum)}` : `${n} ta yangi buyurtma · ${fmtSum(sum)}`, tag: "zetme-order" }); } catch (e) {}
+    }
+    ordFilter = "yangi";
+  }
+  function dismissNewOrderBanner() {
+    document.getElementById("newOrderBanner").classList.add("hidden");
+    document.title = "Zetme Business";
+    window.scrollTo({ top: document.getElementById("ordersCard").offsetTop - 10, behavior: "smooth" });
+  }
+  function renderNotifRow() {
+    const el = document.getElementById("notifRow");
+    if (!el || !("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      el.innerHTML = `<div class="notifrow"><button type="button" onclick="Notification.requestPermission().then(renderNotifRow)">🔔 Telefonga bildirishnoma yoqish</button></div>`;
+    } else el.innerHTML = "";
+  }
+  async function pollOrders() {
+    if (!ME || document.hidden) return;
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ action: "list" }),
+      });
+      const data = await res.json();
+      if (!data.ok) return;
+      const orders = data.orders || [];
+      if (knownOrderIds) {
+        const fresh = orders.filter(o => o.id && !knownOrderIds.has(o.id) && stOf(o) === "yangi");
+        if (fresh.length) notifyNewOrders(fresh);
+      }
+      knownOrderIds = new Set(orders.filter(o => o.id).map(o => o.id));
+      const changed = JSON.stringify(orders) !== JSON.stringify(ordersCache);
+      if (changed) { ordersCache = orders; renderAnalytics(ordersCache); renderOrders(); }
+    } catch (e) {}
+  }
+  function startOrderPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(pollOrders, 20000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) pollOrders(); });
+    renderNotifRow();
   }
 
   // ===================== buyurtmalar boshqaruvi =====================
@@ -606,6 +785,14 @@
   function ordDate(ts) {
     const d = new Date(ts); const p = n => String(n).padStart(2, "0");
     return `${p(d.getDate())}.${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+  const MONTHS_UZ = ["yanvar","fevral","mart","aprel","may","iyun","iyul","avgust","sentabr","oktabr","noyabr","dekabr"];
+  function dayKey(ts) { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+  function dayLabel(ts) {
+    const d = new Date(ts), t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1);
+    if (dayKey(ts) === dayKey(t)) return "Bugun";
+    if (dayKey(ts) === dayKey(y)) return "Kecha";
+    return `${d.getDate()}-${MONTHS_UZ[d.getMonth()]}${d.getFullYear() !== t.getFullYear() ? " " + d.getFullYear() : ""}`;
   }
   function renderOrders() {
     const yangiCount = ordersCache.filter(o => stOf(o) === "yangi").length;
@@ -635,8 +822,18 @@
       return;
     }
     if (list.length === 0) { el.innerHTML = `<p style="color:var(--inkDim);font-size:13px;">Bu bo'limda buyurtma yo'q.</p>`; return; }
+    // kun bo'yicha guruhlash: "Bugun — 3 ta · 2 400 000 so'm"
+    let lastDay = null;
     el.innerHTML = list.map(o => {
       const c = o.customer || {};
+      let dayHdr = "";
+      const dk = dayKey(o.ts);
+      if (dk !== lastDay) {
+        lastDay = dk;
+        const same = list.filter(x => dayKey(x.ts) === dk && stOf(x) !== "bekor");
+        const daySum = same.reduce((a, x) => a + (x.payTotal || x.total || 0), 0);
+        dayHdr = `<div class="ord-day"><span>📅 ${dayLabel(o.ts)}</span><span><b>${same.length} ta</b> · ${fmtSum(daySum)}</span></div>`;
+      }
       const items = (o.items || []).map(i => `${i.qty} × ${escHtml(i.name)}`).join("<br>");
       const stBtns = ["yangi", "tayyorlanmoqda", "yuborildi", "bekor"].map(s => {
         const click = s === "bekor" ? `openCancelForm('${escAttr(o.id)}')` : `setOrderStatus('${escAttr(o.id)}','${s}')`;
@@ -660,7 +857,7 @@
         <div class="ord-bekorinfo">
           ${o.cancelledBy === "mijoz" ? "❌ Mijoz o'zi bekor qilgan" : `❌ Sabab: ${escHtml(o.cancelReason || "—")}${o.bonusPercent ? ` · 🎁 mijozga ${o.bonusPercent}% bonus berildi` : ""}`}
         </div>` : "";
-      return `
+      return dayHdr + `
         <div class="ordrow st-${stOf(o)}">
           <div class="ord-top">
             <span class="ord-id">${o.id ? "#" + escHtml(o.id) : "—"}</span>
@@ -836,7 +1033,7 @@
   async function loadSellers() {
     const res = await fetch("/api/sellers", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": ME.password },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ action: "adminList" }),
     });
     const data = await res.json();
@@ -896,7 +1093,7 @@
     try {
       const res = await fetch("/api/sellers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-password": ME.password },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ action: "catSave", categories: clean }),
       });
       const data = await res.json();
@@ -938,7 +1135,7 @@
     if (i === -1) ids.push(catId); else ids.splice(i, 1);
     const res = await fetch("/api/sellers", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": ME.password },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ action: "setSellerCategories", id: sellerId, categoryIds: ids }),
     });
     const data = await res.json();
@@ -978,7 +1175,7 @@
   async function sellerAction(action, id) {
     const res = await fetch("/api/sellers", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": ME.password },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ action, id }),
     });
     const data = await res.json();
@@ -995,7 +1192,7 @@
     if (newPw.length < 6) { alert("Parol kamida 6 ta belgi bo'lsin"); return; }
     const res = await fetch("/api/sellers", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": ME.password },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ action: "resetPassword", id, newPassword: newPw }),
     });
     const data = await res.json();
@@ -1377,7 +1574,7 @@
     const payload = {
       action: "updateProfile",
       login: ME.login,
-      password: ME.password,
+      token: ME.token,
       shopName,
       shopLogo: shopLogo.url || "",
       sections: sections.filter(s => String(s.name).trim()).map(s => ({ id: s.id, name: String(s.name).trim() })),
@@ -1394,11 +1591,7 @@
     });
     const data = await res.json();
     if (!data.ok) { msgEl.innerHTML = `<div class="msg err">${data.error || "Xatolik"}</div>`; return; }
-    if (newPw) {
-      ME.password = newPw;
-      sessionStorage.setItem("zetme_seller_session", JSON.stringify({ login: ME.login, password: newPw }));
-      document.getElementById("profNewPw").value = "";
-    }
+    if (newPw) document.getElementById("profNewPw").value = "";
     ME.seller = data.seller;
     // server bo'limlarni normallashtiradi (bo'shlari tushib qoladi, id beriladi) — panelni yangilaymiz
     sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name })) : [];
@@ -1680,8 +1873,9 @@
     list.innerHTML = items.map(p => {
       const st = stockSummary(p);
       const isOut = st.tracked && st.sum <= 0;
+      const paused = !!p.paused;
       return `
-      <div class="prow${isOut ? " out" : ""}">
+      <div class="prow${isOut ? " out" : ""}${paused ? " paused" : ""}">
         <img src="${thumbUrl(p)}" />
         <div class="info">
           ${ME.isSuper ? `<div class="shop">🏪 ${escHtml(p.shopName || "Tuvaklar")}</div>` : ""}
@@ -1690,10 +1884,12 @@
           <div class="price">Chakana: ${priceRangeText(p)}</div>
           ${optPriceRangeText(p) ? `<div class="meta opt">Optom: ${optPriceRangeText(p)}</div>` : ''}
           ${st.tracked ? `<div class="meta stock${st.sum <= 0 ? ' zero' : ''}">${st.sum <= 0 ? '⛔ Tugadi' : '📦 ' + st.sum + ' dona qoldi'}</div>` : ''}
+          ${paused ? `<div class="meta paused">⏸ Muzlatilgan — mijozlarga "Vaqtincha tugagan" ko'rinadi</div>` : ''}
         </div>
         <div class="btns">
           <button class="editBtn" onclick="editProduct('${p.id}')">Tahrirlash</button>
           <button class="stockBtn" onclick="toggleQuickStock('${p.id}')">📦 Ostatka</button>
+          <button class="pauseBtn" onclick="togglePause('${p.id}', ${paused ? 'false' : 'true'})">${paused ? '▶ Yoqish' : '⏸ Muzlatish'}</button>
           <button class="delBtn" onclick="deleteProduct('${p.id}')">O'chirish</button>
         </div>
         <div class="quickStock hidden" id="qs-${p.id}"></div>
@@ -1702,8 +1898,20 @@
     }).join("");
   }
 
+  // Muzlatish / yoqish — mahsulot o'chirilmaydi, barcha ma'lumot saqlanadi.
+  async function togglePause(id, paused) {
+    const res = await fetch("/api/products", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ id, paused }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok) { alert(data.error || "Xatolik"); return; }
+    loadProducts();
+  }
+
   async function deleteProduct(id) {
-    if (!confirm("Bu mahsulotni butunlay o'chirasizmi?")) return;
+    if (!confirm("DIQQAT: mahsulot BUTUNLAY o'chadi — rasm, narx, ostatka qaytmaydi.\n\nVaqtincha yashirish uchun \"O'chirish\" emas, \"⏸ Muzlatish\" tugmasini bosing.\n\nRostdan ham o'chirasizmi?")) return;
     await fetch("/api/products?id=" + encodeURIComponent(id), {
       method: "DELETE",
       headers: authHeaders(),
