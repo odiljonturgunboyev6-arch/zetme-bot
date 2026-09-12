@@ -6,6 +6,7 @@
 
 import { put } from "@vercel/blob";
 import { kv } from "@vercel/kv";
+import { sellerFromTokenHeaders } from "./_lib/auth.js";
 import { createHash } from "crypto";
 import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG, isAllowedImageType } from "./_lib/security.js";
 
@@ -22,6 +23,7 @@ function hashPassword(password, salt) {
 async function isAuthorized(req) {
   const admin = req.headers["x-admin-password"];
   if (admin && ADMIN_PASSWORD && admin === ADMIN_PASSWORD) return true;
+  if (await sellerFromTokenHeaders(req)) return true;
 
   const login = String(req.headers["x-seller-login"] || "").trim().toLowerCase();
   const password = String(req.headers["x-seller-password"] || "");
@@ -37,7 +39,7 @@ async function isAuthorized(req) {
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-password");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-password, x-seller-token");
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
 

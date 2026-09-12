@@ -111,6 +111,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ ok: false, error: "Bitta buyurtmada faqat bitta do'kon mahsulotlari bo'lishi mumkin. Avval joriy buyurtmani yakunlang." });
       }
 
+      // muzlatilgan mahsulot — sotuvchi vaqtincha to'xtatgan
+      if (fam.paused) {
+        return res.status(400).json({ ok: false, error: `"${fam.name}" vaqtincha tugagan — savatdan olib tashlang` });
+      }
+
       const unitPrice = priceMode === "optom" ? Number(variant.optPrice) : Number(variant.price);
       if (!unitPrice || unitPrice <= 0) {
         return res.status(400).json({ ok: false, error: "Bu mahsulot uchun narx aniqlanmagan" });

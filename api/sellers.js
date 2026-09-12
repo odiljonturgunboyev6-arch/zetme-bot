@@ -35,6 +35,7 @@
 import { kv } from "@vercel/kv";
 import { createHash, randomBytes } from "crypto";
 import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG } from "./_lib/security.js";
+import { issueToken, revokeToken, sellerFromToken, sellerFromTokenHeaders } from "./_lib/auth.js";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const KEY = "sellers";
@@ -44,9 +45,15 @@ const AUTH_SCOPE = "auth";
 const AUTH_LIMIT = 8;
 const AUTH_WINDOW = 900;
 
-function isAdmin(req) {
+function isAdminPw(req) {
   const auth = req.headers["x-admin-password"];
   return auth && ADMIN_PASSWORD && auth === ADMIN_PASSWORD;
+}
+// super-admin: parol headeri YOKI builtin (zetme) sotuvchining sessiya tokeni
+async function isAdmin(req, list) {
+  if (isAdminPw(req)) return true;
+  const s = await sellerFromTokenHeaders(req, list);
+  return !!(s && s.builtin);
 }
 
 function hashPassword(password, salt) {
@@ -157,7 +164,7 @@ function verifySellerCredentials(seller, password) {
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-token");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
@@ -226,7 +233,20 @@ export default async function handler(req, res) {
       await clearFailures(AUTH_SCOPE, req);
       if (seller.status === "pending") return res.status(403).json({ ok: false, error: "Arizangiz hali tasdiqlanmagan — administrator ko'rib chiqmoqda" });
       if (seller.status !== "active") return res.status(403).json({ ok: false, error: "Bu do'kon bloklangan" });
+      const token = await issueToken(seller);
+      return res.status(200).json({ ok: true, seller: adminSeller(seller), isSuper: !!seller.builtin, token });
+    }
+
+    // sessiya tokenini tekshirish (panel ochilganda — parolsiz kirish)
+    if (action === "session") {
+      const seller = await sellerFromToken(body.login, body.token, list);
+      if (!seller) return res.status(401).json({ ok: false, error: "Sessiya eskirgan — qayta kiring" });
+      await clearFailures(AUTH_SCOPE, req);
       return res.status(200).json({ ok: true, seller: adminSeller(seller), isSuper: !!seller.builtin });
+    }
+    if (action === "logout") {
+      await revokeToken(body.token);
+      return res.status(200).json({ ok: true });
     }
 
     /* ---------------- sotuvchi: profil yangilash ---------------- */
@@ -234,7 +254,8 @@ export default async function handler(req, res) {
       const login = String(body.login || "").trim().toLowerCase();
       const idx = list.findIndex((s) => s.login === login);
       const seller = list[idx];
-      if (!seller || !verifySellerCredentials(seller, String(body.password || ""))) {
+      const byToken = body.token ? await sellerFromToken(login, body.token, list) : null;
+      if (!seller || (!byToken && !verifySellerCredentials(seller, String(body.password || "")))) {
         await recordFailure(AUTH_SCOPE, req, AUTH_WINDOW);
         return res.status(401).json({ ok: false, error: "Login yoki parol noto'g'ri" });
       }
@@ -284,7 +305,7 @@ export default async function handler(req, res) {
     }
 
     /* ---------------- super-admin amallari ---------------- */
-    if (!isAdmin(req)) {
+    if (!(await isAdmin(req, list))) {
       await recordFailure(AUTH_SCOPE, req, AUTH_WINDOW);
       return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
     }

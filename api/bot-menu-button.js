@@ -11,20 +11,23 @@ const BOT_TOKEN = (process.env.BOT_TOKEN || "").trim();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const SITE_URL = "https://zetme-bot.vercel.app";
 
-function isAdmin(req) {
+import { sellerFromTokenHeaders } from "./_lib/auth.js";
+async function isAdmin(req) {
   const auth = req.headers["x-admin-password"];
-  return auth && ADMIN_PASSWORD && auth === ADMIN_PASSWORD;
+  if (auth && ADMIN_PASSWORD && auth === ADMIN_PASSWORD) return true;
+  const s = await sellerFromTokenHeaders(req);
+  return !!(s && s.builtin);
 }
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-token");
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
 
   try {
-    if (!isAdmin(req)) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+    if (!(await isAdmin(req))) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
     if (!BOT_TOKEN) return res.status(400).json({ ok: false, error: "BOT_TOKEN sozlanmagan" });
 
     const tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setChatMenuButton`, {

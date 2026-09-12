@@ -3,6 +3,7 @@
 // POST   /api/products        -> yangi mahsulot qo'shish
 // PUT    /api/products        -> mahsulotni tahrirlash
 // DELETE /api/products?id=xxx -> mahsulotni o'chirish
+// PATCH  /api/products        -> {id, paused:true|false} — muzlatish / yoqish (o'chirmasdan yashirish)
 //
 // KIRISH HUQUQI (POST/PUT/DELETE):
 //   - Super-admin: "x-admin-password" header (ADMIN_PASSWORD) -> istalgan mahsulot
@@ -12,6 +13,7 @@
 import { kv } from "@vercel/kv";
 import { createHash } from "crypto";
 import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG } from "./_lib/security.js";
+import { sellerFromTokenHeaders } from "./_lib/auth.js";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const KEY = "products";
@@ -65,6 +67,9 @@ function hashPassword(password, salt) {
 // aks holda null qaytaradi. Super-admin bo'lsa {id:"*"} qaytadi.
 async function resolveActor(req) {
   if (isAdmin(req)) return { id: "*", super: true };
+  // sessiya tokeni (brauzer parolni saqlamaydi)
+  const tokSeller = await sellerFromTokenHeaders(req);
+  if (tokSeller) return tokSeller.builtin ? { id: "*", super: true } : tokSeller;
   const login = String(req.headers["x-seller-login"] || "").trim().toLowerCase();
   const password = String(req.headers["x-seller-password"] || "");
   if (!login || !password) return null;
@@ -168,8 +173,8 @@ function normalizeVariants(variants) {
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-password");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-password, x-seller-token");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
@@ -196,6 +201,7 @@ export default async function handler(req, res) {
             sectionName: sec ? sec.name : "",
             shopName: (s && s.shopName) || "Tuvaklar",
             bonusEnabled: s ? !!s.bonusEnabled : true,
+            paused: !!p.paused,
           };
         });
       return res.status(200).json({ ok: true, products: out });
@@ -280,11 +286,36 @@ export default async function handler(req, res) {
         color: colorList[0] || (color ? String(color) : ""),
         colors: colorList,
         variants: normVariants,
+        paused: typeof body.paused === "boolean" ? body.paused : !!list[idx].paused,
         updatedAt: Date.now(),
       };
       list[idx] = updated;
       await kv.set(KEY, list);
       return res.status(200).json({ ok: true, product: updated });
+    }
+
+    // Muzlatish / yoqish — mahsulot o'chirilmaydi, faqat mijozlarga
+    // "Vaqtincha tugagan" bo'lib ko'rinadi. Ostatka 0 ga tushsa sayt buni
+    // o'zi ko'rsatadi; bu tugma sotuvchi qo'lda yashirishi uchun.
+    if (req.method === "PATCH") {
+      const actor = await authOrBlock(req, res);
+      if (!actor) return;
+      const body = req.body || {};
+      const { id } = body;
+      if (!id) return res.status(400).json({ ok: false, error: "Mahsulot ID si yo'q" });
+      if (typeof body.paused !== "boolean") {
+        return res.status(400).json({ ok: false, error: "paused true yoki false bo'lishi kerak" });
+      }
+      const list = (await kv.get(KEY)) || [];
+      const idx = list.findIndex((p) => p.id === id);
+      if (idx === -1) return res.status(404).json({ ok: false, error: "Mahsulot topilmadi" });
+      const ownerId = list[idx].sellerId || MAIN_SELLER_ID;
+      if (!actor.super && ownerId !== actor.id) {
+        return res.status(403).json({ ok: false, error: "Bu mahsulot sizning do'koningizga tegishli emas" });
+      }
+      list[idx] = { ...list[idx], paused: body.paused, updatedAt: Date.now() };
+      await kv.set(KEY, list);
+      return res.status(200).json({ ok: true, product: list[idx] });
     }
 
     if (req.method === "DELETE") {
