@@ -11,6 +11,7 @@
 // Eski (sellerId'siz) mahsulotlar avtomatik "zetme" (asosiy do'kon)ga tegishli hisoblanadi.
 
 import { kv } from "@vercel/kv";
+import { getThumbMap } from "./_lib/thumbs.js";
 import { createHash } from "crypto";
 import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG } from "./_lib/security.js";
 import { sellerFromTokenHeaders } from "./_lib/auth.js";
@@ -179,8 +180,15 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      const list = (await kv.get(KEY)) || [];
-      const sellers = (await kv.get("sellers")) || [];
+      const [list, sellers, thumbs] = await Promise.all([
+        kv.get(KEY).then((x) => x || []),
+        kv.get("sellers").then((x) => x || []),
+        getThumbMap(),
+      ]);
+      // 2026-09-16: ochiq ro'yxat CDN'da 20 s keshlanadi — Toshkentdan har ochilishda
+      // AQSh serveriga borib kelish shart emas. Admin panel `?t=` bilan keshni chetlab o'tadi.
+      res.setHeader("Cache-Control", "public, s-maxage=20, stale-while-revalidate=120");
+      const withThumb = (v) => ({ ...v, thumb: (v.image && thumbs[v.image] && thumbs[v.image] !== v.image) ? thumbs[v.image] : "" });
       const byId = Object.fromEntries(sellers.map((s) => [s.id, s]));
       const out = list
         .map((p) => ({ ...p, sellerId: p.sellerId || MAIN_SELLER_ID }))
@@ -196,6 +204,7 @@ export default async function handler(req, res) {
           const sec = secs.find((x) => x.id === p.sectionId);
           return {
             ...p,
+            variants: Array.isArray(p.variants) ? p.variants.map(withThumb) : [],
             unit: p.unit || "litr",
             sectionId: sec ? sec.id : "",
             sectionName: sec ? sec.name : "",

@@ -33,6 +33,7 @@
 // unga kirish uchun ADMIN_PASSWORD ishlatiladi (alohida parol shart emas).
 
 import { kv } from "@vercel/kv";
+import { getThumbMap } from "./_lib/thumbs.js";
 import { createHash, randomBytes } from "crypto";
 import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG } from "./_lib/security.js";
 import { issueToken, revokeToken, sellerFromToken, sellerFromTokenHeaders } from "./_lib/auth.js";
@@ -169,8 +170,12 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      const [list, categories] = await Promise.all([loadSellers(), loadCategories()]);
-      const active = list.filter((s) => s.status === "active").map(publicSeller);
+      const [list, categories, thumbs] = await Promise.all([loadSellers(), loadCategories(), getThumbMap()]);
+      const active = list.filter((s) => s.status === "active").map(publicSeller).map((s) => ({
+        ...s,
+        shopLogoThumb: (s.shopLogo && thumbs[s.shopLogo] && thumbs[s.shopLogo] !== s.shopLogo) ? thumbs[s.shopLogo] : "",
+      }));
+      res.setHeader("Cache-Control", "public, s-maxage=20, stale-while-revalidate=120");
       return res.status(200).json({ ok: true, sellers: active, categories });
     }
 

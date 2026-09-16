@@ -9,6 +9,7 @@ import { kv } from "@vercel/kv";
 import { sellerFromTokenHeaders } from "./_lib/auth.js";
 import { createHash } from "crypto";
 import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG, isAllowedImageType } from "./_lib/security.js";
+import { getThumbMap, saveThumbMap, uploadThumb } from "./_lib/thumbs.js";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const MAX_BYTES = 4.5 * 1024 * 1024; // ~4.5 MB — Vercel body limitiga mos
@@ -71,7 +72,18 @@ export default async function handler(req, res) {
       contentType,
     });
 
-    res.status(200).json({ ok: true, url: blob.url });
+    // 2026-09-16: tezlik uchun 480px WebP kichik nusxa ham yasaymiz (xato bo'lsa — asl rasm ishlayveradi)
+    let thumb = "";
+    try {
+      thumb = await uploadThumb(buffer, filename);
+      const map = await getThumbMap();
+      map[blob.url] = thumb;
+      await saveThumbMap(map);
+    } catch (e) {
+      console.error("thumb:", e);
+    }
+
+    res.status(200).json({ ok: true, url: blob.url, thumb });
   } catch (err) {
     console.error(err);
     res.status(500).json({ ok: false, error: "Yuklashda xatolik" });
