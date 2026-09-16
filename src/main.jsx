@@ -24,6 +24,7 @@ const Upload = (p) => <Ic {...p}><path d="M12 15V4" /><path d="M7 9l5-5 5 5" /><
 const ImageIcon = (p) => <Ic {...p}><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="1.6" /><path d="M21 17l-6-6-4 4-3-3-5 5" /></Ic>;
 const Camera = (p) => <Ic {...p}><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="3.5" /></Ic>;
 const X = (p) => <Ic {...p}><path d="M6 6l12 12" /><path d="M18 6L6 18" /></Ic>;
+const SearchIc = (p) => <Ic {...p}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></Ic>;
 const ChevronRight = (p) => <Ic {...p}><path d="M9 6l6 6-6 6" /></Ic>;
 const ChevronDown = (p) => <Ic {...p}><path d="M6 9l6 6 6-6" /></Ic>;
 const ShoppingBag = (p) => <Ic {...p}><path d="M5 8h14l-1 12H6L5 8z" /><path d="M8 8V6a4 4 0 0 1 8 0v2" /></Ic>;
@@ -133,6 +134,8 @@ const STR = {
     emptyShopOptom: "Bu do'kon mahsulotlariga hali optom narx kiritilmagan.",
     emptyShop: "Bu do'konda hozircha mahsulot yo'q.",
     navStudio: "Studiya", navProducts: "Mahsulotlar", navCart: "Savat", navProfile: "Profil",
+    searchPh: "Qidirish: nom, rang, hajm…", sortDefault: "Odatiy", sortCheap: "Arzon → qimmat", sortExp: "Qimmat → arzon",
+    onlyStock: "Faqat mavjud", noMatch: "Hech narsa topilmadi. Boshqa so'z bilan urinib ko'ring.", clear: "Tozalash",
     installTitle: "Zetme'ni telefonga o'rnating",
     installBodyAndroid: "Ilova kabi tezroq ochiladi, manzil satrisiz",
     installBodyIOS: "Pastdagi Ulashish tugmasi → \u201cBosh ekranga qo'shish\u201d",
@@ -250,6 +253,8 @@ const STR = {
     emptyShopOptom: "Для товаров этого магазина ещё не указана оптовая цена.",
     emptyShop: "В этом магазине пока нет товаров.",
     navStudio: "Студия", navProducts: "Товары", navCart: "Корзина", navProfile: "Профиль",
+    searchPh: "Поиск: название, цвет, объём…", sortDefault: "По умолчанию", sortCheap: "Дешевле → дороже", sortExp: "Дороже → дешевле",
+    onlyStock: "Только в наличии", noMatch: "Ничего не найдено. Попробуйте другое слово.", clear: "Очистить",
     installTitle: "Установите Zetme на телефон",
     installBodyAndroid: "Открывается как приложение, быстрее и без адресной строки",
     installBodyIOS: "Кнопка \u201cПоделиться\u201d внизу → \u201cНа экран «Домой»\u201d",
@@ -559,8 +564,13 @@ function variantImgs(v) {
   if (Array.isArray(v.images) && v.images.length > 0) return v.images;
   return v.image ? [v.image] : [];
 }
+// Ro'yxat (grid) uchun kichik 480px nusxa (server `thumb` beradi); bo'lmasa asl rasm.
 function thumbUrl(p) {
-  return variantImg(p.variants && p.variants[0]) || "";
+  const v = p.variants && p.variants[0];
+  return (v && v.thumb) || variantImg(v) || "";
+}
+function variantThumb(v) {
+  return (v && v.thumb) || variantImg(v) || "";
 }
 
 /* ============ Ostatka (stock) helperlari ============
@@ -1643,6 +1653,11 @@ function App() {
   const [catFilter, setCatFilter] = useState(null);      // null = Barchasi | category id
   const [priceMode, setPriceMode] = useState("chakana"); // "chakana" | "optom"
   const [shopFilter, setShopFilter] = useState(null);    // null | { id, name } — do'kon sahifasi
+  // 2026-09-16: qidiruv va filtrlar (do'kon sahifasida)
+  const [searchQ, setSearchQ] = useState("");
+  const [sortMode, setSortMode] = useState("default");   // default | cheap | exp
+  const [onlyStock, setOnlyStock] = useState(false);
+  useEffect(() => { setSearchQ(""); setSortMode("default"); setOnlyStock(false); }, [shopFilter && shopFilter.id]);
 
   // FULLSCREEN OYNALAR: Studiya/Mahsulotlar — asosiy "sahifa" almashinuvi (bittasi to'liq
   // ko'rinadi, ikkinchisi butunlay yashiriladi — orqa fonda hech narsa qolmaydi).
@@ -1897,13 +1912,21 @@ function App() {
 
   // load real product catalog — MARKETPLACE: endi barcha kategoriya (tuvak + gul),
   // har mahsulotda sellerId + shopName + bonusEnabled keladi (api/products.js GET)
+  // 2026-09-16 tezlik: oxirgi ro'yxat telefonda saqlanadi — sayt ochilishi bilan
+  // DARHOL ko'rsatiladi (aylanuvchi "Yuklanmoqda" yo'q), tarmoqdan kelgani bilan almashadi.
   useEffect(() => {
+    try {
+      const cached = JSON.parse(storageGet("zetme_products_v1", "null"));
+      if (Array.isArray(cached) && cached.length) { setProducts(cached); setProductsLoading(false); }
+    } catch (e) {}
     fetch(`${API_BASE}/api/products`)
       .then((r) => r.json())
       .then((data) => {
         if (!data.ok) throw new Error(data.error || "Mahsulotlarni yuklab bo'lmadi");
         const list = (data.products || []).filter((p) => Array.isArray(p.variants) && p.variants.length > 0);
         setProducts(list);
+        setProductsError(null);
+        storageSet("zetme_products_v1", JSON.stringify(list));
       })
       .catch((err) => setProductsError(err.message))
       .finally(() => setProductsLoading(false));
@@ -1912,12 +1935,21 @@ function App() {
   // faol do'konlar ro'yxati (studiyadagi "Do'konlar" devori uchun)
   // api/sellers.js GET -> { ok, sellers:[{ id, shopName, shopLogo, bonusEnabled }] }
   useEffect(() => {
+    try {
+      const cached = JSON.parse(storageGet("zetme_sellers_v1", "null"));
+      if (cached && Array.isArray(cached.sellers) && cached.sellers.length) {
+        setShops(cached.sellers);
+        setCategories(Array.isArray(cached.categories) ? cached.categories : []);
+        setShopsLoading(false);
+      }
+    } catch (e) {}
     fetch(`${API_BASE}/api/sellers`)
       .then((r) => r.json())
       .then((data) => {
         if (data.ok) {
           setShops(data.sellers || []);
           setCategories(Array.isArray(data.categories) ? data.categories : []);
+          storageSet("zetme_sellers_v1", JSON.stringify({ sellers: data.sellers || [], categories: data.categories || [] }));
         }
       })
       .catch(() => {})
@@ -1940,7 +1972,7 @@ function App() {
       .map((s) => ({
         id: s.id,
         name: s.shopName || "Do'kon",
-        img: s.shopLogo || firstImg[s.id] || "",
+        img: s.shopLogoThumb || s.shopLogo || firstImg[s.id] || "",
         count: count[s.id] || 0,
         bonus: !!s.bonusEnabled,
         categoryIds: Array.isArray(s.categoryIds) ? s.categoryIds : [],
@@ -1969,7 +2001,7 @@ function App() {
   const studioShops = useMemo(() => shops.map((s) => ({
     id: s.id,
     name: s.shopName || "Do'kon",
-    img: s.shopLogo || "",
+    img: s.shopLogoThumb || s.shopLogo || "",
     bonus: !!s.bonusEnabled,
   })), [shops]);
 
@@ -1984,11 +2016,28 @@ function App() {
   // Filtrlash: narx rejimi (optom narxi yo'q variantlar yashirinadi) +
   // kategoriya (Barchasi/Tuvaklar/Gullar) + do'kon sahifasi (shopFilter)
   const visibleProducts = useMemo(() => {
-    return products
+    const q = searchQ.trim().toLowerCase();
+    const norm = (x) => String(x || "").toLowerCase();
+    const matches = (p) => {
+      if (!q) return true;
+      if (norm(p.name).includes(q) || norm(p.color).includes(q) || norm(p.sectionName).includes(q)) return true;
+      return (p.variants || []).some((v) =>
+        norm(v.name).includes(q) || norm(v.litr).includes(q) || norm(v.size).includes(q) ||
+        (v.colors || []).some((c) => norm(c).includes(q)) ||
+        norm(priceOf(v, priceMode)).includes(q));
+    };
+    const minPrice = (p) => Math.min(...p.variants.map((v) => priceOf(v, priceMode)));
+    let list = products
       .map((p) => ({ ...p, variants: (p.variants || []).filter((v) => priceOf(v, priceMode) > 0) }))
       .filter((p) => p.variants.length > 0)
-      .filter((p) => (shopFilter ? (p.sellerId || "zetme") === shopFilter.id : true));
-  }, [products, priceMode, shopFilter]);
+      .filter((p) => (shopFilter ? (p.sellerId || "zetme") === shopFilter.id : true))
+      .filter(matches)
+      .filter((p) => (onlyStock ? !isProductOut(p) : true));
+    if (sortMode === "cheap") list = [...list].sort((a, b) => minPrice(a) - minPrice(b));
+    if (sortMode === "exp") list = [...list].sort((a, b) => minPrice(b) - minPrice(a));
+    return list;
+  }, [products, priceMode, shopFilter, searchQ, sortMode, onlyStock]);
+  const filtersActive = !!searchQ.trim() || onlyStock || sortMode !== "default";
 
   // Do'kon sahifasi: mahsulotlar sotuvchining o'z bo'limlari bo'yicha guruhlanadi
   // (Uzum Tezkor menyusi kabi). Bo'limsizlar oxirida "Boshqalar" ostida.
@@ -2064,7 +2113,7 @@ function App() {
         key, id: fam.id, variantId: variant.id,
         name: variant.name || fam.name, litr: variant.litr, unit: fam.unit || "litr",
         price: Number(variant.price), optPrice: Number(variant.optPrice),
-        image: variantImg(variant), qty: cap(qty), color: color || "", stock,
+        image: variantThumb(variant), qty: cap(qty), color: color || "", stock,
         sellerId: fam.sellerId || "zetme",
         shopName: fam.shopName || "Tuvaklar",
         bonusEnabled: fam.bonusEnabled !== false,
@@ -2523,6 +2572,22 @@ function App() {
               )}
             </div>
 
+            {/* 2026-09-16: qidiruv + saralash + faqat mavjud */}
+            <div className="msearch">
+              <SearchIc size={16} color={C.inkDim} />
+              <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} placeholder={tr("searchPh")}
+                type="search" autoCorrect="off" autoCapitalize="off" />
+              {searchQ && <button type="button" className="msearch-x" onClick={() => setSearchQ("")} aria-label={tr("clear")}><X size={14} /></button>}
+            </div>
+            <div className="mfilters">
+              {[["default", "sortDefault"], ["cheap", "sortCheap"], ["exp", "sortExp"]].map(([m, k]) => (
+                <button key={m} type="button" className={"mfchip" + (sortMode === m ? " active" : "")} onClick={() => setSortMode(m)}>{tr(k)}</button>
+              ))}
+              <button type="button" className={"mfchip" + (onlyStock ? " active" : "")} onClick={() => setOnlyStock((v) => !v)}>
+                {onlyStock ? "✓ " : ""}{tr("onlyStock")}
+              </button>
+            </div>
+
             {shopGroups.length > 1 && (
               <div className="secchips">
                 {shopGroups.map((g) => (
@@ -2535,7 +2600,12 @@ function App() {
 
             {visibleProducts.length === 0 && (
               <div className="market-state">
-                {priceMode === "optom" ? tr("emptyShopOptom") : tr("emptyShop")}
+                {filtersActive ? tr("noMatch") : (priceMode === "optom" ? tr("emptyShopOptom") : tr("emptyShop"))}
+                {filtersActive && (
+                  <div style={{ marginTop: 10 }}>
+                    <button type="button" className="mfchip active" onClick={() => { setSearchQ(""); setOnlyStock(false); setSortMode("default"); }}>{tr("clear")}</button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -2550,7 +2620,7 @@ function App() {
                     return (
                       <div key={p.id} className={"pcard" + (pOut ? " pcard-out" : "")} onClick={() => setActiveProduct(p)}>
                         <div className="pcard-img">
-                          {thumbUrl(p) ? <img src={thumbUrl(p)} alt={p.name} /> : <span style={{ fontSize: 34 }}>🪴</span>}
+                          {thumbUrl(p) ? <img src={thumbUrl(p)} alt={p.name} loading="lazy" decoding="async" /> : <span style={{ fontSize: 34 }}>🪴</span>}
                           {pOut && <span className={"pcard-outbadge" + (p.paused ? " paused" : "")}>{p.paused ? tr("pmPaused") : tr("pmOut")}</span>}
                         </div>
                         <div className="pcard-body">
@@ -2655,7 +2725,6 @@ function App() {
 
 /* ============================== CSS ============================== */
 const buildCSS = () => `
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500;600&display=swap');
 *{box-sizing:border-box}
 .root{font-family:${FONT_BODY};background:${C.paper};
   background-image:radial-gradient(120% 46% at 50% 0%, ${C.accentSoft}, transparent 62%);
@@ -2958,6 +3027,14 @@ const buildCSS = () => `
 .market-sub{font-size:12px;color:${C.inkDim}}
 .market-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .market-optnote{font-size:11px;color:${C.laitonLo};font-weight:600}
+.msearch{display:flex;align-items:center;gap:8px;background:${C.card};border:1px solid ${C.mline};border-radius:12px;padding:9px 12px;margin-bottom:10px}
+.msearch input{flex:1;border:none;outline:none;background:transparent;font-size:14px;color:${C.ink};font-family:${FONT_BODY};min-width:0}
+.msearch input::placeholder{color:${C.inkDim}}
+.msearch-x{border:none;background:${C.mline};color:${C.ink};width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.mfilters{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 10px;margin:-2px -2px 6px;scrollbar-width:none}
+.mfilters::-webkit-scrollbar{display:none}
+.mfchip{flex-shrink:0;border:1px solid ${C.mline};background:${C.card};color:${C.inkDim};border-radius:999px;padding:6px 12px;font-size:12.5px;font-family:${FONT_BODY};cursor:pointer;white-space:nowrap}
+.mfchip.active{background:${C.ink};color:${C.card};border-color:${C.ink}}
 .market-state{font-size:13px;color:${C.inkDim};background:${C.card};border:1px solid ${C.mline};border-radius:12px;padding:18px;text-align:center}
 .market-state.err{color:${C.sale}}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:12px}
