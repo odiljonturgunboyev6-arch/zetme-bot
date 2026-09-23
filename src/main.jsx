@@ -91,6 +91,12 @@ function applyTheme(t) { THEME = t; Object.assign(C, THEMES[t]); try { localStor
 /* ============ UZ / RU tarjimalar ============ */
 const STR = {
   uz: {
+    aiTitle: "AI operator", aiSub: "Gul va tuvak bo'yicha savol bering",
+    aiGreeting: "Salom! Men Zetme AI operatoriman. Tuvak tanlash, narxlar, ranglar va gul parvarishi bo'yicha so'rang.",
+    aiPlaceholder: "Savolingizni yozing…", aiSend: "Yuborish",
+    aiErr: "Javob kelmadi. Birozdan keyin qayta urinib ko'ring.",
+    aiThinking: "Yozmoqda…", aiClear: "Tozalash", aiProducts: "Mahsulotlarni ko'rish",
+    aiQ1: "2 litrli tuvak qaysi ranglarda bor?", aiQ2: "Atirgulga qanday tuvak kerak?", aiQ3: "Buyurtma qanday beriladi?",
     eyebrow: "Botanik studiya", heroT1: "Gul va tuvaklar", heroEm: "olamiga", heroT2: "xush kelibsiz",
     slotFlower: "Gul rasmi", slotPot: "Tuvak rasmi",
     generating: "Yaratilmoqda…", generate: "Generatsiya qilish",
@@ -210,6 +216,12 @@ const STR = {
     lbOrdersN: (n) => n + " ta buyurtma",
   },
   ru: {
+    aiTitle: "AI оператор", aiSub: "Спросите про цветы и горшки",
+    aiGreeting: "Здравствуйте! Я AI-оператор Zetme. Спрашивайте про выбор горшка, цены, цвета и уход за цветами.",
+    aiPlaceholder: "Напишите вопрос…", aiSend: "Отправить",
+    aiErr: "Ответ не пришёл. Попробуйте чуть позже.",
+    aiThinking: "Печатает…", aiClear: "Очистить", aiProducts: "Смотреть товары",
+    aiQ1: "Какие цвета есть у горшка 2 л?", aiQ2: "Какой горшок нужен розе?", aiQ3: "Как оформить заказ?",
     eyebrow: "Ботаническая студия", heroT1: "Добро пожаловать в мир", heroEm: "цветов и горшков", heroT2: "",
     slotFlower: "Фото цветка", slotPot: "Фото горшка",
     generating: "Создаётся…", generate: "Сгенерировать",
@@ -1616,6 +1628,86 @@ function InstallBanner() {
 }
 
 /* ============================== App ============================== */
+/* ============ AI OPERATOR — savol-javob chati (generatsiya yo'q) ============
+   /api/ai-chat ga so'nggi 8 ta xabar yuboriladi; javob katalog asosida keladi.
+   Tarix localStorage'da (zetme_ai_chat), foydalanuvchi id — zetme_ai_uid. */
+const ChatIc = (p) => <Ic {...p}><path d="M4 5h16v11H8l-4 4V5z" /><path d="M8 9h8" /><path d="M8 12h5" /></Ic>;
+function aiUid() {
+  let u = storageGet("zetme_ai_uid", "");
+  if (!u) { u = "u" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); storageSet("zetme_ai_uid", u); }
+  return u;
+}
+function AiChat({ lang, onOpenProducts }) {
+  const [open, setOpen] = useState(false);
+  const [msgs, setMsgs] = useState(() => { try { const v = JSON.parse(storageGet("zetme_ai_chat", "[]")); return Array.isArray(v) ? v.slice(-20) : []; } catch (e) { return []; } });
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const listRef = React.useRef(null);
+  useEffect(() => { storageSet("zetme_ai_chat", JSON.stringify(msgs.slice(-20))); }, [msgs]);
+  useEffect(() => { if (open && listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight; }, [open, msgs, busy]);
+
+  const send = async (q) => {
+    const content = String(q || text).trim();
+    if (!content || busy) return;
+    setText(""); setErr("");
+    const next = [...msgs, { role: "user", content }];
+    setMsgs(next); setBusy(true);
+    try {
+      const r = await fetch("/api/ai-chat", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: next.slice(-8), lang, uid: aiUid() }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (d && d.ok && d.reply) setMsgs((m) => [...m, { role: "assistant", content: d.reply }]);
+      else setErr((d && d.error) || tr("aiErr"));
+    } catch (e) { setErr(tr("aiErr")); }
+    setBusy(false);
+  };
+  const clear = () => { setMsgs([]); setErr(""); };
+
+  return (
+    <React.Fragment>
+      {!open && (
+        <button className="aifab" onClick={() => setOpen(true)} aria-label={tr("aiTitle")}>
+          <ChatIc size={20} /><span>AI</span>
+        </button>
+      )}
+      {open && (
+        <div className="aichat">
+          <div className="aichat-hd">
+            <div className="aichat-av"><Sparkles size={16} /></div>
+            <div className="aichat-ttl"><b>{tr("aiTitle")}</b><span>{tr("aiSub")}</span></div>
+            {msgs.length > 0 && <button className="aichat-clr" onClick={clear}>{tr("aiClear")}</button>}
+            <button className="aichat-x" onClick={() => setOpen(false)} aria-label="close"><X size={18} /></button>
+          </div>
+          <div className="aichat-list" ref={listRef}>
+            <div className="aimsg ai">{tr("aiGreeting")}</div>
+            {msgs.length === 0 && (
+              <div className="aichips">
+                {["aiQ1", "aiQ2", "aiQ3"].map((k) => <button key={k} onClick={() => send(tr(k))}>{tr(k)}</button>)}
+              </div>
+            )}
+            {msgs.map((m, i) => <div key={i} className={"aimsg " + (m.role === "user" ? "me" : "ai")}>{m.content}</div>)}
+            {busy && <div className="aimsg ai aityping">{tr("aiThinking")}</div>}
+            {err && <div className="aimsg err">{err}</div>}
+            {msgs.length > 0 && !busy && (
+              <button className="aichat-prod" onClick={() => { setOpen(false); onOpenProducts && onOpenProducts(); }}>
+                <ShoppingBag size={14} /> {tr("aiProducts")}
+              </button>
+            )}
+          </div>
+          <div className="aichat-in">
+            <input value={text} onChange={(e) => setText(e.target.value)} placeholder={tr("aiPlaceholder")}
+              maxLength={600} onKeyDown={(e) => { if (e.key === "Enter") send(); }} />
+            <button onClick={() => send()} disabled={busy || !text.trim()} aria-label={tr("aiSend")}><Send size={16} /></button>
+          </div>
+        </div>
+      )}
+    </React.Fragment>
+  );
+}
+
 function App() {
   const [flower, setFlower] = useState(null);
   const [pot, setPot] = useState(null);
@@ -2719,6 +2811,7 @@ function App() {
           onSaveInfo={saveCustInfo} onLogout={logoutCustomer} />
       )}
       <InstallBanner />
+      <AiChat lang={lang} onOpenProducts={() => { setMainTab("products"); setCartOpen(false); setProfileOpen(false); }} />
     </div>
   );
 }
@@ -3139,6 +3232,38 @@ const buildCSS = () => `
   font-weight:700;font-size:12px;padding:8px 12px;cursor:pointer;white-space:nowrap}
 .installbar-x{flex-shrink:0;border:none;background:transparent;color:${C.inkDim};cursor:pointer;
   width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+/* ---------- AI operator chati ---------- */
+.aifab{position:fixed;right:14px;bottom:76px;z-index:56;display:flex;align-items:center;gap:6px;
+  border:none;border-radius:24px;padding:10px 14px 10px 12px;background:${C.accent};color:#fff;
+  font-family:${FONT_BODY};font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 8px 24px ${C.accentGlow};
+  animation:rvIn .4s ease both}
+.aifab:active{transform:scale(.96)}
+.aichat{position:fixed;left:0;right:0;bottom:0;top:auto;height:min(78vh,620px);z-index:66;display:flex;flex-direction:column;
+  background:${C.card};border-radius:20px 20px 0 0;border-top:1px solid ${C.mline};box-shadow:0 -12px 40px #0004;
+  animation:rvIn .3s ease both}
+@media(min-width:720px){.aichat{left:auto;right:16px;bottom:16px;width:400px;border-radius:20px;border:1px solid ${C.mline}}}
+.aichat-hd{display:flex;align-items:center;gap:10px;padding:12px 12px 10px 14px;border-bottom:1px solid ${C.mline}}
+.aichat-av{width:34px;height:34px;border-radius:12px;background:${C.accentSoft};color:${C.accent};display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.aichat-ttl{flex:1;min-width:0;display:flex;flex-direction:column}
+.aichat-ttl b{font-size:14px;color:${C.ink}}
+.aichat-ttl span{font-size:11px;color:${C.inkDim};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aichat-clr{border:1px solid ${C.mline};background:transparent;color:${C.inkDim};font-size:11px;border-radius:10px;padding:5px 8px;cursor:pointer;font-family:${FONT_BODY}}
+.aichat-x{border:none;background:transparent;color:${C.inkDim};cursor:pointer;width:30px;height:30px;display:flex;align-items:center;justify-content:center}
+.aichat-list{flex:1;overflow-y:auto;padding:12px 12px 8px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
+.aimsg{max-width:86%;padding:9px 12px;border-radius:14px;font-size:13.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word;color:${C.ink}}
+.aimsg.ai{align-self:flex-start;background:${C.accentSoft};border-bottom-left-radius:4px}
+.aimsg.me{align-self:flex-end;background:${C.accent};color:#fff;border-bottom-right-radius:4px}
+.aimsg.err{align-self:center;background:transparent;color:${C.sale};font-size:12px;text-align:center}
+.aityping{opacity:.7;font-style:italic}
+.aichips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px}
+.aichips button{border:1px solid ${C.mline};background:${C.card};color:${C.ink};font-size:12px;border-radius:12px;padding:7px 10px;cursor:pointer;font-family:${FONT_BODY};text-align:left}
+.aichat-prod{align-self:flex-start;display:flex;align-items:center;gap:6px;border:1px solid ${C.accent};background:transparent;color:${C.accent};
+  font-size:12px;font-weight:600;border-radius:12px;padding:6px 10px;cursor:pointer;font-family:${FONT_BODY};margin-top:2px}
+.aichat-in{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid ${C.mline}}
+.aichat-in input{flex:1;min-width:0;border:1px solid ${C.mline};background:${C.paper};color:${C.ink};border-radius:14px;padding:10px 12px;font-size:14px;font-family:${FONT_BODY};outline:none}
+.aichat-in input:focus{border-color:${C.accent}}
+.aichat-in button{width:42px;height:42px;border:none;border-radius:14px;background:${C.accent};color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.aichat-in button:disabled{opacity:.45;cursor:default}
 .bottomnav{position:fixed;left:0;right:0;bottom:0;background:${C.card};border-top:1px solid ${C.mline};
   display:flex;z-index:60;padding:6px 6px 8px;gap:3px}
 .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;border:none;
