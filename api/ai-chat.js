@@ -231,12 +231,14 @@ async function askGemini(system, messages) {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
-        generationConfig: { maxOutputTokens: MAX_OUT_TOKENS, temperature: 0.3 },
+        // Gemini 3.x da "thinking" sukut bo'yicha yoqilgan va chiqish byudjetini yeydi —
+        // qisqa savol-javob uchun minimal darajaga tushiramiz, byudjetni kengroq qoldiramiz.
+        generationConfig: { maxOutputTokens: 1024, temperature: 0.3, thinkingConfig: { thinkingLevel: "minimal" } },
       }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(`Gemini ${r.status}: ${data?.error?.message || "xato"}`);
-    const text = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim();
+    const text = (data.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || "").join("").trim();
     const u = data.usageMetadata || {};
     return { text, inTok: u.promptTokenCount || 0, outTok: u.candidatesTokenCount || 0 };
   } finally { clearTimeout(t); }
