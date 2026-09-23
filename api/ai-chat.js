@@ -306,7 +306,7 @@ export default async function handler(req, res) {
     // --- FAQ kesh (faqat tarixsiz, qisqa savolga) ---
     const nq = normQ(question);
     const cacheable = msgs.length === 1 && nq.length >= 3 && nq.length <= 120;
-    const faqKey = cacheable ? `ai:faq:${lang}:${hash(nq)}` : null;
+    const faqKey = cacheable ? `ai:faq:v2:${lang}:${hash(nq)}` : null;
     if (faqKey) {
       try {
         const hit = await kv.get(faqKey);
@@ -322,10 +322,12 @@ export default async function handler(req, res) {
     const system = systemPrompt((rules && String(rules).trim()) || DEFAULT_RULES, catalog.text, lang);
     const ask = PROVIDER === "gemini" ? askGemini : askAnthropic;
     const out = await ask(system, msgs);
-    const reply = (out.text || "").trim() || (lang === "ru" ? "Извините, не понял. Уточните, пожалуйста." : "Kechirasiz, tushunmadim. Aniqroq yozing.");
+    const realText = (out.text || "").trim();
+    const reply = realText || (lang === "ru" ? "Извините, не понял. Уточните, пожалуйста." : "Kechirasiz, tushunmadim. Aniqroq yozing.");
 
     await stat("req"); await stat("ai"); await stat("in_tokens", out.inTok); await stat("out_tokens", out.outTok);
-    if (faqKey) { try { await kv.set(faqKey, reply, { ex: FAQ_TTL }); } catch (e) {} }
+    // faqat to'liq, mazmunli javob keshlanadi (bo'sh/qisqa javob keshga tushmasin)
+    if (faqKey && realText.length >= 40) { try { await kv.set(faqKey, reply, { ex: FAQ_TTL }); } catch (e) {} }
 
     return res.status(200).json({ ok: true, reply });
   } catch (e) {
