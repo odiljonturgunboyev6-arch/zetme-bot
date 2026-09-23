@@ -332,6 +332,21 @@
       <div id="catMsg"></div>
     </div>
 
+    <!-- SUPER-ADMIN: AI operator (sayt chati) qoidalari + statistika (2026-09-23) -->
+    <div class="card hidden" data-pane="profil" id="aiCard">
+      <h3>AI operator <span class="badge" id="aiBadge"></span></h3>
+      <div class="hint" style="margin-bottom:8px;">
+        Saytdagi "AI" chat tugmasi. Mijoz savoliga AI <b>real katalog</b> (nom, hajm, narx, rang, zaxira)
+        va pastdagi <b>do'kon qoidalari</b> asosida javob beradi. Qoidalarga yetkazib berish narxi,
+        ish vaqti, to'lov turi, qaytarish sharti va h.k. ni oddiy matnda yozing.
+      </div>
+      <textarea id="aiRules" rows="7" style="width:100%; font-size:13px; line-height:1.4;" placeholder="Yuklanmoqda..."></textarea>
+      <button class="submitbtn" onclick="saveAiRules()">Qoidalarni saqlash</button>
+      <button type="button" class="addVariantBtn" onclick="loadAi()" style="margin-left:8px;">↻ Yangilash</button>
+      <div id="aiMsg" style="margin-top:8px; font-size:13px;"></div>
+      <div id="aiStats" class="hint" style="margin-top:10px;"></div>
+    </div>
+
     <div class="card hidden" data-pane="profil" id="botMenuCard">
       <h3>Telegram bot tugmasi</h3>
       <div class="hint" style="margin-bottom:10px;">
@@ -460,6 +475,42 @@
 
   function authHeaders() {
     return { "x-seller-login": ME.login, "x-seller-token": ME.token };
+  }
+
+  // ---- AI operator: qoidalar + statistika (super-admin) ----
+  async function loadAi() {
+    const ta = document.getElementById("aiRules");
+    const st = document.getElementById("aiStats");
+    try {
+      const res = await fetch("/api/ai-chat", { headers: authHeaders() });
+      const d = await res.json();
+      if (!d.ok) throw new Error(d.error || "Xatolik");
+      ta.value = d.rules || d.defaultRules || "";
+      ta.placeholder = "Do'kon qoidalari...";
+      document.getElementById("aiBadge").textContent = (d.provider || "") + " · " + (d.model || "");
+      const t = d.stats && d.stats.today ? d.stats.today : {};
+      const y = d.stats && d.stats.yesterday ? d.stats.yesterday : {};
+      const line = (n, o) => `${n}: ${o.req || 0} savol (AI: ${o.ai || 0}, keshdan: ${o.cached || 0}, limit: ${o.limited || 0}, xato: ${o.error || 0}) · tokenlar ${o.in_tokens || 0} / ${o.out_tokens || 0}`;
+      st.innerHTML = escHtml(line("Bugun", t)) + "<br>" + escHtml(line("Kecha", y));
+    } catch (e) {
+      st.textContent = "Statistika yuklanmadi: " + e.message;
+    }
+  }
+  async function saveAiRules() {
+    const msg = document.getElementById("aiMsg");
+    msg.style.color = "var(--inkDim)"; msg.textContent = "Saqlanmoqda...";
+    try {
+      const res = await fetch("/api/ai-chat", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ rules: document.getElementById("aiRules").value }),
+      });
+      const d = await res.json();
+      if (!d.ok) throw new Error(d.error || "Xatolik");
+      msg.style.color = "var(--accent)"; msg.textContent = "✅ Saqlandi — AI keyingi savoldan boshlab yangi qoidalar bilan javob beradi.";
+    } catch (e) {
+      msg.style.color = "var(--sale)"; msg.textContent = "❌ " + e.message;
+    }
   }
 
   async function setupBotMenuButton() {
@@ -665,6 +716,8 @@
       document.getElementById("sellersCard").classList.remove("hidden");
       document.getElementById("catCard").classList.remove("hidden");
       document.getElementById("botMenuCard").classList.remove("hidden");
+      document.getElementById("aiCard").classList.remove("hidden");
+      loadAi();
       loadSellers();   // adminList — categories ham qaytaradi
     } else {
       loadCategoriesPublic();
