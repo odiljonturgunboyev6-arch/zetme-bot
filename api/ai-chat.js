@@ -10,7 +10,7 @@
 //
 // ENV:  AI_PROVIDER = "anthropic" (default) | "gemini"
 //       ANTHROPIC_API_KEY  yoki  GEMINI_API_KEY
-//       AI_MODEL (ixtiyoriy) — default: claude-haiku-4-5 / gemini-2.5-flash
+//       AI_MODEL (ixtiyoriy) — default: claude-haiku-4-5 / gemini-3.6-flash
 //
 // XARAJATNI KAMAYTIRISH (1000+ foydalanuvchi bo'lsa ham tayyor):
 //   1) FAQ kesh — birinchi (tarixsiz) savolga javob KV'da 6 soat saqlanadi; bir xil
@@ -29,7 +29,7 @@ export const config = { maxDuration: 30 };
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const PROVIDER = (process.env.AI_PROVIDER || "anthropic").toLowerCase();
-const MODEL = process.env.AI_MODEL || (PROVIDER === "gemini" ? "gemini-2.5-flash" : "claude-haiku-4-5");
+const MODEL = process.env.AI_MODEL || (PROVIDER === "gemini" ? "gemini-3.6-flash" : "claude-haiku-4-5");
 
 const RULES_KEY = "ai:rules";
 const USER_DAILY_LIMIT = 20;
@@ -225,9 +225,9 @@ async function askGemini(system, messages) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 25000);
   try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`, {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
       method: "POST", signal: ctrl.signal,
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
@@ -329,6 +329,14 @@ export default async function handler(req, res) {
   } catch (e) {
     console.error("ai-chat:", e);
     await stat("error");
-    return res.status(500).json({ ok: false, error: "AI operator hozir javob bera olmadi. Birozdan keyin urinib ko'ring." });
+    // detail: provayder xatosining qisqa matni (kalit/sir bo'lmaydi) — admin tekshiruvi uchun
+    const detail = String(e && e.message ? e.message : e).replace(/AIza[0-9A-Za-z_-]+/g, "***").slice(0, 200);
+    const busy = /429|quota|RESOURCE_EXHAUSTED|rate/i.test(detail);
+    return res.status(busy ? 503 : 500).json({
+      ok: false, detail,
+      error: busy
+        ? "AI operator hozir band (limit). 1 daqiqadan keyin qayta urinib ko'ring."
+        : "AI operator hozir javob bera olmadi. Birozdan keyin urinib ko'ring.",
+    });
   }
 }
