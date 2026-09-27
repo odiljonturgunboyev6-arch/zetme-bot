@@ -88,6 +88,7 @@ function publicSeller(s) {
     shopName: s.shopName,
     bonusEnabled: !!s.bonusEnabled,
     shopLogo: s.shopLogo || "", // do'kon logotipi (sotuvchi admin panelda o'zi yuklaydi)
+    region: s.region || "", // 2026-09-27: do'kon joylashuvi (viloyat) — mijozga 📍 bilan ko'rinadi
     sections: normalizeSections(s.sections), // do'kon bo'limlari (5 tagacha): [{id,name}]
     categoryIds: Array.isArray(s.categoryIds) ? s.categoryIds : [], // marketplace bo'limlari
   };
@@ -286,6 +287,7 @@ export default async function handler(req, res) {
       }
 
       if (body.telegramChatId !== undefined) updated.telegramChatId = String(body.telegramChatId).trim();
+      if (body.region !== undefined) updated.region = String(body.region).trim().slice(0, 40); // viloyat / shahar
       if (body.bonusEnabled !== undefined) updated.bonusEnabled = !!body.bonusEnabled;
       if (body.phone !== undefined && String(body.phone).trim()) updated.phone = String(body.phone).trim();
       if (body.shopLogo !== undefined) updated.shopLogo = String(body.shopLogo).trim().slice(0, 600);

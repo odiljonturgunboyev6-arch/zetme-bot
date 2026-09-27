@@ -209,6 +209,7 @@ export default async function handler(req, res) {
             sectionId: sec ? sec.id : "",
             sectionName: sec ? sec.name : "",
             shopName: (s && s.shopName) || "Tuvaklar",
+            shopRegion: (s && s.region) || "",
             bonusEnabled: s ? !!s.bonusEnabled : true,
             paused: !!p.paused,
           };
