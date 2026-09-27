@@ -857,7 +857,7 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
         <div className="pm-body">
           <div className="pm-toprow">
             <span className="pm-modebadge">{priceMode === "optom" ? tr("pmOptom") : tr("pmChakana")}</span>
-            <span className="pm-shop"><Store size={11} /> {p.shopName || "Tuvaklar"}</span>
+            <span className="pm-shop"><Store size={11} /> {p.shopName || "Tuvaklar"}{p.shopRegion ? <span className="pm-shop-region"><MapPin size={10} /> {p.shopRegion}</span> : null}</span>
           </div>
           <h3 className="pm-title">{displayName}</h3>
           <div className="pm-price">{fmt(unitPrice)}</div>
@@ -2152,6 +2152,7 @@ function App() {
         img: s.shopLogoThumb || s.shopLogo || firstImg[s.id] || "",
         count: count[s.id] || 0,
         bonus: !!s.bonusEnabled,
+        region: s.region || "",
         categoryIds: Array.isArray(s.categoryIds) ? s.categoryIds : [],
       }))
       .filter((s) => s.count > 0)
@@ -2180,6 +2181,7 @@ function App() {
     name: s.shopName || "Do'kon",
     img: s.shopLogoThumb || s.shopLogo || "",
     bonus: !!s.bonusEnabled,
+    region: s.region || "",
   })), [shops]);
 
   function openShopById(s) {
@@ -2558,7 +2560,7 @@ function App() {
                   </div>
                   <span className="sw-shine" />
                   <div className="sw-veil" />
-                  <div className="sw-name"><Store size={11} color={C.laitonHi} /><span>{s.name}</span></div>
+                  <div className="sw-name"><Store size={11} color={C.laitonHi} /><span>{s.name}{s.region ? <em className="sw-region"> · 📍 {s.region}</em> : null}</span></div>
                   {s.bonus && <div className="sw-bonus" title="Bonus tizimi yoqilgan">★</div>}
                 </button>
               ))}
@@ -2714,6 +2716,7 @@ function App() {
                   </div>
                   <div className="mshop-body">
                     <div className="mshop-name">{s.name}</div>
+                    {s.region && <div className="shop-region"><MapPin size={11} /> {s.region}</div>}
                     <div className="mshop-count">{tr("productN", s.count)} <ChevronRight size={12} /></div>
                   </div>
                 </button>
@@ -2735,6 +2738,9 @@ function App() {
               </div>
               <div>
                 <h2 className="shophead-name">{shopFilter.name}</h2>
+                {currentShopTile && currentShopTile.region && (
+                  <div className="shop-region shop-region-lg"><MapPin size={12} /> {currentShopTile.region}</div>
+                )}
                 <div className="shophead-meta">
                   {tr("productN", visibleProducts.length)}
                   {currentShopTile && currentShopTile.bonus ? tr("bonusGifts") : ""}
@@ -3249,6 +3255,11 @@ const buildCSS = () => `
 .mshop-body{padding:10px 12px 12px}
 .mshop-name{font-weight:600;font-size:14px;color:${C.ink};overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mshop-count{display:flex;align-items:center;gap:2px;font-size:11.5px;color:${C.inkDim};margin-top:2px}
+/* do'kon joylashuvi (viloyat) — 2026-09-27 */
+.shop-region{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:${C.laitonLo};margin-top:2px;white-space:nowrap}
+.shop-region-lg{font-size:12px;margin:2px 0}
+.sw-region{font-style:normal;font-weight:500;opacity:.85}
+.pm-shop-region{display:inline-flex;align-items:center;gap:2px;margin-left:6px;font-weight:500;color:${C.inkDim}}
 
 /* ---------- MARKET: do'kon ichi (2-qadam) ---------- */
 .shopback{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid ${C.mline};
