@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import ReactDOM from "react-dom/client";
+import { createPortal } from "react-dom";
 
 /* ============================== Icons (no npm package — hand-drawn, lucide-style) ============================== */
 function Ic({ children, size = 18, color = "currentColor", kind = "stroke" }) {
@@ -776,7 +777,8 @@ function ImageLightbox({ imgs, index, alt, onIndex, onClose }) {
     document.body.style.overflow = "hidden";
     return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
   }, [i, n]);
-  return (
+  // body'ga portal: modal ichida qolsa, uning overflow/animation'i lightbox'ni kesib qo'yadi
+  return createPortal(
     <div className="lbx" onClick={onClose}
       onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
       onTouchEnd={(e) => {
@@ -795,7 +797,8 @@ function ImageLightbox({ imgs, index, alt, onIndex, onClose }) {
         </div>
       )}
       <button className="lbx-back" onClick={onClose}>{tr("imgBack")}</button>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -3355,7 +3358,7 @@ const buildCSS = () => `
 .lbx-dot.active{background:${C.laiton};transform:scale(1.25)}
 .lbx-back{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
   border:1px solid #ffffff44;background:#ffffff14;color:#fff;font-family:${FONT_BODY};font-size:13px;font-weight:600;
-  border-radius:30px;padding:10px 20px;cursor:pointer;backdrop-filter:blur(6px)}
+  border-radius:30px;padding:10px 20px;cursor:pointer;backdrop-filter:blur(6px);white-space:nowrap}
 .pm-thumbrow{display:flex;gap:8px;padding:10px 20px 0}
 .pm-thumb{width:52px;height:52px;border-radius:10px;border:2px solid ${C.mline};background:${C.paper};padding:0;cursor:pointer;overflow:hidden}
 .pm-thumb.active{border-color:${C.accent}}
