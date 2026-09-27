@@ -29,6 +29,7 @@ const SearchIc = (p) => <Ic {...p}><circle cx="11" cy="11" r="7" /><path d="M21 
 const ChevronRight = (p) => <Ic {...p}><path d="M9 6l6 6-6 6" /></Ic>;
 const ChevronDown = (p) => <Ic {...p}><path d="M6 9l6 6 6-6" /></Ic>;
 const ChevronLeft = (p) => <Ic {...p}><path d="M15 6l-6 6 6 6" /></Ic>;
+const ChevronUp = (p) => <Ic {...p}><path d="M6 15l6-6 6 6" /></Ic>;
 const Maximize2 = (p) => <Ic {...p}><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></Ic>;
 const ShoppingBag = (p) => <Ic {...p}><path d="M5 8h14l-1 12H6L5 8z" /><path d="M8 8V6a4 4 0 0 1 8 0v2" /></Ic>;
 const Minus = (p) => <Ic {...p}><path d="M5 12h14" /></Ic>;
@@ -213,6 +214,7 @@ const STR = {
     genHistory: "Generatsiyalar tarixi", genEmpty: "Hali generatsiya qilinmagan. Studiyadan boshlang.",
     toNight: "Tun rejimi", toDay: "Kun rejimi",
     imgOpen: "Kattalashtirish", imgBack: "← Mahsulotga qaytish",
+    showItems: (n, q) => "Barcha mahsulotlarni ko'rish (" + n + " xil · " + q + " dona)", hideItems: "Yig'ish", pcs: "dona",
     lbEyebrow: "Musobaqa", lbTitle: "TOP xaridorlar", lbSub: "Eng ko'p xarid qilgan mijozlar reytingi — har hafta yangilanadi",
     lbDaily: "Kunlik", lbWeekly: "Haftalik", lbMonthly: "Oylik", lbQuarterly: "Choraklik", lbHalfyear: "Yarim yillik", lbYearly: "Yillik",
     lbRetail: "Chakana", lbWholesale: "Optom",
@@ -342,6 +344,7 @@ const STR = {
     genHistory: "История генераций", genEmpty: "Генераций пока нет. Начните со студии.",
     toNight: "Ночной режим", toDay: "Дневной режим",
     imgOpen: "Увеличить", imgBack: "← Вернуться к товару",
+    showItems: (n, q) => "Показать все товары (" + n + " видов · " + q + " шт.)", hideItems: "Свернуть", pcs: "шт.",
     lbEyebrow: "Соревнование", lbTitle: "ТОП покупатели", lbSub: "Рейтинг клиентов с наибольшими покупками — обновляется каждую неделю",
     lbDaily: "За день", lbWeekly: "За неделю", lbMonthly: "За месяц", lbQuarterly: "За квартал", lbHalfyear: "За полгода", lbYearly: "За год",
     lbRetail: "Розница", lbWholesale: "Опт",
@@ -1107,6 +1110,8 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
   const [payFormId, setPayFormId] = useState(null);     // "To'lov qildim" izoh formasi
   const [payNote, setPayNote] = useState("");
   const [actBusy, setActBusy] = useState(false);
+  const [openOrders, setOpenOrders] = useState({}); // 2026-09-27: qaysi buyurtma to'liq ochilgan
+  const toggleOrder = (key) => setOpenOrders((m) => ({ ...m, [key]: !m[key] }));
   async function doCancelOrder(id) {
     setCancelBusy(true); setCancelErr("");
     const err = await onCancelOrder(id);
@@ -1366,16 +1371,46 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
                       </span>
                     </div>
                     {o.shopName && <div className="prof-order-shop" style={{ marginBottom: 5 }}><Store size={10} /> {o.shopName}</div>}
-                    <div className="prof-order-items">
-                      {(o.items || []).slice(0, 3).map((it, k) => (
-                        <div key={k}>{it.qty} × {it.name}</div>
-                      ))}
-                      {(o.items || []).length > 3 && <div>{tr("moreN", (o.items || []).length - 3)}</div>}
-                    </div>
-                    <div className="prof-order-total">
-                      {fmt(o.payTotal || o.total || 0)}
-                      {o.voucherDiscount > 0 && <span className="po-vdisc">{tr("vdisc", fmt(o.voucherDiscount))}</span>}
-                    </div>
+                    {/* 2026-09-27: mahsulotlar ro'yxati — yig'iq holda 3 ta, "Barchasini ko'rish" bosilsa
+                        har bir mahsulot rasmi, nomi, soni × narxi va jami bilan to'liq ochiladi */}
+                    {(() => {
+                      const items = o.items || [];
+                      const okey = o.id || String(o.ts || i);
+                      const open = !!openOrders[okey];
+                      const shown = open ? items : items.slice(0, 3);
+                      const totalQty = items.reduce((a, it) => a + (Number(it.qty) || 0), 0);
+                      return (
+                        <>
+                          <div className={"prof-order-items" + (open ? " po-open" : "")} onClick={() => toggleOrder(okey)} role="button">
+                            {shown.map((it, k) => (
+                              open ? (
+                                <div key={k} className="po-item">
+                                  <div className="po-item-img">{it.image ? <img src={it.image} alt="" /> : "🪴"}</div>
+                                  <div className="po-item-body">
+                                    <div className="po-item-name">{it.name}</div>
+                                    <div className="po-item-sub">{it.qty} {tr("pcs")} × {fmt(it.price || 0)}</div>
+                                  </div>
+                                  <div className="po-item-sum">{fmt((Number(it.price) || 0) * (Number(it.qty) || 0))}</div>
+                                </div>
+                              ) : (
+                                <div key={k}>{it.qty} × {it.name}</div>
+                              )
+                            ))}
+                            {!open && items.length > 3 && <div className="po-more">{tr("moreN", items.length - 3)}</div>}
+                          </div>
+                          {items.length > 0 && (
+                            <button type="button" className="po-togglebtn" onClick={() => toggleOrder(okey)}>
+                              {open ? <><ChevronUp size={13} /> {tr("hideItems")}</> : <><ChevronDown size={13} /> {tr("showItems", items.length, totalQty)}</>}
+                            </button>
+                          )}
+                          <div className="prof-order-total">
+                            {open && <span className="po-total-label">{tr("total")}: </span>}
+                            {fmt(o.payTotal || o.total || 0)}
+                            {o.voucherDiscount > 0 && <span className="po-vdisc">{tr("vdisc", fmt(o.voucherDiscount))}</span>}
+                          </div>
+                        </>
+                      );
+                    })()}
 
                     {(o.status || "yangi") === "bekor" && (
                       <div className="po-cancelinfo">
@@ -3531,7 +3566,20 @@ const buildCSS = () => `
 .po-cancelask{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:${C.inkDim}}
 .po-cbtn{border:1px solid ${C.mline};background:#fff;border-radius:16px;padding:6px 12px;font-size:11.5px;font-weight:600;font-family:inherit;cursor:pointer;color:${C.inkDim}}
 .po-cyes{background:#FBEFEA;border-color:${C.sale};color:${C.sale}}
-.prof-order-items{font-size:12px;color:${C.ink};line-height:1.55}
+.prof-order-items{font-size:12px;color:${C.ink};line-height:1.55;cursor:pointer}
+.po-more{color:${C.inkDim};font-style:italic}
+.po-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid ${C.mline}}
+.po-item:last-child{border-bottom:none}
+.po-item-img{width:44px;height:44px;border-radius:10px;background:${C.card};border:1px solid ${C.mline};flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:20px}
+.po-item-img img{width:100%;height:100%;object-fit:cover}
+.po-item-body{flex:1;min-width:0}
+.po-item-name{font-weight:600;font-size:12.5px;line-height:1.35;color:${C.ink}}
+.po-item-sub{font-size:11.5px;color:${C.inkDim};margin-top:2px}
+.po-item-sum{font-weight:700;font-size:12.5px;white-space:nowrap;color:${C.ink}}
+.po-togglebtn{margin-top:7px;display:inline-flex;align-items:center;gap:5px;background:${C.accentSoft};border:none;color:${C.accent};
+  border-radius:16px;padding:6px 12px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer}
+.po-total-label{font-weight:500;color:${C.inkDim}}
 .prof-order-total{margin-top:6px;font-weight:700;font-size:13px;color:${C.ink}}
 .prof-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
 .prof-avatar{position:relative;width:68px;height:68px;border-radius:50%;border:2px solid ${C.accent}66;background:${C.paper};
