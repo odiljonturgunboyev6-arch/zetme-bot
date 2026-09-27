@@ -419,6 +419,16 @@
       <div class="catpick" id="profCatPick"></div>
       <div class="hint">Mijoz saytda bo'limni bossa (masalan "Sun'iy gullar"), faqat shu bo'limni belgilagan do'konlar chiqadi. Bir nechtasini belgilash mumkin. Hech birini belgilamasangiz do'koningiz faqat "Barchasi" ostida ko'rinadi.</div>
 
+      <label>Do'kon joylashuvi — viloyat / shahar</label>
+      <select id="profRegion">
+        <option value="">Ko'rsatilmasin</option>
+        <option>Toshkent</option><option>Toshkent viloyati</option><option>Andijon</option><option>Farg'ona</option>
+        <option>Namangan</option><option>Samarqand</option><option>Buxoro</option><option>Navoiy</option>
+        <option>Qashqadaryo</option><option>Surxondaryo</option><option>Jizzax</option><option>Sirdaryo</option>
+        <option>Xorazm</option><option>Qoraqalpog'iston</option>
+      </select>
+      <div class="hint">Mijozlar saytda do'kon nomi yonida kichik <b>📍 Toshkent</b> ko'rinishida ko'radi — qayerdan yetkazilishini oldindan biladi.</div>
+
       <label>Telegram Chat ID (buyurtmalar shu yerga keladi)</label>
       <input type="text" id="profChatId" placeholder="Masalan: 5262377062" />
       <div class="hint">Chat ID'ni olish uchun Telegram'da <b>@zetmeai_bot</b> ga kirib <b>/myid</b> deb yozing — bot raqamingizni aytadi. Bo'sh qoldirsangiz buyurtmalar bosh administratorga boradi.</div>
@@ -703,6 +713,7 @@
     shopLogo = { url: ME.seller.shopLogo || "", dataUrl: "", name: "", type: "" };
     renderShopLogo();
     document.getElementById("profChatId").value = ME.seller.telegramChatId || "";
+    document.getElementById("profRegion").value = ME.seller.region || "";
     document.getElementById("profBonus").checked = !!ME.seller.bonusEnabled;
     sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name })) : [];
     renderSections();
@@ -1633,6 +1644,7 @@
       sections: sections.filter(s => String(s.name).trim()).map(s => ({ id: s.id, name: String(s.name).trim() })),
       categoryIds: myCategoryIds,
       telegramChatId: document.getElementById("profChatId").value.trim(),
+      region: document.getElementById("profRegion").value,
       bonusEnabled: document.getElementById("profBonus").checked,
     };
     const newPw = document.getElementById("profNewPw").value;
