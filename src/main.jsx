@@ -27,6 +27,8 @@ const X = (p) => <Ic {...p}><path d="M6 6l12 12" /><path d="M18 6L6 18" /></Ic>;
 const SearchIc = (p) => <Ic {...p}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></Ic>;
 const ChevronRight = (p) => <Ic {...p}><path d="M9 6l6 6-6 6" /></Ic>;
 const ChevronDown = (p) => <Ic {...p}><path d="M6 9l6 6 6-6" /></Ic>;
+const ChevronLeft = (p) => <Ic {...p}><path d="M15 6l-6 6 6 6" /></Ic>;
+const Maximize2 = (p) => <Ic {...p}><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></Ic>;
 const ShoppingBag = (p) => <Ic {...p}><path d="M5 8h14l-1 12H6L5 8z" /><path d="M8 8V6a4 4 0 0 1 8 0v2" /></Ic>;
 const Minus = (p) => <Ic {...p}><path d="M5 12h14" /></Ic>;
 const Plus = (p) => <Ic {...p}><path d="M12 5v14" /><path d="M5 12h14" /></Ic>;
@@ -73,7 +75,7 @@ const THEMES = {
     accent: "#2F6B4F", accent2: "#1B4A34", accentSoft: "#E2F0E6", accentGlow: "#2F6B4F2E",
     price: "#16211B", sale: "#C6472E",
     noir: "#FBF8EF", vert: "#E4EFE1", vertLo: "#D3E4CE",
-    ivoire: "#16261C", ivoireDim: "#5C6D60", line: "#CFDBC9", goldText: "#8B6A2A",
+    ivoire: "#16261C", ivoireDim: "#5C6D60", line: "#CFDBC9", goldText: "#7A5A1C",
   },
   night: {
     paper: "#081310", card: "#0F1D17", ink: "#EDE9DC", inkDim: "#8FA398", mline: "#1E3227",
@@ -113,7 +115,7 @@ const STR = {
     hiwLead: "Zetme — gul va tuvak sotuvchilarini xaridorlar bilan bog'laydigan platforma. Turli do'konlardagi mahsulotlarni bitta joydan qulay tanlab, buyurtma qilasiz.",
     hiw1t: "Do'kon va mahsulot tanlang", hiw1d: "Studiya bo'limidan tasdiqlangan do'konni yoki Mahsulotlar bo'limidan kerakli tuvak/gulni to'g'ridan-to'g'ri tanlang.",
     hiw2t: "Savatga qo'shing", hiw2d: "Yoqqan mahsulotlarni savatga qo'shing — istagan miqdorda, hatto turli do'konlardan bir vaqtda.",
-    hiw3t: "Ma'lumotlaringizni kiriting", hiw3d: "Ism, telefon va manzilingizni yozing — keyingi safar qayta kiritish shart emas, eslab qolinadi.",
+    hiw3t: "Ma'lumotlaringizni kiriting", hiw3d: "Ism, telefon va viloyatingizni yozing — keyingi safar qayta kiritish shart emas, eslab qolinadi.",
     hiw4t: "Sotuvchi bog'lanadi", hiw4d: "Buyurtma to'g'ridan-to'g'ri do'konga tushadi, sotuvchi tez orada siz bilan bog'lanib yetkazib beradi.",
     rulesT: "Zetme kim va nima uchun javobgar",
     rulesD: "Zetme — sotuvchi va xaridorni bog'laydigan platforma, o'zi mahsulot sotmaydi. Mahsulot sifati, narxi va yetkazib berish muddati uchun tegishli do'kon (sotuvchi) javobgar. Har bir sotuvchi ro'yxatdan o'tishda tekshiriladi, lekin savdoning o'zi bevosita siz va sotuvchi o'rtasida amalga oshadi. Savol yoki muammo bo'lsa — avval sotuvchi bilan bog'laning; hal bo'lmasa, Zetme administratsiyasiga murojaat qiling.",
@@ -125,7 +127,7 @@ const STR = {
     abC1t: "Katalogdan ko'rib tanlang", abC1d: "Har bir mahsulotning aniq rasmlari va tavsifi — hech qanday taxmin qilishga hojat yo'q.",
     abC2t: "Bir necha soniyada", abC2d: "Dizayner kutish yo'q, o'lchov yo'q. Natija shu zahoti ekraningizda paydo bo'ladi.",
     abC3t: "Tasdiqlangan do'konlar", abC3d: "Har bir sotuvchi administrator tomonidan tekshiriladi. Buyurtma to'g'ridan-to'g'ri do'konga boradi.",
-    abC4t: "Bonus va sovg'alar", abC4d: "1 mln so'mdan yuqori buyurtmalarga sovg'a, yirik xaridlarga esa pul bonuslari beriladi.",
+    abC4t: "Bonus va sovg'alar", abC4d: "1 mln so'mdan yuqori buyurtmalarga tuvak-sovg'a qo'shiladi.",
     statShop: "do'kon", statProd: "mahsulot", statOpen: "ochiq",
     statShopN: () => "do'kon", statProdN: () => "mahsulot",
     marketTitle: "Mahsulotlar", marketShopsN: (n) => n + " ta do'kon",
@@ -209,6 +211,7 @@ const STR = {
     regName: "Ismingiz", regContact: "Telefon yoki email", regBtn: "Ro'yxatdan o'tish",
     genHistory: "Generatsiyalar tarixi", genEmpty: "Hali generatsiya qilinmagan. Studiyadan boshlang.",
     toNight: "Tun rejimi", toDay: "Kun rejimi",
+    imgOpen: "Kattalashtirish", imgBack: "← Mahsulotga qaytish",
     lbEyebrow: "Musobaqa", lbTitle: "TOP xaridorlar", lbSub: "Eng ko'p xarid qilgan mijozlar reytingi — har hafta yangilanadi",
     lbDaily: "Kunlik", lbWeekly: "Haftalik", lbMonthly: "Oylik", lbQuarterly: "Choraklik", lbHalfyear: "Yarim yillik", lbYearly: "Yillik",
     lbRetail: "Chakana", lbWholesale: "Optom",
@@ -238,7 +241,7 @@ const STR = {
     hiwLead: "Zetme — платформа, которая связывает продавцов цветов и горшков с покупателями. Вы удобно выбираете товары из разных магазинов в одном месте и оформляете заказ.",
     hiw1t: "Выберите магазин и товар", hiw1d: "В разделе Студия выберите проверенный магазин или сразу товар в разделе Товары.",
     hiw2t: "Добавьте в корзину", hiw2d: "Добавляйте понравившиеся товары в корзину — в любом количестве, даже из разных магазинов сразу.",
-    hiw3t: "Укажите данные", hiw3d: "Впишите имя, телефон и адрес — в следующий раз вводить заново не нужно, всё запомнится.",
+    hiw3t: "Укажите данные", hiw3d: "Впишите имя, телефон и область — в следующий раз вводить заново не нужно, всё запомнится.",
     hiw4t: "Продавец свяжется с вами", hiw4d: "Заказ сразу попадает в магазин, продавец вскоре свяжется с вами и доставит заказ.",
     rulesT: "Кто и за что отвечает на Zetme",
     rulesD: "Zetme — это платформа, соединяющая продавца и покупателя, сама она товары не продаёт. За качество, цену и сроки доставки товара отвечает магазин (продавец). Каждый продавец проверяется при регистрации, но сама сделка происходит напрямую между вами и продавцом. Если есть вопрос или проблема — сначала обратитесь к продавцу; если не решится — напишите администрации Zetme.",
@@ -250,7 +253,7 @@ const STR = {
     abC1t: "Выбирайте прямо из каталога", abC1d: "Чёткие фото и описание каждого товара — никаких догадок.",
     abC2t: "За несколько секунд", abC2d: "Не нужно ждать дизайнера и делать замеры. Результат сразу на вашем экране.",
     abC3t: "Проверенные магазины", abC3d: "Каждый продавец проверяется администратором. Заказ идёт напрямую в магазин.",
-    abC4t: "Бонусы и подарки", abC4d: "К заказам свыше 1 млн сумов — подарок, к крупным покупкам — денежные бонусы.",
+    abC4t: "Бонусы и подарки", abC4d: "К заказам свыше 1 млн сумов добавляется горшок в подарок.",
     statShop: "магазинов", statProd: "товаров", statOpen: "открыто",
     statShopN: (n) => plural(n, "магазин", "магазина", "магазинов"), statProdN: (n) => plural(n, "товар", "товара", "товаров"),
     marketTitle: "Товары", marketShopsN: (n) => n + " " + plural(n, "магазин", "магазина", "магазинов"),
@@ -337,6 +340,7 @@ const STR = {
     regName: "Ваше имя", regContact: "Телефон или email", regBtn: "Зарегистрироваться",
     genHistory: "История генераций", genEmpty: "Генераций пока нет. Начните со студии.",
     toNight: "Ночной режим", toDay: "Дневной режим",
+    imgOpen: "Увеличить", imgBack: "← Вернуться к товару",
     lbEyebrow: "Соревнование", lbTitle: "ТОП покупатели", lbSub: "Рейтинг клиентов с наибольшими покупками — обновляется каждую неделю",
     lbDaily: "За день", lbWeekly: "За неделю", lbMonthly: "За месяц", lbQuarterly: "За квартал", lbHalfyear: "За полгода", lbYearly: "За год",
     lbRetail: "Розница", lbWholesale: "Опт",
@@ -454,13 +458,9 @@ function priceOf(v, mode) {
 }
 
 // one-time-order loyalty bonus — matches loyiha-holati.md jadvali
+// 2026-09-27: 5 mln+ pul bonuslari OLIB TASHLANDI (juda arzon qolib ketardi).
+// Faqat 1 mln+ buyurtmaga tuvak-sovg'a qoldi.
 const BONUS_TIERS = [
-  { min: 50000000, money: 3000000, tokin: 100 },
-  { min: 30000000, money: 1600000, tokin: 50 },
-  { min: 20000000, money: 1100000, tokin: 30 },
-  { min: 15000000, money: 800000, tokin: 25 },
-  { min: 10000000, money: 600000, tokin: 20 },
-  { min: 5000000, money: 250000, tokin: 10 },
   { min: 1000000, money: 0, tokin: 0, gift: true },
 ];
 function bonusFor(total) {
@@ -757,6 +757,48 @@ function PriceModeToggle({ mode, onChange }) {
   );
 }
 
+/* ============================== To'liq ekran rasm ko'rish (lightbox) ==============================
+   Mahsulot rasmi bosilganda ochiladi: rasm butun ekranda ko'rinadi, chapga/o'ngga
+   surib (swipe) yoki o'qlar bilan boshqa rasmlarga o'tiladi, ✕ / fon / Esc bilan yopiladi. */
+function ImageLightbox({ imgs, index, alt, onIndex, onClose }) {
+  const n = imgs.length;
+  const i = Math.min(Math.max(index, 0), Math.max(n - 1, 0));
+  const touchX = React.useRef(null);
+  const go = (d) => { if (n > 1) onIndex((i + d + n) % n); };
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight") go(1);
+      else if (e.key === "ArrowLeft") go(-1);
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [i, n]);
+  return (
+    <div className="lbx" onClick={onClose}
+      onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
+      onTouchEnd={(e) => {
+        if (touchX.current == null) return;
+        const dx = e.changedTouches[0].clientX - touchX.current;
+        touchX.current = null;
+        if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+      }}>
+      <button className="lbx-close" onClick={onClose} aria-label={tr("close")}><X size={20} /></button>
+      {n > 1 && <button className="lbx-nav lbx-prev" onClick={(e) => { e.stopPropagation(); go(-1); }} aria-label="←"><ChevronLeft size={22} /></button>}
+      <img src={imgs[i]} alt={alt} className="lbx-img" onClick={(e) => e.stopPropagation()} />
+      {n > 1 && <button className="lbx-nav lbx-next" onClick={(e) => { e.stopPropagation(); go(1); }} aria-label="→"><ChevronRight size={22} /></button>}
+      {n > 1 && (
+        <div className="lbx-dots" onClick={(e) => e.stopPropagation()}>
+          {imgs.map((_, k) => <button key={k} className={"lbx-dot" + (k === i ? " active" : "")} onClick={() => onIndex(k)} aria-label={String(k + 1)} />)}
+        </div>
+      )}
+      <button className="lbx-back" onClick={onClose}>{tr("imgBack")}</button>
+    </div>
+  );
+}
+
 /* ============================== Product detail modal (litr variant picker) ============================== */
 function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
   const variants = p.variants || [];
@@ -764,6 +806,7 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
   const [qty, setQty] = useState(1);
   const [imgIdx, setImgIdx] = useState(0);
   const [colorIdx, setColorIdx] = useState(0);
+  const [zoom, setZoom] = useState(false); // rasm bosilganda to'liq ekran ko'rish
   const v = variants[vi] || variants[0] || {};
   const displayName = v.name || p.name;
   // ranglar endi VARIANT (hajm) darajasida — har birining o'z ro'yxati bor;
@@ -787,9 +830,15 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="pmodal">
         <button className="pm-close" onClick={onClose}><X size={18} /></button>
-        <div className="pm-hero">
+        <div className={"pm-hero" + (heroImg ? " pm-hero-zoomable" : "")} onClick={() => heroImg && setZoom(true)}
+          role={heroImg ? "button" : undefined} aria-label={heroImg ? tr("imgOpen") : undefined}>
           {heroImg ? <img src={heroImg} alt={displayName} className="pm-hero-img" /> : <span style={{ fontSize: 54 }}>🪴</span>}
+          {heroImg && <span className="pm-zoom-hint"><Maximize2 size={13} /> {tr("imgOpen")}</span>}
         </div>
+        {zoom && heroImg && (
+          <ImageLightbox imgs={imgs} index={imgIdx} alt={displayName}
+            onIndex={setImgIdx} onClose={() => setZoom(false)} />
+        )}
         {imgs.length > 1 && (
           <div className="pm-thumbrow">
             {imgs.map((u, i) => (
@@ -988,8 +1037,10 @@ function CheckoutForm({ initial, itemCount, payTotal, shopName, busy, error, onS
   const [name, setName] = useState(initial.name || "");
   const [phone, setPhone] = useState(initial.phone || "");
   const [region, setRegion] = useState(initial.region || "");
-  const [address, setAddress] = useState(initial.address || "");
-  const [note, setNote] = useState(initial.note || "");
+  // 2026-09-27: buyurtma formasi soddalashtirildi — faqat ism / telefon / viloyat.
+  // Manzil va kuryer izohi Profil bo'limida to'ldiriladi va shu yerdan avtomatik olinadi.
+  const address = initial.address || "";
+  const note = initial.note || "";
   return (
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="checkout">
@@ -1007,10 +1058,6 @@ function CheckoutForm({ initial, itemCount, payTotal, shopName, busy, error, onS
           <option value="">{tr("coSelect")}</option>
           {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
-        <label className="co-label">{tr("fAddress")}</label>
-        <input className="co-input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder={tr("fAddressPh")} />
-        <label className="co-label">{tr("fNote")}</label>
-        <input className="co-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={tr("fNotePh")} />
         {error && <div className="prof-err" style={{ marginTop: 8 }}>{error}</div>}
         <button className="pm-add" style={{ marginTop: 14 }} disabled={busy}
           onClick={() => onSubmit({ name: name.trim(), phone: phone.trim(), region, address: address.trim(), note: note.trim() })}>
@@ -2501,7 +2548,7 @@ function App() {
               const Ic = s.ic;
               return (
                 <div key={i} className="hiw-step" style={{ animationDelay: `${i * 130}ms` }}>
-                  <div className="hiw-num"><span className="hiw-n">{i + 1}</span><Ic size={17} color={C.laitonHi} /></div>
+                  <div className="hiw-num"><span className="hiw-n">{i + 1}</span><Ic size={17} color={C.goldText} /></div>
                   <div className="hiw-t">{s.t}</div>
                   <div className="hiw-d">{s.d}</div>
                 </div>
@@ -2510,7 +2557,7 @@ function App() {
           </div>
 
           <div className="hiw-rules">
-            <div className="hiw-rules-ic"><BadgeCheck size={19} color={C.laitonHi} /></div>
+            <div className="hiw-rules-ic"><BadgeCheck size={19} color={C.goldText} /></div>
             <div>
               <div className="hiw-rules-t">{tr("rulesT")}</div>
               <p className="hiw-rules-d">{tr("rulesD")}</p>
@@ -3290,6 +3337,25 @@ const buildCSS = () => `
 @keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 .pm-hero{aspect-ratio:4/3;max-height:340px;width:100%;background:${C.paper};display:flex;align-items:center;justify-content:center;overflow:hidden}
 .pm-hero-img{width:100%;height:100%;object-fit:contain}
+.pm-hero-zoomable{cursor:zoom-in;position:relative}
+.pm-zoom-hint{position:absolute;right:10px;bottom:10px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  color:#fff;background:#0009;border-radius:20px;padding:5px 10px;pointer-events:none;backdrop-filter:blur(4px)}
+/* to'liq ekran rasm (lightbox) */
+.lbx{position:fixed;inset:0;z-index:200;background:#000000F2;display:flex;align-items:center;justify-content:center;
+  animation:lbxIn .22s ease both;touch-action:pan-y}
+@keyframes lbxIn{from{opacity:0}to{opacity:1}}
+.lbx-img{max-width:100vw;max-height:100vh;width:auto;height:auto;object-fit:contain;user-select:none;-webkit-user-drag:none}
+.lbx-close{position:absolute;top:calc(12px + env(safe-area-inset-top));right:14px;width:42px;height:42px;border-radius:50%;
+  border:1px solid #ffffff33;background:#ffffff1a;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.lbx-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1px solid #ffffff33;
+  background:#ffffff1a;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.lbx-prev{left:10px}.lbx-next{right:10px}
+.lbx-dots{position:absolute;bottom:calc(74px + env(safe-area-inset-bottom));left:0;right:0;display:flex;justify-content:center;gap:7px}
+.lbx-dot{width:8px;height:8px;border-radius:50%;border:none;background:#ffffff55;padding:0;cursor:pointer}
+.lbx-dot.active{background:${C.laiton};transform:scale(1.25)}
+.lbx-back{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+  border:1px solid #ffffff44;background:#ffffff14;color:#fff;font-family:${FONT_BODY};font-size:13px;font-weight:600;
+  border-radius:30px;padding:10px 20px;cursor:pointer;backdrop-filter:blur(6px)}
 .pm-thumbrow{display:flex;gap:8px;padding:10px 20px 0}
 .pm-thumb{width:52px;height:52px;border-radius:10px;border:2px solid ${C.mline};background:${C.paper};padding:0;cursor:pointer;overflow:hidden}
 .pm-thumb.active{border-color:${C.accent}}
@@ -3618,7 +3684,7 @@ const buildCSS = () => `
 .hiw-num{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:9px}
 .hiw-n{width:26px;height:26px;border-radius:50%;border:1px solid #C6A05B99;color:${C.goldText};font-size:12.5px;font-weight:600;
   display:flex;align-items:center;justify-content:center;font-family:${FONT_DISPLAY};background:#C6A05B1A}
-.hiw-t{font-family:${FONT_DISPLAY};font-size:17.5px;margin-bottom:5px;color:#F1ECDF}
+.hiw-t{font-family:${FONT_DISPLAY};font-size:17.5px;margin-bottom:5px;color:${C.goldText};font-weight:600}
 .hiw-d{font-size:12.5px;line-height:1.55;color:${C.ivoireDim}}
 @media (min-width:640px){
   .hiw-row{grid-template-columns:repeat(3,1fr)}
@@ -3628,7 +3694,7 @@ const buildCSS = () => `
   border:1px solid #C6A05B33;border-radius:16px;background:linear-gradient(160deg,#C6A05B12,#FFFFFF03)}
 .hiw-rules-ic{flex-shrink:0;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   border:1px solid #C6A05B55;background:#C6A05B1A;margin-top:1px}
-.hiw-rules-t{font-family:${FONT_DISPLAY};font-size:16px;color:#F1ECDF;margin-bottom:5px}
+.hiw-rules-t{font-family:${FONT_DISPLAY};font-size:16px;color:${C.goldText};font-weight:600;margin-bottom:5px}
 .hiw-rules-d{font-size:12.5px;line-height:1.65;color:${C.ivoireDim};margin:0}
 
 /* ============ Mijozlar sotuv reytingi (liderlar taxtasi) ============ */
@@ -3674,7 +3740,7 @@ const buildCSS = () => `
   display:flex;align-items:center;justify-content:center;margin-top:2px}
 .lb-p1 .lb-avatar{width:58px;height:58px;border-color:${C.laiton}}
 .lb-avatar img{width:100%;height:100%;object-fit:cover}
-.lb-name{font-size:11.5px;font-weight:600;color:#F1ECDF;margin-top:3px;max-width:90px;overflow:hidden;
+.lb-name{font-size:11.5px;font-weight:600;color:${C.ivoire};margin-top:3px;max-width:90px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .lb-amt{font-size:11px;color:${C.goldText};font-weight:700}
 
@@ -3686,7 +3752,7 @@ const buildCSS = () => `
   display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .lb-row-avatar img{width:100%;height:100%;object-fit:cover}
 .lb-row-mid{flex:1;min-width:0}
-.lb-row-name{font-size:12.5px;font-weight:600;color:#F1ECDF;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-row-name{font-size:12.5px;font-weight:600;color:${C.ivoire};overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lb-row-orders{font-size:10.5px;color:${C.ivoireDim}}
 .lb-row-amt{font-size:12px;font-weight:700;color:${C.goldText};flex-shrink:0}
 
