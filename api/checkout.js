@@ -145,6 +145,8 @@ export default async function handler(req, res) {
         price: unitPrice,
         qty,
         color,
+        // 2026-09-27: mijoz profilida buyurtma ochilganda rasm ko'rinishi uchun
+        image: variant.thumb || variant.image || (Array.isArray(variant.images) && variant.images[0]) || "",
       });
       stockOps.push({ famId: fam.id, variantId: variant.id, colorKey, qty, label: `${variant.name || fam.name}${color ? " — " + color : ""}` });
     }
