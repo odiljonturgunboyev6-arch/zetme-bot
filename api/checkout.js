@@ -27,13 +27,9 @@ const VOUCHER_CAP = 1000000;
 const BOT_TOKEN = (process.env.BOT_TOKEN || "").trim();
 const OWNER_CHAT_ID = process.env.OWNER_CHAT_ID;
 
+// 2026-09-27: 5 mln+ pul bonuslari olib tashlandi (narx juda arzon qolib ketardi).
+// Faqat 1 mln+ buyurtmaga tuvak-sovg'a qoldi. Frontend (src/main.jsx) bilan bir xil.
 const BONUS_TIERS = [
-  { min: 50000000, money: 3000000, tokin: 100 },
-  { min: 30000000, money: 1600000, tokin: 50 },
-  { min: 20000000, money: 1100000, tokin: 30 },
-  { min: 15000000, money: 800000, tokin: 25 },
-  { min: 10000000, money: 600000, tokin: 20 },
-  { min: 5000000, money: 250000, tokin: 10 },
   { min: 1000000, money: 0, tokin: 0, gift: true },
 ];
 function bonusFor(total) {
