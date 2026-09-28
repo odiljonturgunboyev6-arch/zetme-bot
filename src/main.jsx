@@ -56,6 +56,10 @@ const Mail = (p) => <Ic {...p}><rect x="3" y="5" width="18" height="14" rx="2" /
 const PhoneIc = (p) => <Ic {...p}><path d="M6 3h3l2 5-2.5 1.5a12 12 0 0 0 5 5L15 12l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4 5.2 2 2 0 0 1 6 3z" /></Ic>;
 const HomeIc = (p) => <Ic {...p}><path d="M4 11l8-7 8 7" /><path d="M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9" /></Ic>;
 const LogOut = (p) => <Ic {...p}><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="M10 17l-5-5 5-5" /><path d="M5 12h11" /></Ic>;
+const SunIc = (p) => <Ic {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="M4.9 4.9l1.4 1.4" /><path d="M17.7 17.7l1.4 1.4" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M4.9 19.1l1.4-1.4" /><path d="M17.7 6.3l1.4-1.4" /></Ic>;
+const MoonIc = (p) => <Ic {...p}><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></Ic>;
+const PercentIc = (p) => <Ic {...p}><path d="M19 5L5 19" /><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" /></Ic>;
+const HeadsetIc = (p) => <Ic {...p}><path d="M3 18v-6a9 9 0 0 1 18 0v6" /><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z" /><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" /></Ic>;
 const IdCard = (p) => <Ic {...p}><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="9" cy="11" r="2.2" /><path d="M5.5 16.6c.6-1.6 2-2.4 3.5-2.4s2.9.8 3.5 2.4" /><path d="M15 10h4" /><path d="M15 13.5h4" /></Ic>;
 const CakeIc = (p) => <Ic {...p}><path d="M4 20h16v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6z" /><path d="M12 9V6.5" /><path d="M8 9V7.5" /><path d="M16 9V7.5" /></Ic>;
 
@@ -216,6 +220,11 @@ const STR = {
     regName: "Ismingiz", regContact: "Telefon yoki email", regBtn: "Ro'yxatdan o'tish",
     genHistory: "Generatsiyalar tarixi", genEmpty: "Hali generatsiya qilinmagan. Studiyadan boshlang.",
     toNight: "Tun rejimi", toDay: "Kun rejimi",
+    phTitle: "Profilim", phOrdersS: "Barcha buyurtmalaringiz", phInfoS: "Manzil va telefon \u2014 bir marta",
+    phVouchersT: "Chegirmalarim", phVouchersS: "Sizga berilgan bonuslar", phGensS: "AI studiya tarixi",
+    phSettings: "Sozlamalar", phLang: "Til", phTheme: "Ko'rinish", phDay: "Kun", phNight: "Tun",
+    phSupportT: "Qo'llab-quvvatlash", phSupportS: "Savollar uchun adminga yozing", phBack: "Profilga qaytish",
+    phNoVouchers: "Hozircha chegirma yo'q \u2014 xarid qilib bonus yig'ing", phFill: (n) => "Profil " + n + "% to'ldirilgan",
     imgOpen: "Kattalashtirish", imgBack: "← Mahsulotga qaytish",
     showItems: (n, q) => "Barcha mahsulotlarni ko'rish (" + n + " xil · " + q + " dona)", hideItems: "Yig'ish", pcs: "dona",
     lbEyebrow: "Musobaqa", lbTitle: "TOP xaridorlar", lbSub: "Eng ko'p xarid qilgan mijozlar reytingi — har hafta yangilanadi",
@@ -346,6 +355,11 @@ const STR = {
     regName: "Ваше имя", regContact: "Телефон или email", regBtn: "Зарегистрироваться",
     genHistory: "История генераций", genEmpty: "Генераций пока нет. Начните со студии.",
     toNight: "Ночной режим", toDay: "Дневной режим",
+    phTitle: "Мой профиль", phOrdersS: "Все ваши заказы", phInfoS: "Адрес и телефон \u2014 один раз",
+    phVouchersT: "Мои скидки", phVouchersS: "Ваши бонусы", phGensS: "История AI-студии",
+    phSettings: "Настройки", phLang: "Язык", phTheme: "Вид", phDay: "День", phNight: "Ночь",
+    phSupportT: "Поддержка", phSupportS: "Напишите админу по вопросам", phBack: "Назад в профиль",
+    phNoVouchers: "Скидок пока нет \u2014 покупайте и копите бонусы", phFill: (n) => "Профиль заполнен на " + n + "%",
     imgOpen: "Увеличить", imgBack: "← Вернуться к товару",
     showItems: (n, q) => "Показать все товары (" + n + " видов · " + q + " шт.)", hideItems: "Свернуть", pcs: "шт.",
     lbEyebrow: "Соревнование", lbTitle: "ТОП покупатели", lbSub: "Рейтинг клиентов с наибольшими покупками — обновляется каждую неделю",
@@ -1126,7 +1140,9 @@ function OrderSuccess({ orderId, payTotal, shopName, voucherDiscount, voucherPer
 /* ============================== Profile screen ============================== */
 function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge,
   cust, orders, linked, vouchers, onLink, onRegister, onSaveName, onPhoto, onCancelOrder, onReceiveOrder, onPaidOrder,
-  onSaveInfo, onLogout }) {
+  onSaveInfo, onLogout, lang, theme, onSwitchLang, onToggleTheme }) {
+  // 2026-09-29: profil endi "hub" — bosh sahifada plitkalar, har bo'lim alohida ochiladi
+  const [sec, setSec] = useState("hub");
   const [cancelingId, setCancelingId] = useState(null); // "tasdiqlaysizmi?" bosqichi
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelErr, setCancelErr] = useState("");
@@ -1245,54 +1261,117 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
       <div className="profile">
         <button className="pm-close" onClick={onClose}><X size={18} /></button>
 
-        <div className="prof-head">
-          {/* RASM YUKLASH — <label> ichida haqiqiy <input type="file">.
-              Avval yashirin input JS orqali .click() qilinardi; iPhone Safari va
-              Telegram ichki brauzerida bu bloklanib, "rasm qo'yish" ishlamay qolardi.
-              Endi bosish brauzerning o'z mexanizmi orqali ketadi — hamma joyda ishlaydi. */}
-          <label className="prof-avatar" title={tr("photoHint")}>
-            <input className="prof-fileinput" type="file" accept="image/*,.heic,.heif" onChange={onPhotoFile} />
-            {cust && cust.photo
-              ? <img src={cust.photo} alt="" className="prof-photo" />
-              : <User size={28} color={C.accent} />}
-            <span className="prof-cam"><Camera size={11} color="#fff" /></span>
-            {photoBusy && <span className="prof-photobusy"><span className="pf-spin" /></span>}
-          </label>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {!editName ? (
-              <div className="prof-name">
-                {displayName}
-                {linked && (
-                  <button className="prof-editbtn" onClick={() => {
-                    setFn((cust && cust.firstName) || ""); setLn((cust && cust.lastName) || ""); setEditName(true);
-                  }}>{tr("edit")}</button>
-                )}
+        <div className="ph-hero">
+          <span className="ph-orb ph-orb1" /><span className="ph-orb ph-orb2" />
+          <div className="ph-top">
+            {/* RASM YUKLASH — <label> ichida haqiqiy <input type="file"> (iOS/Telegram uchun) */}
+            <label className="prof-avatar ph-avatar" title={tr("photoHint")} style={{ "--fill": fillPct + "%" }}>
+              <input className="prof-fileinput" type="file" accept="image/*,.heic,.heif" onChange={onPhotoFile} />
+              <span className="ph-avatar-in">
+                {cust && cust.photo
+                  ? <img src={cust.photo} alt="" className="prof-photo" />
+                  : <User size={30} color={C.laitonHi} />}
+              </span>
+              <span className="prof-cam ph-cam"><Camera size={11} color="#fff" /></span>
+              {photoBusy && <span className="prof-photobusy"><span className="pf-spin" /></span>}
+            </label>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="ph-eyebrow">{tr("phTitle")}</div>
+              {!editName ? (
+                <div className="ph-name">
+                  {displayName}
+                  {linked && (
+                    <button className="prof-editbtn ph-edit" onClick={() => {
+                      setFn((cust && cust.firstName) || ""); setLn((cust && cust.lastName) || ""); setEditName(true);
+                    }}>{tr("edit")}</button>
+                  )}
+                </div>
+              ) : (
+                <div className="prof-nameedit ph-nameedit">
+                  <input value={fn} placeholder={tr("fName")} onChange={(e) => setFn(e.target.value)} />
+                  <input value={ln} placeholder={tr("lName")} onChange={(e) => setLn(e.target.value)} />
+                  <button onClick={doSaveName} disabled={nameBusy}>{nameBusy ? "…" : tr("save")}</button>
+                </div>
+              )}
+              <div className="ph-tier">{cust && cust.createdAt ? tr("memberSince", dayShort(cust.createdAt)) : tr("memberNew")}</div>
+              <div className="ph-phone">
+                {displayPhone ? <>{displayPhone}{linked ? tr("tgLinked") : ""}</> : tr("noPhone")}
               </div>
-            ) : (
-              <div className="prof-nameedit">
-                <input value={fn} placeholder={tr("fName")} onChange={(e) => setFn(e.target.value)} />
-                <input value={ln} placeholder={tr("lName")} onChange={(e) => setLn(e.target.value)} />
-                <button onClick={doSaveName} disabled={nameBusy}>{nameBusy ? "…" : tr("save")}</button>
-              </div>
-            )}
-            <div className="prof-tier">{cust && cust.createdAt ? tr("memberSince", dayShort(cust.createdAt)) : tr("memberNew")}</div>
-            <div className="prof-phone">
-              {displayPhone
-                ? <>{displayPhone}{linked ? tr("tgLinked") : ""}</>
-                : tr("noPhone")}
+              {photoBusy && <div className="ph-phone">{tr("photoLoading")}</div>}
+              {photoErr && <div className="prof-err">{photoErr}</div>}
             </div>
-            {photoBusy && <div className="prof-phone">{tr("photoLoading")}</div>}
-            {photoErr && <div className="prof-err">{photoErr}</div>}
+          </div>
+          <div className="ph-stats">
+            <div className="ph-stat"><b>{okOrders.length}</b><span>{tr("stOrders")}</span></div>
+            <div className="ph-stat"><b>{fmtShort(spent)}</b><span>{tr("stSpent")}</span></div>
+            <div className="ph-stat"><b>{(vouchers || []).length}</b><span>{tr("stVouchers")}</span></div>
           </div>
         </div>
 
-        {/* ---------- Qisqa statistika ---------- */}
-        <div className="pf-stats">
-          <div className="pf-stat"><b>{okOrders.length}</b><span>{tr("stOrders")}</span></div>
-          <div className="pf-stat"><b>{fmtShort(spent)}</b><span>{tr("stSpent")}</span></div>
-          <div className="pf-stat"><b>{(vouchers || []).length}</b><span>{tr("stVouchers")}</span></div>
-        </div>
+        {sec === "hub" && (
+          <>
+            <div className="ph-tiles">
+              <button className="ph-tile" onClick={() => setSec("orders")}>
+                <span className="ph-tile-ic ph-ic-a"><ShoppingBag size={18} /></span>
+                <span className="ph-tile-t">{tr("myOrders")}{linked && orders.length > 0 && <em>{orders.length}</em>}</span>
+                <span className="ph-tile-s">{tr("phOrdersS")}</span>
+                <span className="ph-tile-ch"><ChevronRight size={15} /></span>
+              </button>
+              <button className="ph-tile" onClick={() => setSec("info")}>
+                <span className="ph-tile-ic ph-ic-b"><IdCard size={18} /></span>
+                <span className="ph-tile-t">{tr("infoT")}<em className={fillPct < 100 ? "ph-em-warn" : ""}>{fillPct}%</em></span>
+                <span className="ph-tile-s">{tr("phInfoS")}</span>
+                <span className="ph-tile-ch"><ChevronRight size={15} /></span>
+              </button>
+              <button className="ph-tile" onClick={() => setSec("vouchers")}>
+                <span className="ph-tile-ic ph-ic-c"><PercentIc size={18} /></span>
+                <span className="ph-tile-t">{tr("phVouchersT")}{(vouchers || []).length > 0 && <em>{vouchers.length}</em>}</span>
+                <span className="ph-tile-s">{tr("phVouchersS")}</span>
+                <span className="ph-tile-ch"><ChevronRight size={15} /></span>
+              </button>
+              {AI_STUDIO_ENABLED && (
+                <button className="ph-tile" onClick={() => setSec("gens")}>
+                  <span className="ph-tile-ic ph-ic-d"><Sparkles size={18} /></span>
+                  <span className="ph-tile-t">{tr("genHistory")}</span>
+                  <span className="ph-tile-s">{tr("phGensS")}</span>
+                  <span className="ph-tile-ch"><ChevronRight size={15} /></span>
+                </button>
+              )}
+            </div>
 
+            <div className="prof-histhead ph-sechead"><span>{tr("phSettings")}</span></div>
+            <div className="ph-settings">
+              <div className="ph-row">
+                <span className="ph-row-ic"><Globe size={16} /></span>
+                <span className="ph-row-t">{tr("phLang")}</span>
+                <span className="ph-seg" role="group">
+                  <button className={lang === "uz" ? "on" : ""} onClick={() => lang !== "uz" && onSwitchLang && onSwitchLang()}>UZ</button>
+                  <button className={lang === "ru" ? "on" : ""} onClick={() => lang !== "ru" && onSwitchLang && onSwitchLang()}>RU</button>
+                </span>
+              </div>
+              <div className="ph-row">
+                <span className="ph-row-ic">{theme === "night" ? <MoonIc size={16} /> : <SunIc size={16} />}</span>
+                <span className="ph-row-t">{tr("phTheme")}</span>
+                <span className="ph-seg" role="group">
+                  <button className={theme !== "night" ? "on" : ""} onClick={() => theme === "night" && onToggleTheme && onToggleTheme()}><SunIc size={12} /> {tr("phDay")}</button>
+                  <button className={theme === "night" ? "on" : ""} onClick={() => theme !== "night" && onToggleTheme && onToggleTheme()}><MoonIc size={12} /> {tr("phNight")}</button>
+                </span>
+              </div>
+            </div>
+
+            <a className="ph-support" href={`https://t.me/${BOT_USERNAME}`} target="_blank" rel="noreferrer">
+              <span className="ph-sup-ic"><HeadsetIc size={22} /></span>
+              <span className="ph-sup-txt"><b>{tr("phSupportT")}</b><span>{tr("phSupportS")}</span></span>
+              <span className="ph-sup-arr"><ChevronRight size={18} /></span>
+            </a>
+          </>
+        )}
+
+        {sec !== "hub" && (
+          <button className="ph-back" onClick={() => setSec("hub")}><ArrowLeft size={15} /> {tr("phBack")}</button>
+        )}
+
+        {sec === "info" && (<>
         {/* ---------- MENING MA'LUMOTLARIM (galichkalar o'rniga) ---------- */}
         <div className="prof-histhead">
           <IdCard size={14} color={C.inkDim} />
@@ -1331,6 +1410,9 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
           {infoErr && <div className="prof-err" style={{ textAlign: "center" }}>{infoErr}</div>}
         </div>
 
+        </>)}
+
+        {sec === "orders" && (<>
         {/* ---------- Buyurtmalarim ---------- */}
         <div className="prof-histhead">
           <ShoppingBag size={14} color={C.inkDim} />
@@ -1371,15 +1453,6 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
           </div>
         ) : (
           <>
-            {vouchers && vouchers.length > 0 && (
-              <div className="prof-vouchers">
-                {vouchers.map((v, i) => (
-                  <div key={i} className="prof-voucher">
-                    {tr("voucherLine", v.percent, v.shopName)}
-                  </div>
-                ))}
-              </div>
-            )}
             {cancelErr && <div className="prof-err" style={{ marginBottom: 8 }}>{cancelErr}</div>}
             {orders.length === 0 ? (
               <div className="prof-empty">{tr("noOrders")}</div>
@@ -1497,7 +1570,29 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
           </>
         )}
 
-        {AI_STUDIO_ENABLED && (
+        </>)}
+
+        {sec === "vouchers" && (
+          <>
+            <div className="prof-histhead">
+              <PercentIc size={14} color={C.inkDim} />
+              <span>{tr("phVouchersT")}</span>
+            </div>
+            {vouchers && vouchers.length > 0 ? (
+              <div className="prof-vouchers">
+                {vouchers.map((v, i) => (
+                  <div key={i} className="prof-voucher">
+                    {tr("voucherLine", v.percent, v.shopName)}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="prof-empty">{tr("phNoVouchers")}</div>
+            )}
+          </>
+        )}
+
+        {sec === "gens" && AI_STUDIO_ENABLED && (
           <>
             <div className="prof-histhead">
               <Clock size={14} color={C.inkDim} />
@@ -1519,6 +1614,7 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
         )}
 
         {/* ---------- Pastki amallar ---------- */}
+        {sec === "hub" && (
         <div className="pf-actions">
           <a className="pf-act" href={`https://t.me/${BOT_USERNAME}`} target="_blank" rel="noreferrer">
             <Send size={13} /> {tr("openBot")}
@@ -1533,6 +1629,7 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
             </button>
           ))}
         </div>
+        )}
       </div>
     </div>
   );
@@ -2923,7 +3020,8 @@ function App() {
           vouchers={custVouchers.map((v) => ({ ...v, shopName: (shops.find((s) => s.id === v.sellerId) || {}).shopName || "" }))}
           onLink={linkCustomer} onRegister={registerCustomer} onSaveName={saveCustName} onPhoto={setCustPhoto} onCancelOrder={cancelCustOrder}
           onReceiveOrder={receiveCustOrder} onPaidOrder={paidCustOrder}
-          onSaveInfo={saveCustInfo} onLogout={logoutCustomer} />
+          onSaveInfo={saveCustInfo} onLogout={logoutCustomer}
+          lang={lang} theme={theme} onSwitchLang={switchLang} onToggleTheme={toggleTheme} />
       )}
       <InstallBanner />
       <AiChat lang={lang} onOpenProducts={() => { setMainTab("products"); setCartOpen(false); setProfileOpen(false); }} />
@@ -3703,6 +3801,67 @@ const buildCSS = () => `
 .prof-reg-hint{font-size:10.5px;color:${C.inkDim};margin-top:2px}
 
 .prof-histhead{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:${C.ink};margin-bottom:10px}
+/* ---------- Profil v2 (2026-09-29): hub + plitkalar ---------- */
+.profile{background:${C.paper}}
+.ph-hero{position:relative;overflow:hidden;border-radius:22px;padding:22px 18px 16px;margin:6px 0 16px;
+  background:linear-gradient(150deg,#0B211B 0%,#153A2E 60%,#1B4A34 100%);color:${C.laitonHi};
+  box-shadow:0 18px 40px -22px #0B211B99, inset 0 1px 0 #ffffff14}
+.ph-orb{position:absolute;border-radius:50%;pointer-events:none;filter:blur(2px)}
+.ph-orb1{width:220px;height:220px;right:-70px;top:-110px;background:radial-gradient(circle,#C6A05B55,transparent 65%)}
+.ph-orb2{width:180px;height:180px;left:-60px;bottom:-110px;background:radial-gradient(circle,#8FE3B833,transparent 65%)}
+.ph-top{position:relative;display:flex;align-items:center;gap:15px}
+.ph-avatar{width:78px;height:78px;border:none;background:conic-gradient(#E7D3A0 var(--fill,0%),#ffffff22 0);padding:3px;box-shadow:none}
+.ph-avatar-in{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:#0F2E24;
+  border:2px solid #0B211B;overflow:hidden}
+.ph-cam{background:${C.laiton};border-color:#0B211B}
+.ph-eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#E7D3A0AA;font-weight:600}
+.ph-name{font-family:${FONT_DISPLAY};font-size:23px;font-weight:600;color:#F1ECDF;line-height:1.15;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph-edit{color:#E7D3A0}
+.ph-nameedit input{background:#ffffff12;border-color:#ffffff22;color:#F1ECDF}
+.ph-nameedit button{background:${C.laiton};color:#0B211B;border:none;border-radius:9px;padding:7px 12px;font-weight:700;font-family:inherit}
+.ph-tier{font-size:11.5px;font-weight:600;color:#E7D3A0;margin-top:3px}
+.ph-phone{font-size:12px;color:#B9C4B6}
+.ph-stats{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.ph-stat{background:#ffffff0f;border:1px solid #ffffff1c;border-radius:14px;padding:10px 6px;text-align:center;backdrop-filter:blur(6px)}
+.ph-stat b{display:block;font-family:${FONT_DISPLAY};font-size:19px;font-weight:600;color:#F1ECDF;line-height:1.1}
+.ph-stat span{display:block;font-size:10px;color:#B9C4B6;margin-top:3px;letter-spacing:.2px}
+.ph-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.ph-tile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;
+  background:${C.card};border:1px solid ${C.mline};border-radius:18px;padding:14px 34px 13px 14px;cursor:pointer;
+  font-family:inherit;color:${C.ink};transition:transform .18s ease,box-shadow .18s ease;box-shadow:0 1px 2px #0B211B0a}
+.ph-tile:active{transform:scale(.98)}
+.ph-tile:last-child:nth-child(odd){grid-column:1 / -1;flex-direction:row;align-items:center;flex-wrap:wrap;gap:2px 12px}
+.ph-tile:last-child:nth-child(odd) .ph-tile-ic{margin-bottom:0}
+.ph-tile:last-child:nth-child(odd) .ph-tile-s{flex-basis:100%;padding-left:50px;margin-top:-2px}
+.ph-tile:hover{box-shadow:0 10px 26px -16px #0B211B66;transform:translateY(-1px)}
+.ph-tile-ic{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+.ph-ic-a{background:#E2F0E6;color:#2F6B4F}.ph-ic-b{background:#FBF3E2;color:#9C7C3E}.ph-ic-c{background:#FBEAF0;color:#B4547A}.ph-ic-d{background:#E8E9F7;color:#4E55A8}
+.ph-tile-t{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px;line-height:1.2}
+.ph-tile-t em{font-style:normal;font-size:10.5px;font-weight:700;background:${C.accent};color:${C.card};border-radius:20px;padding:1px 7px}
+.ph-tile-t em.ph-em-warn{background:${C.laiton};color:#0B211B}
+.ph-tile-s{font-size:11px;color:${C.inkDim};line-height:1.35}
+.ph-tile-ch{position:absolute;right:12px;top:16px;color:${C.inkDim};opacity:.7}
+.ph-sechead{margin-top:4px;text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;color:${C.inkDim}}
+.ph-settings{background:${C.card};border:1px solid ${C.mline};border-radius:18px;overflow:hidden;margin-bottom:14px}
+.ph-row{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.ph-row+.ph-row{border-top:1px solid ${C.mline}}
+.ph-row-ic{width:32px;height:32px;border-radius:10px;background:${C.paper};display:flex;align-items:center;justify-content:center;color:${C.accent}}
+.ph-row-t{flex:1;font-size:13px;font-weight:600;color:${C.ink}}
+.ph-seg{display:inline-flex;background:${C.paper};border:1px solid ${C.mline};border-radius:12px;padding:3px;gap:2px}
+.ph-seg button{display:inline-flex;align-items:center;gap:4px;border:none;background:transparent;border-radius:9px;padding:6px 11px;
+  font-size:11.5px;font-weight:700;color:${C.inkDim};font-family:inherit;cursor:pointer;transition:all .18s ease}
+.ph-seg button.on{background:${C.accent};color:${C.card};box-shadow:0 2px 8px -3px ${C.accent}99}
+.ph-support{display:flex;align-items:center;gap:13px;text-decoration:none;border-radius:20px;padding:15px 16px;
+  background:linear-gradient(120deg,${C.accent2},${C.accent});color:${C.card};margin-bottom:6px;
+  box-shadow:0 14px 30px -18px ${C.accent}}
+.ph-sup-ic{width:44px;height:44px;border-radius:14px;background:#ffffff22;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ph-sup-txt{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.ph-sup-txt b{font-size:15px;font-weight:700;font-family:${FONT_DISPLAY};font-size:18px}
+.ph-sup-txt span{font-size:11.5px;opacity:.85}
+.ph-sup-arr{opacity:.9}
+.ph-back{display:inline-flex;align-items:center;gap:6px;border:none;background:${C.card};border:1px solid ${C.mline};color:${C.ink};
+  border-radius:20px;padding:8px 14px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;margin-bottom:16px}
 .prof-empty{font-size:12.5px;color:${C.inkDim};background:${C.paper};border-radius:12px;padding:16px;text-align:center}
 .prof-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .prof-gitem{aspect-ratio:1;background:${C.paper};border-radius:10px;display:flex;flex-direction:column;align-items:center;
