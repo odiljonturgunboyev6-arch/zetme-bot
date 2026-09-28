@@ -30,6 +30,9 @@ const ChevronRight = (p) => <Ic {...p}><path d="M9 6l6 6-6 6" /></Ic>;
 const ChevronDown = (p) => <Ic {...p}><path d="M6 9l6 6 6-6" /></Ic>;
 const ChevronLeft = (p) => <Ic {...p}><path d="M15 6l-6 6 6 6" /></Ic>;
 const ChevronUp = (p) => <Ic {...p}><path d="M6 15l6-6 6 6" /></Ic>;
+const PlayIc = (p) => <Ic {...p} kind="fill"><path d="M8 5v14l11-7z" /></Ic>;
+const VolOn = (p) => <Ic {...p}><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M19 5a9 9 0 0 1 0 14" /></Ic>;
+const VolOff = (p) => <Ic {...p}><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M23 9l-6 6" /><path d="M17 9l6 6" /></Ic>;
 const Maximize2 = (p) => <Ic {...p}><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></Ic>;
 const ShoppingBag = (p) => <Ic {...p}><path d="M5 8h14l-1 12H6L5 8z" /><path d="M8 8V6a4 4 0 0 1 8 0v2" /></Ic>;
 const Minus = (p) => <Ic {...p}><path d="M5 12h14" /></Ic>;
@@ -813,6 +816,11 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
   const [imgIdx, setImgIdx] = useState(0);
   const [colorIdx, setColorIdx] = useState(0);
   const [zoom, setZoom] = useState(false); // rasm bosilganda to'liq ekran ko'rish
+  // 2026-09-28: mahsulot videosi (5–10 s) — bor bo'lsa avval ovozsiz aylanadi;
+  // rasm tanlansa videodan chiqadi, video-thumb bosilsa qaytadi.
+  const video = p.video || "";
+  const [showVideo, setShowVideo] = useState(!!video);
+  const [muted, setMuted] = useState(true);
   const v = variants[vi] || variants[0] || {};
   const displayName = v.name || p.name;
   // ranglar endi VARIANT (hajm) darajasida — har birining o'z ro'yxati bor;
@@ -836,19 +844,34 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="pmodal">
         <button className="pm-close" onClick={onClose}><X size={18} /></button>
+        {video && showVideo ? (
+          <div className="pm-hero pm-hero-video">
+            <video key={video} src={video} poster={imgs[0] || undefined} muted={muted} autoPlay loop playsInline preload="metadata" className="pm-hero-vid" />
+            <button type="button" className="pm-vol" onClick={(e) => { e.stopPropagation(); setMuted((m) => !m); }} aria-label={muted ? "Ovoz" : "Ovozsiz"}>
+              {muted ? <VolOff size={15} /> : <VolOn size={15} />}
+            </button>
+          </div>
+        ) : (
         <div className={"pm-hero" + (heroImg ? " pm-hero-zoomable" : "")} onClick={() => heroImg && setZoom(true)}
           role={heroImg ? "button" : undefined} aria-label={heroImg ? tr("imgOpen") : undefined}>
           {heroImg ? <img src={heroImg} alt={displayName} className="pm-hero-img" /> : <span style={{ fontSize: 54 }}>🪴</span>}
           {heroImg && <span className="pm-zoom-hint"><Maximize2 size={13} /> {tr("imgOpen")}</span>}
         </div>
+        )}
         {zoom && heroImg && (
           <ImageLightbox imgs={imgs} index={imgIdx} alt={displayName}
             onIndex={setImgIdx} onClose={() => setZoom(false)} />
         )}
-        {imgs.length > 1 && (
+        {(imgs.length > 1 || (video && imgs.length > 0)) && (
           <div className="pm-thumbrow">
+            {video && (
+              <button type="button" className={"pm-thumb pm-thumb-video" + (showVideo ? " active" : "")} onClick={() => setShowVideo(true)}>
+                {imgs[0] ? <img src={imgs[0]} alt="" /> : null}
+                <span className="pm-thumb-play"><PlayIc size={16} color="#fff" /></span>
+              </button>
+            )}
             {imgs.map((u, i) => (
-              <button key={i} type="button" className={"pm-thumb" + (u === heroImg ? " active" : "")} onClick={() => setImgIdx(i)}>
+              <button key={i} type="button" className={"pm-thumb" + (!showVideo && u === heroImg ? " active" : "")} onClick={() => { setImgIdx(i); setShowVideo(false); }}>
                 <img src={u} alt="" />
               </button>
             ))}
@@ -2805,6 +2828,7 @@ function App() {
                         <div className="pcard-img">
                           {thumbUrl(p) ? <img src={thumbUrl(p)} alt={p.name} loading="lazy" decoding="async" /> : <span style={{ fontSize: 34 }}>🪴</span>}
                           {pOut && <span className={"pcard-outbadge" + (p.paused ? " paused" : "")}>{p.paused ? tr("pmPaused") : tr("pmOut")}</span>}
+                          {p.video && <span className="pcard-playbadge"><PlayIc size={12} color="#fff" /></span>}
                         </div>
                         <div className="pcard-body">
                           <div className="pcard-name">{p.name}</div>
@@ -3294,6 +3318,7 @@ const buildCSS = () => `
 .pcard-outbadge{position:absolute;top:6px;left:6px;background:${C.sale};color:#fff;font-size:10px;font-weight:700;
   padding:3px 8px;border-radius:20px;letter-spacing:.02em}
 .pcard-outbadge.paused{background:#5B6B7A}
+.pcard-playbadge{position:absolute;right:6px;bottom:6px;width:24px;height:24px;border-radius:50%;background:#0009;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
 .pcard-name{font-size:12.5px;font-weight:600;color:${C.ink};line-height:1.3}
 .pcard-meta{font-size:11px;color:${C.inkDim}}
 .pcard-price{font-size:13.5px;font-weight:700;color:${C.price};margin-top:2px}
@@ -3387,6 +3412,10 @@ const buildCSS = () => `
 .pm-hero{aspect-ratio:4/3;max-height:340px;width:100%;background:${C.paper};display:flex;align-items:center;justify-content:center;overflow:hidden}
 .pm-hero-img{width:100%;height:100%;object-fit:contain}
 .pm-hero-zoomable{cursor:zoom-in;position:relative}
+.pm-hero-video{position:relative;background:#000}
+.pm-hero-vid{width:100%;height:100%;object-fit:cover;display:block}
+.pm-vol{position:absolute;right:10px;bottom:10px;width:34px;height:34px;border-radius:50%;border:none;background:#0009;color:#fff;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px)}
 .pm-zoom-hint{position:absolute;right:10px;bottom:10px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
   color:#fff;background:#0009;border-radius:20px;padding:5px 10px;pointer-events:none;backdrop-filter:blur(4px)}
 /* to'liq ekran rasm (lightbox) */
@@ -3409,6 +3438,8 @@ const buildCSS = () => `
 .pm-thumb{width:52px;height:52px;border-radius:10px;border:2px solid ${C.mline};background:${C.paper};padding:0;cursor:pointer;overflow:hidden}
 .pm-thumb.active{border-color:${C.accent}}
 .pm-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.pm-thumb-video{position:relative;background:#222}
+.pm-thumb-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0006}
 .pm-body{padding:18px 20px 24px}
 .pm-toprow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
 .pm-modebadge{font-size:10.5px;font-weight:700;color:${C.accent};text-transform:uppercase;letter-spacing:.04em}
