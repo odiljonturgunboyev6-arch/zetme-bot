@@ -1673,7 +1673,7 @@
     try {
       blob = await mod.upload(`videos/${Date.now()}-${safe}${ext}`, vid.file, {
         access: "public",
-        handleUploadUrl: "/api/upload-video",
+        handleUploadUrl: "/api/upload",
         contentType: vid.file.type || "video/mp4",
         clientPayload: JSON.stringify({ login: ME.login, token: ME.token }),
       });
