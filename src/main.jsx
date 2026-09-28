@@ -208,7 +208,7 @@ const STR = {
     tokensLeft: "token qoldi", buyTokens: "Token sotib olish",
     badgeT: "Nishon (belgi)", buy: "Sotib olish",
     badgesT: "Galichkalar", galiFree: "Bepul (standart)", galiMonth: (p) => p + " / oyiga", galiSelect: "Tanlash", galiCurrent: "Joriy",
-    infoT: "Mening ma'lumotlarim", infoSub: "Bir marta to'ldiring \u2014 buyurtma berishda bu ma'lumotlar avtomatik qo'yiladi va kuryer sizni tez topadi.",
+    infoT: "Mening ma'lumotlarim", infoSub: "Bir marta to'ldiring \u2014 buyurtma berishda avtomatik qo'yiladi.",
     infoFill: (p) => "to'ldirilgan " + p + "%",
     fEmail: "Email", fPhone: "Telefon", fRegion: "Viloyat", fAddress: "Manzil (ko'cha, uy, xonadon)",
     fAddressPh: "Masalan: Chilonzor 19, 4-uy, 12-xonadon", fBirth: "Tug'ilgan sana", fNote: "Kuryerga izoh",
@@ -227,7 +227,7 @@ const STR = {
     phVouchersT: "Chegirmalarim", phVouchersS: "Sizga berilgan bonuslar", phGensS: "AI studiya tarixi",
     phSettings: "Sozlamalar", phLang: "Til", phTheme: "Ko'rinish", phDay: "Kun", phNight: "Tun",
     phSupportT: "Qo'llab-quvvatlash", phSupportS: "Savollar uchun adminga yozing", phBack: "Profilga qaytish",
-    phNoVouchers: "Hozircha chegirma yo'q \u2014 xarid qilib bonus yig'ing", phFill: (n) => "Profil " + n + "% to'ldirilgan",
+    phNoVouchers: "Hozircha chegirma yo'q \u2014 xarid qilib bonus yig'ing", phOptional: "ixtiyoriy", phFill: (n) => "Profil " + n + "% to'ldirilgan",
     imgOpen: "Kattalashtirish", imgBack: "← Mahsulotga qaytish",
     showItems: (n, q) => "Barcha mahsulotlarni ko'rish (" + n + " xil · " + q + " dona)", hideItems: "Yig'ish", pcs: "dona",
     lbEyebrow: "Musobaqa", lbTitle: "TOP xaridorlar", lbSub: "Eng ko'p xarid qilgan mijozlar reytingi — har hafta yangilanadi",
@@ -343,7 +343,7 @@ const STR = {
     tokensLeft: "токенов осталось", buyTokens: "Купить токены",
     badgeT: "Значок", buy: "Купить",
     badgesT: "Значки", galiFree: "Бесплатно (стандарт)", galiMonth: (p) => p + " / в месяц", galiSelect: "Выбрать", galiCurrent: "Текущий",
-    infoT: "Мои данные", infoSub: "Заполните один раз — при заказе данные подставятся автоматически, и курьер быстро вас найдёт.",
+    infoT: "Мои данные", infoSub: "Заполните один раз — при заказе данные подставятся автоматически.",
     infoFill: (p) => "заполнено " + p + "%",
     fEmail: "Email", fPhone: "Телефон", fRegion: "Область", fAddress: "Адрес (улица, дом, квартира)",
     fAddressPh: "Например: Чиланзар 19, дом 4, кв. 12", fBirth: "Дата рождения", fNote: "Комментарий курьеру",
@@ -362,7 +362,7 @@ const STR = {
     phVouchersT: "Мои скидки", phVouchersS: "Ваши бонусы", phGensS: "История AI-студии",
     phSettings: "Настройки", phLang: "Язык", phTheme: "Вид", phDay: "День", phNight: "Ночь",
     phSupportT: "Поддержка", phSupportS: "Напишите админу по вопросам", phBack: "Назад в профиль",
-    phNoVouchers: "Скидок пока нет \u2014 покупайте и копите бонусы", phFill: (n) => "Профиль заполнен на " + n + "%",
+    phNoVouchers: "Скидок пока нет \u2014 покупайте и копите бонусы", phOptional: "необязательно", phFill: (n) => "Профиль заполнен на " + n + "%",
     imgOpen: "Увеличить", imgBack: "← Вернуться к товару",
     showItems: (n, q) => "Показать все товары (" + n + " видов · " + q + " шт.)", hideItems: "Свернуть", pcs: "шт.",
     lbEyebrow: "Соревнование", lbTitle: "ТОП покупатели", lbSub: "Рейтинг клиентов с наибольшими покупками — обновляется каждую неделю",
@@ -1207,7 +1207,8 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
     });
   }, [cust]);
   const setF = (k, v) => { setInfo((s) => ({ ...s, [k]: v })); setInfoMsg(""); };
-  const INFO_KEYS = ["firstName", "lastName", "phone", "email", "region", "address", "birthday", "note"];
+  // 2026-09-29: faqat Ism, Telefon, Viloyat shart; tug'ilgan sana ixtiyoriy (foizga kirmaydi)
+  const INFO_KEYS = ["firstName", "phone", "region"];
   const fillPct = Math.round((INFO_KEYS.filter((k) => String(info[k] || "").trim().length > 0).length / INFO_KEYS.length) * 100);
   async function doSaveInfo() {
     setInfoBusy(true); setInfoErr(""); setInfoMsg("");
@@ -1392,23 +1393,15 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
           <div className="pf-grid">
             <label className="pf-f"><span><User size={11} /> {tr("fName")}</span>
               <input value={info.firstName} placeholder={tr("fName")} onChange={(e) => setF("firstName", e.target.value)} /></label>
-            <label className="pf-f"><span><User size={11} /> {tr("lName")}</span>
-              <input value={info.lastName} placeholder={tr("lName")} onChange={(e) => setF("lastName", e.target.value)} /></label>
             <label className="pf-f"><span><PhoneIc size={11} /> {tr("fPhone")}</span>
               <input value={info.phone} inputMode="tel" placeholder="+998 90 123 45 67" onChange={(e) => setF("phone", e.target.value)} /></label>
-            <label className="pf-f"><span><Mail size={11} /> {tr("fEmail")}</span>
-              <input value={info.email} inputMode="email" placeholder="ism@gmail.com" onChange={(e) => setF("email", e.target.value)} /></label>
             <label className="pf-f"><span><MapPin size={11} /> {tr("fRegion")}</span>
               <select value={info.region} onChange={(e) => setF("region", e.target.value)}>
                 <option value="">{tr("coSelect")}</option>
                 {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
               </select></label>
-            <label className="pf-f"><span><CakeIc size={11} /> {tr("fBirth")}</span>
+            <label className="pf-f"><span><CakeIc size={11} /> {tr("fBirth")} <i className="pf-opt">{tr("phOptional")}</i></span>
               <input value={info.birthday} placeholder="12.05.1995" onChange={(e) => setF("birthday", e.target.value)} /></label>
-            <label className="pf-f pf-wide"><span><HomeIc size={11} /> {tr("fAddress")}</span>
-              <input value={info.address} placeholder={tr("fAddressPh")} onChange={(e) => setF("address", e.target.value)} /></label>
-            <label className="pf-f pf-wide"><span><Send size={11} /> {tr("fNote")}</span>
-              <input value={info.note} placeholder={tr("fNotePh")} onChange={(e) => setF("note", e.target.value)} /></label>
           </div>
           {!linked && <div className="pf-lock"><Lock size={12} /> <span>{tr("infoLocked")}</span></div>}
           <button className="pf-savebtn" disabled={!linked || infoBusy} onClick={doSaveInfo}>
@@ -3757,6 +3750,7 @@ const buildCSS = () => `
 .pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .pf-f{display:flex;flex-direction:column;gap:4px;min-width:0}
 .pf-wide{grid-column:1 / -1}
+.pf-opt{font-style:normal;font-weight:500;opacity:.7;margin-left:2px}
 .pf-f>span{display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:${C.inkDim};letter-spacing:.2px}
 .pf-f input,.pf-f select{width:100%;padding:9px 11px;border:1px solid ${C.mline};border-radius:10px;font-size:13px;
   font-family:inherit;background:${C.card};color:${C.ink}}
