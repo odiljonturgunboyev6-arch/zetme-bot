@@ -72,6 +72,9 @@ const C = {
   paper: "#F5F6F3", card: "#FFFFFF", ink: "#16211B", inkDim: "#69756D",
   mline: "#E4E7E1", accent: "#2F6B4F", price: "#16211B", sale: "#C6472E",
 };
+const SUPPORT_TG = "gultuvak_admin";
+const SUPPORT_PHONE = "+998770412611";
+const SUPPORT_PHONE_FMT = "+998 77 041 26 11";
 const FONT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
 const FONT_BODY = "'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif";
 
@@ -1359,11 +1362,16 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
               </div>
             </div>
 
-            <a className="ph-support" href={`https://t.me/${BOT_USERNAME}`} target="_blank" rel="noreferrer">
-              <span className="ph-sup-ic"><HeadsetIc size={22} /></span>
-              <span className="ph-sup-txt"><b>{tr("phSupportT")}</b><span>{tr("phSupportS")}</span></span>
-              <span className="ph-sup-arr"><ChevronRight size={18} /></span>
-            </a>
+            {/* Qo'llab-quvvatlash: Telegram @gultuvak_admin + telefon (2026-09-29) */}
+            <div className="ph-support">
+              <a className="ph-sup-main" href={`https://t.me/${SUPPORT_TG}`} target="_blank" rel="noreferrer">
+                <span className="ph-sup-ic"><HeadsetIc size={22} /></span>
+                <span className="ph-sup-txt"><b>{tr("phSupportT")}</b><span>{tr("phSupportS")} · @{SUPPORT_TG}</span></span>
+              </a>
+              <a className="ph-sup-call" href={`tel:${SUPPORT_PHONE}`} aria-label={SUPPORT_PHONE_FMT} title={SUPPORT_PHONE_FMT}>
+                <PhoneIc size={18} />
+              </a>
+            </div>
           </>
         )}
 
@@ -3852,14 +3860,17 @@ const buildCSS = () => `
 .ph-seg button{display:inline-flex;align-items:center;gap:4px;border:none;background:transparent;border-radius:9px;padding:6px 11px;
   font-size:11.5px;font-weight:700;color:${C.inkDim};font-family:inherit;cursor:pointer;transition:all .18s ease}
 .ph-seg button.on{background:${C.accent};color:${C.card};box-shadow:0 2px 8px -3px ${C.accent}99}
-.ph-support{display:flex;align-items:center;gap:13px;text-decoration:none;border-radius:20px;padding:15px 16px;
+.ph-support{display:flex;align-items:center;gap:10px;border-radius:20px;padding:10px 10px 10px 16px;
   background:linear-gradient(120deg,${C.accent2},${C.accent});color:${C.card};margin-bottom:6px;
   box-shadow:0 14px 30px -18px ${C.accent}}
 .ph-sup-ic{width:44px;height:44px;border-radius:14px;background:#ffffff22;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ph-sup-txt{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
 .ph-sup-txt b{font-size:15px;font-weight:700;font-family:${FONT_DISPLAY};font-size:18px}
 .ph-sup-txt span{font-size:11.5px;opacity:.85}
-.ph-sup-arr{opacity:.9}
+.ph-sup-main{flex:1;display:flex;align-items:center;gap:13px;text-decoration:none;color:inherit;min-width:0}
+.ph-sup-call{width:46px;height:46px;border-radius:14px;background:#ffffff26;border:1px solid #ffffff33;color:inherit;display:flex;
+  align-items:center;justify-content:center;flex-shrink:0;text-decoration:none}
+.ph-sup-call:active{transform:scale(.95)}
 .ph-back{display:inline-flex;align-items:center;gap:6px;border:none;background:${C.card};border:1px solid ${C.mline};color:${C.ink};
   border-radius:20px;padding:8px 14px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;margin-bottom:16px}
 .prof-empty{font-size:12.5px;color:${C.inkDim};background:${C.paper};border-radius:12px;padding:16px;text-align:center}
