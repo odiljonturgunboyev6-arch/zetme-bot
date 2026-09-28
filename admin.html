@@ -151,6 +151,12 @@
   .vimg img { width:100%; height:100%; object-fit:cover; display:block; }
   .vimg-x { position:absolute; top:3px; right:3px; width:22px; height:22px; border-radius:50%; border:none; background:rgba(0,0,0,.62); color:#fff; font-size:12px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
   .vimg-x:hover { background:var(--sale); }
+  .vidbox { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .vidprev { position:relative; width:120px; height:120px; border-radius:12px; overflow:hidden; border:1px solid var(--mline); background:#000; flex-shrink:0; }
+  .vidprev video { width:100%; height:100%; object-fit:cover; display:block; }
+  .vidslot { width:120px; height:120px; flex-shrink:0; border:1.5px dashed var(--mline); border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; background:#fff; font-size:11px; color:var(--inkDim); text-align:center; }
+  .vidslot:hover { border-color:var(--accent); color:var(--accent); }
+  .vidslot b { font-size:22px; line-height:1; }
   .vimg-main { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.55); color:#fff; font-size:9px; text-align:center; padding:2px 0; }
   .vimgslot { width:78px; height:78px; flex-shrink:0; border:1.5px dashed var(--mline); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; background:#fff; font-size:10.5px; color:var(--inkDim); text-align:center; }
   .vimgslot:hover { border-color:var(--accent); color:var(--accent); }
@@ -385,6 +391,11 @@
       <div class="variantsWrap" id="variantsWrap"></div>
       <button type="button" class="addVariantBtn" id="addVariantBtn" onclick="addVariant()">+ Yana variant qo'shish</button>
       <div class="hint">Rasmlar avtomatik siqiladi — katta telefon rasmlarini ham bemalol yuklashingiz mumkin. Birinchi rasm asosiy bo'lib, katalogda ko'rinadi. Optom narx — mijoz 5 000 000 so'mdan yuqori xarid qilganda ko'radigan narx. Har variantning rangi va ostatkasi (necha dona qolgani) ENDI SHU VARIANT ICHIDA — boshqa hajmga aralashmaydi. Ostatkani bo'sh qoldirsangiz — cheksiz hisoblanadi, tugashi kuzatilmaydi.</div>
+
+      <label style="margin-top:16px;">Qisqa video (ixtiyoriy, 5–10 soniya) — mijoz mahsulotni ochganda rasm o'rnida ovozsiz aylanadi</label>
+      <div class="vidbox" id="videoWrap"></div>
+      <div class="hint">Telefon kamerasida yozib, to'g'ridan-to'g'ri tanlang. Eng ko'pi 15 soniya va 25 MB (720p da ~10 soniya ≈ 3–6 MB). Video "Saqlash" bosilganda yuklanadi.</div>
+      <input type="file" id="videoInput" accept="video/mp4,video/webm,video/quicktime" style="display:none" onchange="onVideoFile(event)" />
 
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFile(event)" />
 
@@ -1330,6 +1341,7 @@
     renderSectionSelect();
     document.getElementById("fSection").value = "";
     variants = [blankVariant()];
+    removeVideo();
     setUnit("litr");   // renderVariants ni ham chaqiradi
     document.getElementById("formMsg").innerHTML = "";
   }
@@ -1589,6 +1601,91 @@
     return data.url;
   }
 
+  // ===================== mahsulot videosi (2026-09-28) =====================
+  // { url } — saqlangan;  { file, localUrl, name } — yangi tanlangan (hali yuklanmagan)
+  const VIDEO_MAX_BYTES = 25 * 1024 * 1024;
+  const VIDEO_MAX_SEC = 15;
+  var productVideo = null;   // var — resetForm() dan oldin ham ishlasin
+
+  function renderVideo() {
+    const el = document.getElementById("videoWrap");
+    if (!el) return;
+    if (!productVideo) {
+      el.innerHTML = `<div class="vidslot" onclick="document.getElementById('videoInput').click()"><b>▶</b>+ Video<br/>5–10 s</div>`;
+      return;
+    }
+    const src = productVideo.localUrl || productVideo.url;
+    el.innerHTML = `<div class="vidprev"><video src="${src}" muted autoplay loop playsinline preload="metadata"></video><button type="button" class="vimg-x" onclick="removeVideo()" title="O'chirish">✕</button></div>
+      <div style="font-size:12px;color:var(--inkDim);">${productVideo.file ? "Tanlandi — \"Saqlash\" bosilganda yuklanadi" : "Saqlangan video"}${productVideo.sec ? ` · ${productVideo.sec} s` : ""}</div>`;
+  }
+  function removeVideo() {
+    if (productVideo && productVideo.localUrl) { try { URL.revokeObjectURL(productVideo.localUrl); } catch (e) {} }
+    productVideo = null;
+    renderVideo();
+  }
+  // Davomiyligini brauzerda o'lchaymiz (yuklamasdan)
+  function videoDuration(localUrl) {
+    return new Promise((resolve) => {
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.onloadedmetadata = () => resolve(Number(v.duration) || 0);
+      v.onerror = () => resolve(0);
+      v.src = localUrl;
+    });
+  }
+  async function onVideoFile(e) {
+    const f = (e.target.files || [])[0];
+    e.target.value = "";
+    if (!f) return;
+    const msgEl = document.getElementById("formMsg");
+    if (!f.type || !f.type.startsWith("video/")) { msgEl.innerHTML = '<div class="msg err">Faqat video fayl tanlang (mp4)</div>'; return; }
+    if (f.size > VIDEO_MAX_BYTES) { msgEl.innerHTML = '<div class="msg err">Video juda katta (25 MB dan kichik bo\'lsin) — 720p da qisqaroq yozing</div>'; return; }
+    const localUrl = URL.createObjectURL(f);
+    const sec = await videoDuration(localUrl);
+    if (sec && sec > VIDEO_MAX_SEC) {
+      URL.revokeObjectURL(localUrl);
+      msgEl.innerHTML = `<div class="msg err">Video ${Math.round(sec)} soniya — eng ko'pi ${VIDEO_MAX_SEC} soniya bo'lsin</div>`;
+      return;
+    }
+    if (productVideo && productVideo.localUrl) { try { URL.revokeObjectURL(productVideo.localUrl); } catch (e) {} }
+    productVideo = { file: f, localUrl, name: f.name || "video.mp4", sec: sec ? Math.round(sec) : 0 };
+    msgEl.innerHTML = "";
+    renderVideo();
+  }
+  // Brauzerdan to'g'ri Vercel Blob ga yuklaydi (4.5 MB server chegarasini chetlab).
+  // SDK ni faqat kerak bo'lganda CDN dan olamiz.
+  let blobClientMod = null;
+  async function loadBlobClient() {
+    if (blobClientMod) return blobClientMod;
+    const urls = ["https://esm.sh/@vercel/blob@0.27.0/client", "https://cdn.jsdelivr.net/npm/@vercel/blob@0.27.0/client/+esm"];
+    let lastErr;
+    for (const u of urls) {
+      try { blobClientMod = await import(u); if (blobClientMod && blobClientMod.upload) return blobClientMod; }
+      catch (e) { lastErr = e; }
+    }
+    throw new Error("Video yuklagichni ochib bo'lmadi — internetni tekshiring");
+  }
+  async function uploadVideoFile(vid) {
+    const mod = await loadBlobClient();
+    const safe = (vid.name || "video.mp4").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 50);
+    const ext = /\.(mp4|webm|mov)$/i.test(safe) ? "" : ".mp4";
+    let blob;
+    try {
+      blob = await mod.upload(`videos/${Date.now()}-${safe}${ext}`, vid.file, {
+        access: "public",
+        handleUploadUrl: "/api/upload-video",
+        contentType: vid.file.type || "video/mp4",
+        clientPayload: JSON.stringify({ login: ME.login, token: ME.token }),
+      });
+    } catch (e) {
+      const m = String(e && e.message || "");
+      if (/Sessiya|401|Unauthorized/i.test(m)) throw new Error("Sessiya tugagan — qaytadan kiring");
+      throw new Error("Videoni yuklab bo'lmadi: " + (m.slice(0, 120) || "noma'lum xato"));
+    }
+    if (!blob || !blob.url) throw new Error("Videoni yuklab bo'lmadi");
+    return blob.url;
+  }
+
   // ===================== do'kon logotipi =====================
   let shopLogo = { url: "", dataUrl: "", name: "", type: "" };
   function renderShopLogo() {
@@ -1710,12 +1807,19 @@
           name: (v.name || "").trim(), colors: (v.colors || []).slice(0, 8), stock: { ...(v.stock || {}) },
         });
       }
+      if (productVideo && productVideo.file) {
+        msgEl.innerHTML = '<div class="msg ok">Video yuklanmoqda… (bir necha soniya)</div>';
+        const vurl = await uploadVideoFile(productVideo);
+        productVideo = { url: vurl, sec: productVideo.sec };
+        renderVideo();
+      }
       msgEl.innerHTML = '<div class="msg ok">Saqlanmoqda…</div>';
 
       const payload = {
         name, category, unit,
         sectionId: document.getElementById("fSection").value || "",
         variants: outVariants,
+        video: (productVideo && productVideo.url) || "",
       };
       let res;
       if (editingId) {
@@ -1768,6 +1872,8 @@
     renderSectionSelect();
     document.getElementById("fSection").value =
       sections.some(s => s.id === p.sectionId) ? p.sectionId : "";
+    productVideo = p.video ? { url: p.video } : null;
+    renderVideo();
 
     // eski mahsulotlarda ranglar hali MAHSULOT darajasida bo'lishi mumkin
     // (2026-09-09'dan oldin qo'shilgan) — variant.colors bo'sh bo'lsa,
