@@ -30,6 +30,7 @@ const ChevronRight = (p) => <Ic {...p}><path d="M9 6l6 6-6 6" /></Ic>;
 const ChevronDown = (p) => <Ic {...p}><path d="M6 9l6 6 6-6" /></Ic>;
 const ChevronLeft = (p) => <Ic {...p}><path d="M15 6l-6 6 6 6" /></Ic>;
 const ChevronUp = (p) => <Ic {...p}><path d="M6 15l6-6 6 6" /></Ic>;
+const HeartIc = (p) => <Ic {...p} kind={p.filled ? "fill" : "stroke"}><path d="M12 21s-7-4.6-9.3-8.6C.7 9 2.6 5 6.5 5c2 0 3.4 1.1 4.2 2.3L12 9l1.3-1.7C14.1 6.1 15.5 5 17.5 5c3.9 0 5.8 4 3.8 7.4C19 16.4 12 21 12 21z" /></Ic>;
 const PlayIc = (p) => <Ic {...p} kind="fill"><path d="M8 5v14l11-7z" /></Ic>;
 const VolOn = (p) => <Ic {...p}><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M19 5a9 9 0 0 1 0 14" /></Ic>;
 const VolOff = (p) => <Ic {...p}><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M23 9l-6 6" /><path d="M17 9l6 6" /></Ic>;
@@ -227,7 +228,9 @@ const STR = {
     phVouchersT: "Chegirmalarim", phVouchersS: "Sizga berilgan bonuslar", phGensS: "AI studiya tarixi",
     phSettings: "Sozlamalar", phLang: "Til", phTheme: "Ko'rinish", phDay: "Kun", phNight: "Tun",
     phSupportT: "Qo'llab-quvvatlash", phSupportS: "Savollar uchun adminga yozing", phBack: "Profilga qaytish",
-    phNoVouchers: "Hozircha chegirma yo'q \u2014 xarid qilib bonus yig'ing", phOptional: "ixtiyoriy", phFill: (n) => "Profil " + n + "% to'ldirilgan",
+    phNoVouchers: "Hozircha chegirma yo'q \u2014 xarid qilib bonus yig'ing", phOptional: "ixtiyoriy",
+    phScript: "Alifbo", phLat: "Lotin", phCyr: "Krill",
+    phFavsT: "Sevimlilar", phFavsS: "Saqlangan mahsulotlar", phNoFavs: "Hali sevimli mahsulot yo'q \u2014 katalogda \u2665 ni bosing", phFill: (n) => "Profil " + n + "% to'ldirilgan",
     imgOpen: "Kattalashtirish", imgBack: "← Mahsulotga qaytish",
     showItems: (n, q) => "Barcha mahsulotlarni ko'rish (" + n + " xil · " + q + " dona)", hideItems: "Yig'ish", pcs: "dona",
     lbEyebrow: "Musobaqa", lbTitle: "TOP xaridorlar", lbSub: "Eng ko'p xarid qilgan mijozlar reytingi — har hafta yangilanadi",
@@ -362,7 +365,9 @@ const STR = {
     phVouchersT: "Мои скидки", phVouchersS: "Ваши бонусы", phGensS: "История AI-студии",
     phSettings: "Настройки", phLang: "Язык", phTheme: "Вид", phDay: "День", phNight: "Ночь",
     phSupportT: "Поддержка", phSupportS: "Напишите админу по вопросам", phBack: "Назад в профиль",
-    phNoVouchers: "Скидок пока нет \u2014 покупайте и копите бонусы", phOptional: "необязательно", phFill: (n) => "Профиль заполнен на " + n + "%",
+    phNoVouchers: "Скидок пока нет \u2014 покупайте и копите бонусы", phOptional: "необязательно",
+    phScript: "Алфавит", phLat: "Латиница", phCyr: "Кириллица",
+    phFavsT: "Избранное", phFavsS: "Сохранённые товары", phNoFavs: "Пока нет избранных \u2014 нажмите \u2665 в каталоге", phFill: (n) => "Профиль заполнен на " + n + "%",
     imgOpen: "Увеличить", imgBack: "← Вернуться к товару",
     showItems: (n, q) => "Показать все товары (" + n + " видов · " + q + " шт.)", hideItems: "Свернуть", pcs: "шт.",
     lbEyebrow: "Соревнование", lbTitle: "ТОП покупатели", lbSub: "Рейтинг клиентов с наибольшими покупками — обновляется каждую неделю",
@@ -381,11 +386,42 @@ const plural = (n, a, b, c) => {
 };
 let LANG = "uz";
 try { const sl = localStorage.getItem("zetme_lang"); if (sl === "ru" || sl === "uz") LANG = sl; } catch (e) {}
+/* 2026-09-29: O'zbek Lotin ↔ Kirill alifbosi. UI matnlari lotinda yozilgan,
+   "Krill" tanlansa tr() natijasi avtomatik transliteratsiya qilinadi. */
+let SCRIPT = "lat";
+try { if (localStorage.getItem("zetme_script") === "cyr") SCRIPT = "cyr"; } catch (e) {}
+function applyScript(sc) { SCRIPT = sc; try { localStorage.setItem("zetme_script", sc); } catch (e) {} }
+const CYR_MAP = { a: "а", b: "б", c: "с", d: "д", e: "е", f: "ф", g: "г", h: "ҳ", i: "и", j: "ж", k: "к", l: "л", m: "м", n: "н",
+  o: "о", p: "п", q: "қ", r: "р", s: "с", t: "т", u: "у", v: "в", w: "в", x: "х", y: "й", z: "з" };
+const CYR_DI = { sh: "ш", ch: "ч", ya: "я", yo: "ё", yu: "ю", ye: "е", ts: "ц" };
+const CYR_RE = /(o['\u02BB\u2018\u2019]|g['\u02BB\u2018\u2019]|sh|ch|ya|yo|yu|ye|ts|[a-z]|['\u02BB\u2018\u2019])/gi;
+function cyrWord(w) {
+  return w.replace(CYR_RE, (m, _g, off, str) => {
+    const low = m.toLowerCase(); const up = m[0] !== low[0];
+    let out;
+    if (/^o['\u02BB\u2018\u2019]$/.test(low)) out = "ў";
+    else if (/^g['\u02BB\u2018\u2019]$/.test(low)) out = "ғ";
+    else if (CYR_DI[low]) out = CYR_DI[low];
+    else if (/^['\u02BB\u2018\u2019]$/.test(low)) out = "ъ";
+    else if (low === "e") out = (off === 0 || !/[a-zа-яўғқҳ]/i.test(str[off - 1])) ? "э" : "е";
+    else out = CYR_MAP[low] || m;
+    return up ? out.toUpperCase() : out;
+  });
+}
+function toCyr(text) {
+  return String(text).split(/(\s+)/).map((w) => {
+    if (!/[a-z]/i.test(w) || w[0] === "/" || w[0] === "#") return w;   // /kod, #teg
+    const core = w.replace(/^[^a-z0-9@]+|[^a-z0-9@]+$/gi, "");
+    if (/[@_\/\d]/.test(core) || /\..*[a-z]/i.test(core)) return w;   // @bot, url, email, ID
+    if (core.length > 1 && core === core.toUpperCase()) return w;   // AI, UZ, RU, QR
+    return cyrWord(w);
+  }).join("");
+}
 const tr = (k, ...a) => {
   const d = STR[LANG] || STR.uz;
   let v = d[k] !== undefined ? d[k] : STR.uz[k];
-  if (typeof v === "function") return v(...a);
-  return v === undefined ? k : v;
+  const out = typeof v === "function" ? v(...a) : (v === undefined ? k : v);
+  return (LANG === "uz" && SCRIPT === "cyr" && typeof out === "string") ? toCyr(out) : out;
 };
 function applyLang(l) { LANG = l; try { localStorage.setItem("zetme_lang", l); } catch (e) {} }
 
@@ -826,7 +862,7 @@ function ImageLightbox({ imgs, index, alt, onIndex, onClose }) {
 }
 
 /* ============================== Product detail modal (litr variant picker) ============================== */
-function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
+function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio, isFav, onFav }) {
   const variants = p.variants || [];
   const [vi, setVi] = useState(0);
   const [qty, setQty] = useState(1);
@@ -861,6 +897,7 @@ function ProductModal({ p, priceMode, onClose, onAdd, onSendToStudio }) {
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="pmodal">
         <button className="pm-close" onClick={onClose}><X size={18} /></button>
+        <button type="button" className={"pm-fav" + (isFav ? " on" : "")} onClick={(e) => { e.stopPropagation(); onFav && onFav(); }} aria-label="♥"><HeartIc size={18} filled={!!isFav} /></button>
         {video && showVideo ? (
           <div className="pm-hero pm-hero-video">
             <video key={video} src={video} poster={imgs[0] || undefined} muted={muted} autoPlay loop playsInline preload="metadata" className="pm-hero-vid" />
@@ -1143,7 +1180,8 @@ function OrderSuccess({ orderId, payTotal, shopName, voucherDiscount, voucherPer
 /* ============================== Profile screen ============================== */
 function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge,
   cust, orders, linked, vouchers, onLink, onRegister, onSaveName, onPhoto, onCancelOrder, onReceiveOrder, onPaidOrder,
-  onSaveInfo, onLogout, lang, theme, onSwitchLang, onToggleTheme }) {
+  onSaveInfo, onLogout, lang, theme, onSwitchLang, onToggleTheme,
+  script, onSetScript, favProducts, onToggleFav, onOpenProduct, priceMode }) {
   // 2026-09-29: profil endi "hub" — bosh sahifada plitkalar, har bo'lim alohida ochiladi
   const [sec, setSec] = useState("hub");
   const [cancelingId, setCancelingId] = useState(null); // "tasdiqlaysizmi?" bosqichi
@@ -1327,6 +1365,12 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
                 <span className="ph-tile-s">{tr("phInfoS")}</span>
                 <span className="ph-tile-ch"><ChevronRight size={15} /></span>
               </button>
+              <button className="ph-tile" onClick={() => setSec("favs")}>
+                <span className="ph-tile-ic ph-ic-e"><HeartIc size={18} filled /></span>
+                <span className="ph-tile-t">{tr("phFavsT")}{(favProducts || []).length > 0 && <em>{favProducts.length}</em>}</span>
+                <span className="ph-tile-s">{tr("phFavsS")}</span>
+                <span className="ph-tile-ch"><ChevronRight size={15} /></span>
+              </button>
               <button className="ph-tile" onClick={() => setSec("vouchers")}>
                 <span className="ph-tile-ic ph-ic-c"><PercentIc size={18} /></span>
                 <span className="ph-tile-t">{tr("phVouchersT")}{(vouchers || []).length > 0 && <em>{vouchers.length}</em>}</span>
@@ -1353,6 +1397,16 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
                   <button className={lang === "ru" ? "on" : ""} onClick={() => lang !== "ru" && onSwitchLang && onSwitchLang()}>RU</button>
                 </span>
               </div>
+              {lang === "uz" && (
+                <div className="ph-row">
+                  <span className="ph-row-ic"><span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 15 }}>Аа</span></span>
+                  <span className="ph-row-t">{tr("phScript")}</span>
+                  <span className="ph-seg" role="group">
+                    <button className={script !== "cyr" ? "on" : ""} onClick={() => script === "cyr" && onSetScript && onSetScript("lat")}>{tr("phLat")}</button>
+                    <button className={script === "cyr" ? "on" : ""} onClick={() => script !== "cyr" && onSetScript && onSetScript("cyr")}>{tr("phCyr")}</button>
+                  </span>
+                </div>
+              )}
               <div className="ph-row">
                 <span className="ph-row-ic">{theme === "night" ? <MoonIc size={16} /> : <SunIc size={16} />}</span>
                 <span className="ph-row-t">{tr("phTheme")}</span>
@@ -1572,6 +1626,32 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
         )}
 
         </>)}
+
+        {sec === "favs" && (
+          <>
+            <div className="prof-histhead">
+              <HeartIc size={14} color={C.inkDim} filled />
+              <span>{tr("phFavsT")}</span>
+              {(favProducts || []).length > 0 && <em className="prof-ordcount">{tr("nPcs", favProducts.length)}</em>}
+            </div>
+            {(favProducts || []).length === 0 ? (
+              <div className="prof-empty">{tr("phNoFavs")}</div>
+            ) : (
+              <div className="ph-favgrid">
+                {favProducts.map((fp) => (
+                  <div key={fp.id} className="ph-fav" onClick={() => onOpenProduct && onOpenProduct(fp)} role="button">
+                    <div className="ph-fav-img">
+                      {thumbUrl(fp) ? <img src={thumbUrl(fp)} alt={fp.name} loading="lazy" /> : <span style={{ fontSize: 28 }}>🪴</span>}
+                      <button type="button" className="pcard-fav on" onClick={(e) => { e.stopPropagation(); onToggleFav && onToggleFav(fp.id); }} aria-label="♥"><HeartIc size={14} filled /></button>
+                    </div>
+                    <div className="ph-fav-name">{fp.name}</div>
+                    <div className="ph-fav-price">{priceRangeText(fp, priceMode || "chakana")}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
         {sec === "vouchers" && (
           <>
@@ -1920,6 +2000,11 @@ function App() {
   const [lang, setLang] = useState(LANG);
   const [theme, setTheme] = useState(THEME);
   const [langBurst, setLangBurst] = useState(0);
+  const [script, setScript] = useState(SCRIPT);
+  const setScriptMode = (sc) => { applyScript(sc); setScript(sc); };
+  // Sevimlilar — telefonda localStorage'da (2026-09-29)
+  const [favs, setFavs] = useState(() => { try { const v = JSON.parse(localStorage.getItem("zetme_favs") || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } });
+  const toggleFav = (id) => setFavs((f) => { const n = f.includes(id) ? f.filter((x) => x !== id) : [id, ...f].slice(0, 100); try { localStorage.setItem("zetme_favs", JSON.stringify(n)); } catch (e) {} return n; });
   const switchLang = () => { const l = lang === "uz" ? "ru" : "uz"; applyLang(l); setLang(l); setLangBurst(Date.now()); };
   const toggleTheme = () => { const t = theme === "day" ? "night" : "day"; applyTheme(t); setTheme(t); };
 
@@ -2927,6 +3012,9 @@ function App() {
                           {thumbUrl(p) ? <img src={thumbUrl(p)} alt={p.name} loading="lazy" decoding="async" /> : <span style={{ fontSize: 34 }}>🪴</span>}
                           {pOut && <span className={"pcard-outbadge" + (p.paused ? " paused" : "")}>{p.paused ? tr("pmPaused") : tr("pmOut")}</span>}
                           {p.video && <span className="pcard-playbadge"><PlayIc size={12} color="#fff" /></span>}
+                          <button type="button" className={"pcard-fav" + (favs.includes(p.id) ? " on" : "")} onClick={(e) => { e.stopPropagation(); toggleFav(p.id); }} aria-label="♥">
+                            <HeartIc size={14} filled={favs.includes(p.id)} />
+                          </button>
                         </div>
                         <div className="pcard-body">
                           <div className="pcard-name">{p.name}</div>
@@ -2970,7 +3058,8 @@ function App() {
       </nav>
 
       {activeProduct && (
-        <ProductModal p={activeProduct} priceMode={priceMode} onClose={() => setActiveProduct(null)} onAdd={addToCart} onSendToStudio={sendPotToStudio} />
+        <ProductModal p={activeProduct} priceMode={priceMode} onClose={() => setActiveProduct(null)} onAdd={addToCart} onSendToStudio={sendPotToStudio}
+          isFav={favs.includes(activeProduct.id)} onFav={() => toggleFav(activeProduct.id)} />
       )}
       {cartOpen && (
         <CartDrawer
@@ -3022,7 +3111,10 @@ function App() {
           onLink={linkCustomer} onRegister={registerCustomer} onSaveName={saveCustName} onPhoto={setCustPhoto} onCancelOrder={cancelCustOrder}
           onReceiveOrder={receiveCustOrder} onPaidOrder={paidCustOrder}
           onSaveInfo={saveCustInfo} onLogout={logoutCustomer}
-          lang={lang} theme={theme} onSwitchLang={switchLang} onToggleTheme={toggleTheme} />
+          lang={lang} theme={theme} onSwitchLang={switchLang} onToggleTheme={toggleTheme}
+          script={script} onSetScript={setScriptMode} priceMode={priceMode}
+          favProducts={favs.map((id) => products.find((x) => x.id === id)).filter(Boolean)}
+          onToggleFav={toggleFav} onOpenProduct={(fp) => { setProfileOpen(false); setActiveProduct(fp); }} />
       )}
       <InstallBanner />
       <AiChat lang={lang} onOpenProducts={() => { setMainTab("products"); setCartOpen(false); setProfileOpen(false); }} />
@@ -3417,6 +3509,10 @@ const buildCSS = () => `
 .pcard-outbadge{position:absolute;top:6px;left:6px;background:${C.sale};color:#fff;font-size:10px;font-weight:700;
   padding:3px 8px;border-radius:20px;letter-spacing:.02em}
 .pcard-outbadge.paused{background:#5B6B7A}
+.pcard-fav{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;border:none;background:#ffffffd9;color:#9aa5a0;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;box-shadow:0 1px 4px #0002;transition:transform .15s ease}
+.pcard-fav:active{transform:scale(.85)}
+.pcard-fav.on{color:${C.sale};background:#fff}
 .pcard-playbadge{position:absolute;right:6px;bottom:6px;width:24px;height:24px;border-radius:50%;background:#0009;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
 .pcard-name{font-size:12.5px;font-weight:600;color:${C.ink};line-height:1.3}
 .pcard-meta{font-size:11px;color:${C.inkDim}}
@@ -3503,6 +3599,9 @@ const buildCSS = () => `
 .ov-full{background:${C.paper};align-items:stretch;justify-content:stretch;bottom:64px;z-index:40}
 .pm-close{position:absolute;top:12px;right:12px;background:${C.paper};border:1px solid ${C.mline};border-radius:20px;
   width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
+.pm-fav{position:absolute;top:12px;left:12px;z-index:3;width:36px;height:36px;border-radius:50%;border:none;background:#ffffffd9;color:#9aa5a0;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px #0003}
+.pm-fav.on{color:${C.sale}}
 
 /* product modal */
 .pmodal{position:relative;background:${C.card};width:100%;max-width:480px;border-radius:20px 20px 0 0;
@@ -3838,6 +3937,13 @@ const buildCSS = () => `
 .ph-tile:last-child:nth-child(odd) .ph-tile-s{flex-basis:100%;padding-left:50px;margin-top:-2px}
 .ph-tile:hover{box-shadow:0 10px 26px -16px #0B211B66;transform:translateY(-1px)}
 .ph-tile-ic{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+.ph-ic-e{background:#FBEAEA;color:${C.sale}}
+.ph-favgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ph-fav{background:${C.card};border:1px solid ${C.mline};border-radius:14px;padding:6px;cursor:pointer}
+.ph-fav-img{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:${C.paper};display:flex;align-items:center;justify-content:center}
+.ph-fav-img img{width:100%;height:100%;object-fit:cover}
+.ph-fav-name{font-size:11.5px;font-weight:600;color:${C.ink};margin-top:6px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ph-fav-price{font-size:11px;color:${C.accent};font-weight:700;margin-top:2px}
 .ph-ic-a{background:#E2F0E6;color:#2F6B4F}.ph-ic-b{background:#FBF3E2;color:#9C7C3E}.ph-ic-c{background:#FBEAF0;color:#B4547A}.ph-ic-d{background:#E8E9F7;color:#4E55A8}
 .ph-tile-t{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px;line-height:1.2}
 .ph-tile-t em{font-style:normal;font-size:10.5px;font-weight:700;background:${C.accent};color:${C.card};border-radius:20px;padding:1px 7px}
