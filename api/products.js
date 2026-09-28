@@ -143,6 +143,16 @@ function normalizeStock(stock, colorKeys) {
   return out;
 }
 
+// 2026-09-28: mahsulot darajasidagi qisqa video (5–10 s). Faqat bizning
+// Vercel Blob domenidagi https manzil qabul qilinadi — begona havola saqlanmaydi.
+function sanitizeVideo(url) {
+  const u = String(url || "").trim();
+  if (!u) return "";
+  if (u.length > 500) return "";
+  if (!/^https:\/\/[a-z0-9.-]+\.(public\.blob\.vercel-storage\.com|blob\.vercel-storage\.com)\/videos\//i.test(u)) return "";
+  return u;
+}
+
 function normalizeVariants(variants) {
   return variants.map((v, i) => {
     // har variantda ko'pi bilan 3 ta rasm
@@ -252,6 +262,7 @@ export default async function handler(req, res) {
         color: colorList[0] || (color ? String(color) : ""),
         colors: colorList,
         variants: normVariants,
+        video: sanitizeVideo(body.video),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
@@ -296,6 +307,7 @@ export default async function handler(req, res) {
         color: colorList[0] || (color ? String(color) : ""),
         colors: colorList,
         variants: normVariants,
+        video: sanitizeVideo(body.video),
         paused: typeof body.paused === "boolean" ? body.paused : !!list[idx].paused,
         updatedAt: Date.now(),
       };
