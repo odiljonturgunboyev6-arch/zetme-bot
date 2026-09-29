@@ -45,6 +45,25 @@ function genOrderId() {
     Date.now().toString(36).slice(-4).toUpperCase()
   );
 }
+// 2026-09-29: buyurtma bilan birga mahsulot rasmlari ham (10 tagacha, takrorlanmasdan)
+async function tgPhotos(chatId, items, caption) {
+  if (!BOT_TOKEN || !chatId) return;
+  const urls = [...new Set(items.map((i) => i.image).filter((u) => typeof u === "string" && /^https?:\/\//.test(u)))].slice(0, 10);
+  if (!urls.length) return;
+  try {
+    if (urls.length === 1) {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, photo: urls[0], caption }),
+      });
+    } else {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, media: urls.map((u, i) => ({ type: "photo", media: u, ...(i === 0 ? { caption } : {}) })) }),
+      });
+    }
+  } catch (e) { console.error("tg photos:", e); }
+}
 async function tgSend(chatId, text) {
   if (!BOT_TOKEN || !chatId) return;
   try {
@@ -277,11 +296,15 @@ export default async function handler(req, res) {
       (cAddress ? `\n🏠 ${cAddress}` : "") +
       (cNote ? `\n📝 ${cNote}` : "") +
       `\n\nAdmin panel > Buyurtmalar bo'limida boshqaring.`;
+    const photoCap = `#${orderId} · ${shopName} · ${resolved.map((i) => i.name).join(", ").slice(0, 900)}`;
     if (sellerChatId && sellerChatId !== String(OWNER_CHAT_ID)) {
       await tgSend(sellerChatId, orderText);
+      await tgPhotos(sellerChatId, resolved, photoCap);
       await tgSend(OWNER_CHAT_ID, `📋 Nazorat nusxasi\n\n${orderText}`);
+      await tgPhotos(OWNER_CHAT_ID, resolved, photoCap);
     } else {
       await tgSend(OWNER_CHAT_ID, orderText);
+      await tgPhotos(OWNER_CHAT_ID, resolved, photoCap);
     }
 
     return res.status(200).json({

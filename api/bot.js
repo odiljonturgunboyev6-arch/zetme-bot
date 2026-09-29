@@ -293,7 +293,7 @@ export default async function handler(req, res) {
             priceMode: draft.priceMode || "chakana",
             totalQty: draft.totalQty || 0,
             bonusApplied: !!draft.bonus,
-            items: (draft.items || []).map((i) => ({ name: i.name, price: i.price, qty: i.qty })),
+            items: (draft.items || []).map((i) => ({ name: i.name, price: i.price, qty: i.qty, image: i.image || "" })),
             customer: {
               chatId: String(chatId),
               name: profile.name || "",
@@ -318,7 +318,7 @@ export default async function handler(req, res) {
             voucherDiscount: vDisc, voucherPercent: vPct,
             shopName: draft.shopName || "",
             totalQty: draft.totalQty || 0,
-            items: (draft.items || []).map((i) => ({ name: i.name, price: i.price, qty: i.qty })),
+            items: (draft.items || []).map((i) => ({ name: i.name, price: i.price, qty: i.qty, image: i.image || "" })),
           });
           if (mine.length > 100) mine.length = 100;
           await kv.set(mkey, mine);
