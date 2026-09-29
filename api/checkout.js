@@ -101,7 +101,7 @@ export default async function handler(req, res) {
     const cRegion = String(cust.region || "").trim().slice(0, 40);
     // manzil va kuryerga izoh — ixtiyoriy (profil "Mening ma'lumotlarim"dan avtomatik keladi)
     const cAddress = String(cust.address || "").trim().slice(0, 160);
-    const cNote = String(cust.note || "").trim().slice(0, 200);
+    const cNote = String(cust.note || "").trim().slice(0, 300);
     if (cName.length < 2) return res.status(400).json({ ok: false, error: "Ismingizni kiriting" });
     if (cPhone.replace(/\D/g, "").length < 7) return res.status(400).json({ ok: false, error: "Telefon raqamingizni to'g'ri kiriting" });
     if (!cRegion) return res.status(400).json({ ok: false, error: "Viloyatingizni tanlang" });
@@ -294,7 +294,7 @@ export default async function handler(req, res) {
       (bonus && bonus.gift ? `\n🎁 Sovg'a: tuvak` : "") +
       `\n\n👤 ${cName}\n📞 ${cPhone}\n📍 ${cRegion}` +
       (cAddress ? `\n🏠 ${cAddress}` : "") +
-      (cNote ? `\n📝 ${cNote}` : "") +
+      (cNote ? `\n\n📝 Mijoz izohi: ${cNote}` : "") +
       `\n\nAdmin panel > Buyurtmalar bo'limida boshqaring.`;
     const photoCap = `#${orderId} · ${shopName} · ${resolved.map((i) => i.name).join(", ").slice(0, 900)}`;
     if (sellerChatId && sellerChatId !== String(OWNER_CHAT_ID)) {
