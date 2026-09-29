@@ -1178,10 +1178,21 @@ function OrderSuccess({ orderId, payTotal, shopName, voucherDiscount, voucherPer
 }
 
 /* ============================== Profile screen ============================== */
+// Raqamlar 0 dan o'sib chiqadi (hero statistikasi uchun) — 2026-09-29
+function useCountUp(target, ms = 900) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const to = Number(target) || 0; const t0 = performance.now(); let raf;
+    const step = (t) => { const k = Math.min(1, (t - t0) / ms); const e = 1 - Math.pow(1 - k, 3); setVal(to * e); if (k < 1) raf = requestAnimationFrame(step); else setVal(to); };
+    raf = requestAnimationFrame(step); return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return val;
+}
 function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge,
   cust, orders, linked, vouchers, onLink, onRegister, onSaveName, onPhoto, onCancelOrder, onReceiveOrder, onPaidOrder,
   onSaveInfo, onLogout, lang, theme, onSwitchLang, onToggleTheme,
-  script, onSetScript, favProducts, onToggleFav, onOpenProduct, priceMode }) {
+  script, onSetScript, favProducts, onToggleFav, onOpenProduct, priceMode, itemImage }) {
+  const imgOf = (it) => it.image || (itemImage ? itemImage(it) : "");
   // 2026-09-29: profil endi "hub" — bosh sahifada plitkalar, har bo'lim alohida ochiladi
   const [sec, setSec] = useState("hub");
   const [cancelingId, setCancelingId] = useState(null); // "tasdiqlaysizmi?" bosqichi
@@ -1256,6 +1267,9 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
   }
   const okOrders = (orders || []).filter((o) => (o.status || "yangi") !== "bekor");
   const spent = okOrders.reduce((s, o) => s + Number(o.payTotal || o.total || 0), 0);
+  const cOrders = useCountUp(okOrders.length, 700);
+  const cSpent = useCountUp(spent, 1000);
+  const cVouch = useCountUp((vouchers || []).length, 700);
   const fmtShort = (n) => n >= 1000000 ? (n / 1000000).toFixed(1).replace(".0", "") + " mln"
     : n >= 1000 ? Math.round(n / 1000) + "k" : String(Math.round(n) || 0);
   const dayShort = (ts) => { const d = new Date(ts); const q = (x) => String(x).padStart(2, "0"); return q(d.getDate()) + "." + q(d.getMonth() + 1) + "." + d.getFullYear(); };
@@ -1305,6 +1319,9 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
 
         <div className="ph-hero">
           <span className="ph-orb ph-orb1" /><span className="ph-orb ph-orb2" />
+          <span className="ph-shine" aria-hidden="true" />
+          <span className="ph-leaf ph-leaf1" aria-hidden="true">🌿</span>
+          <span className="ph-leaf ph-leaf2" aria-hidden="true">🌱</span>
           <div className="ph-top">
             {/* RASM YUKLASH — <label> ichida haqiqiy <input type="file"> (iOS/Telegram uchun) */}
             <label className="prof-avatar ph-avatar" title={tr("photoHint")} style={{ "--fill": fillPct + "%" }}>
@@ -1344,9 +1361,9 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
             </div>
           </div>
           <div className="ph-stats">
-            <div className="ph-stat"><b>{okOrders.length}</b><span>{tr("stOrders")}</span></div>
-            <div className="ph-stat"><b>{fmtShort(spent)}</b><span>{tr("stSpent")}</span></div>
-            <div className="ph-stat"><b>{(vouchers || []).length}</b><span>{tr("stVouchers")}</span></div>
+            <div className="ph-stat"><b>{Math.round(cOrders)}</b><span>{tr("stOrders")}</span></div>
+            <div className="ph-stat"><b>{fmtShort(cSpent)}</b><span>{tr("stSpent")}</span></div>
+            <div className="ph-stat"><b>{Math.round(cVouch)}</b><span>{tr("stVouchers")}</span></div>
           </div>
         </div>
 
@@ -1433,6 +1450,7 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
         {sec !== "hub" && (
           <button className="ph-back" onClick={() => setSec("hub")}><ArrowLeft size={15} /> {tr("phBack")}</button>
         )}
+        <div className="ph-secwrap" key={sec}>
 
         {sec === "info" && (<>
         {/* ---------- MENING MA'LUMOTLARIM (galichkalar o'rniga) ---------- */}
@@ -1536,7 +1554,7 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
                             {shown.map((it, k) => (
                               open ? (
                                 <div key={k} className="po-item">
-                                  <div className="po-item-img">{it.image ? <img src={it.image} alt="" /> : "🪴"}</div>
+                                  <div className="po-item-img">{imgOf(it) ? <img src={imgOf(it)} alt="" loading="lazy" /> : "🪴"}</div>
                                   <div className="po-item-body">
                                     <div className="po-item-name">{it.name}</div>
                                     <div className="po-item-sub">{it.qty} {tr("pcs")} × {fmt(it.price || 0)}</div>
@@ -1694,6 +1712,7 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
           </>
         )}
 
+        </div>
         {/* ---------- Pastki amallar ---------- */}
         {sec === "hub" && (
         <div className="pf-actions">
@@ -2028,6 +2047,16 @@ function App() {
   const [genDone, setGenDone] = useState(false);
 
   const [products, setProducts] = useState([]);
+  // Eski buyurtmalarda (2026-09-27 gacha) rasm saqlanmagan — nomi bo'yicha katalogdan topamiz
+  const itemImage = useMemo(() => {
+    const map = [];
+    for (const p of products) for (const v of (p.variants || [])) {
+      const key = `${v.name || p.name} — ${v.litr}`;
+      const img = variantThumb(v) || variantImg(v);
+      if (img) map.push([key, img]);
+    }
+    return (it) => { const n = String(it.name || ""); const hit = map.find(([k]) => n.startsWith(k)); return hit ? hit[1] : ""; };
+  }, [products]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(null);
   const [shops, setShops] = useState([]);              // studiyadagi do'konlar devori
@@ -3114,7 +3143,8 @@ function App() {
           lang={lang} theme={theme} onSwitchLang={switchLang} onToggleTheme={toggleTheme}
           script={script} onSetScript={setScriptMode} priceMode={priceMode}
           favProducts={favs.map((id) => products.find((x) => x.id === id)).filter(Boolean)}
-          onToggleFav={toggleFav} onOpenProduct={(fp) => { setProfileOpen(false); setActiveProduct(fp); }} />
+          onToggleFav={toggleFav} onOpenProduct={(fp) => { setProfileOpen(false); setActiveProduct(fp); }}
+          itemImage={itemImage} />
       )}
       <InstallBanner />
       <AiChat lang={lang} onOpenProducts={() => { setMainTab("products"); setCartOpen(false); setProfileOpen(false); }} />
@@ -3907,6 +3937,35 @@ const buildCSS = () => `
 .ph-hero{position:relative;overflow:hidden;border-radius:22px;padding:22px 18px 16px;margin:6px 0 16px;
   background:linear-gradient(150deg,#0B211B 0%,#153A2E 60%,#1B4A34 100%);color:${C.laitonHi};
   box-shadow:0 18px 40px -22px #0B211B99, inset 0 1px 0 #ffffff14}
+.ph-hero{animation:phHero .55s cubic-bezier(.2,.8,.2,1) both}
+@keyframes phHero{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.ph-shine{position:absolute;inset:-40% -60%;pointer-events:none;
+  background:linear-gradient(115deg,transparent 40%,#E7D3A01f 48%,#ffffff2a 50%,#E7D3A01f 52%,transparent 60%);
+  transform:translateX(-70%) rotate(0deg);animation:phShine 7s ease-in-out 1.2s infinite}
+@keyframes phShine{0%{transform:translateX(-70%)}35%{transform:translateX(70%)}100%{transform:translateX(70%)}}
+.ph-leaf{position:absolute;pointer-events:none;opacity:.55;filter:drop-shadow(0 6px 10px #0006);animation:phFloat 6s ease-in-out infinite}
+.ph-leaf1{right:14px;top:10px;font-size:22px;animation-delay:-1s}
+.ph-leaf2{right:52px;bottom:76px;font-size:14px;animation-delay:-3.5s;opacity:.4}
+@keyframes phFloat{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-7px) rotate(8deg)}}
+.ph-avatar::before{content:"";position:absolute;inset:-6px;border-radius:50%;pointer-events:none;
+  background:conic-gradient(from 0deg,#E7D3A000,#E7D3A066,#8FE3B844,#E7D3A000);animation:phSpin 5s linear infinite;filter:blur(3px)}
+@keyframes phSpin{to{transform:rotate(360deg)}}
+.ph-stat{animation:phUp .5s ease both}
+.ph-stat:nth-child(1){animation-delay:.15s}.ph-stat:nth-child(2){animation-delay:.25s}.ph-stat:nth-child(3){animation-delay:.35s}
+.ph-tile{animation:phUp .55s cubic-bezier(.2,.8,.2,1) both}
+.ph-tile:nth-child(1){animation-delay:.25s}.ph-tile:nth-child(2){animation-delay:.33s}.ph-tile:nth-child(3){animation-delay:.41s}.ph-tile:nth-child(4){animation-delay:.49s}.ph-tile:nth-child(5){animation-delay:.57s}
+.ph-settings,.ph-sechead{animation:phUp .55s ease .6s both}
+.ph-support{animation:phUp .55s ease .7s both;position:relative;overflow:hidden}
+.ph-support::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,#ffffff33 50%,transparent 65%);
+  transform:translateX(-120%);animation:phShine2 5s ease-in-out 2s infinite;pointer-events:none}
+@keyframes phShine2{0%{transform:translateX(-120%)}40%{transform:translateX(120%)}100%{transform:translateX(120%)}}
+.ph-tile-ic{transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.ph-tile:hover .ph-tile-ic,.ph-tile:active .ph-tile-ic{transform:scale(1.12) rotate(-6deg)}
+.ph-secwrap{animation:phIn .32s cubic-bezier(.2,.8,.2,1) both}
+@keyframes phIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes phUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.ph-back{animation:phIn .3s ease both}
+@media (prefers-reduced-motion:reduce){.ph-hero,.ph-tile,.ph-stat,.ph-settings,.ph-sechead,.ph-support,.ph-secwrap,.ph-back{animation:none}.ph-shine,.ph-leaf,.ph-avatar::before,.ph-support::after{animation:none;display:none}}
 .ph-orb{position:absolute;border-radius:50%;pointer-events:none;filter:blur(2px)}
 .ph-orb1{width:220px;height:220px;right:-70px;top:-110px;background:radial-gradient(circle,#C6A05B55,transparent 65%)}
 .ph-orb2{width:180px;height:180px;left:-60px;bottom:-110px;background:radial-gradient(circle,#8FE3B833,transparent 65%)}
