@@ -181,6 +181,7 @@ const STR = {
     sending: "Yuborilmoqda…", placeOrder: "Buyurtma berish",
     coTitle: "Buyurtmani rasmiylashtirish", coItems: (n) => n + " xil mahsulot",
     coName: "Ismingiz", coPhone: "Telefon raqamingiz", coRegion: "Viloyat", coSelect: "Tanlang…",
+    coNote: "Sotuvchiga izoh", coNotePh: "Masalan: 2 tasi oq, 1 tasi qora bo'lsin; ertaga ertalab kerak; oldindan qo'ng'iroq qiling…",
     coSend: "Buyurtmani yuborish",
     coHint: "Buyurtma darhol do'konga tushadi. Holatini Profil bo'limida kuzatib borasiz — sotuvchi tayyorlab, yuborganida ko'rinadi.",
     osTitle: "Buyurtma qabul qilindi!", shopSuffix: " do'koni",
@@ -315,6 +316,7 @@ const STR = {
     sending: "Отправка…", placeOrder: "Оформить заказ",
     coTitle: "Оформление заказа", coItems: (n) => n + " " + plural(n, "вид", "вида", "видов") + " товара",
     coName: "Ваше имя", coPhone: "Ваш номер телефона", coRegion: "Регион", coSelect: "Выберите…",
+    coNote: "Комментарий продавцу", coNotePh: "Например: 2 белых, 1 чёрный; нужно завтра утром; позвоните заранее…",
     coSend: "Отправить заказ",
     coHint: "Заказ сразу поступит в магазин. Статус отслеживайте в разделе Профиль — увидите, когда продавец готовит и отправит его.",
     osTitle: "Заказ принят!", shopSuffix: "",
@@ -1123,7 +1125,8 @@ function CheckoutForm({ initial, itemCount, payTotal, shopName, busy, error, onS
   // 2026-09-27: buyurtma formasi soddalashtirildi — faqat ism / telefon / viloyat.
   // Manzil va kuryer izohi Profil bo'limida to'ldiriladi va shu yerdan avtomatik olinadi.
   const address = initial.address || "";
-  const note = initial.note || "";
+  // 2026-09-29: sotuvchi uchun izoh — mijoz nima xohlashini shu yerda yozadi
+  const [note, setNote] = useState("");
   return (
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="checkout">
@@ -1141,6 +1144,8 @@ function CheckoutForm({ initial, itemCount, payTotal, shopName, busy, error, onS
           <option value="">{tr("coSelect")}</option>
           {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
+        <label className="co-label">{tr("coNote")} <i className="pf-opt">{tr("phOptional")}</i></label>
+        <textarea className="co-input co-note" value={note} maxLength={300} rows={3} onChange={(e) => setNote(e.target.value)} placeholder={tr("coNotePh")} />
         {error && <div className="prof-err" style={{ marginTop: 8 }}>{error}</div>}
         <button className="pm-add" style={{ marginTop: 14 }} disabled={busy}
           onClick={() => onSubmit({ name: name.trim(), phone: phone.trim(), region, address: address.trim(), note: note.trim() })}>
@@ -3814,6 +3819,7 @@ const buildCSS = () => `
 .po-qabul{background:#EAF3EC;color:${C.accent}}
 .co-label{display:block;font-size:11.5px;font-weight:600;color:${C.inkDim};margin:10px 0 4px;text-align:left}
 .co-input{width:100%;padding:11px 13px;border:1px solid ${C.mline};border-radius:11px;font-size:14.5px;font-family:${FONT_BODY};background:#fff;color:${C.ink}}
+.co-note{resize:vertical;min-height:72px;line-height:1.45;font-size:13.5px}
 .os-ic{width:54px;height:54px;border-radius:50%;background:${C.accent};display:flex;align-items:center;justify-content:center;margin:6px auto 0}
 .po-payrow{margin-top:8px;padding:9px 11px;border-radius:10px;font-size:12px;line-height:1.55}
 .po-pay-none{background:${C.paper};border:1px dashed ${C.mline}}
