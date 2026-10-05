@@ -264,7 +264,7 @@
     <input type="text" id="regOwner" placeholder="Ismingiz" />
     <input type="text" id="regPhone" placeholder="Telefon (+998 ...)" />
     <input type="text" id="regLogin" placeholder="Login (lotin harflar, masalan: gulmarkaz)" />
-    <input type="password" id="regPw" placeholder="Parol (kamida 6 belgi)" />
+    <input type="password" id="regPw" placeholder="Parol (kamida 8 belgi, harf va raqam)" />
     <button class="mainbtn" onclick="tryRegister()">Ariza yuborish</button>
     <div class="err" id="regErr"></div>
     <div class="okmsg hidden" id="regOk">✅ Arizangiz yuborildi! Administrator tasdiqlagach shu yerdan login-parolingiz bilan kirasiz.</div>
@@ -1262,9 +1262,9 @@
     sellerAction("remove", id);
   }
   async function resetSellerPw(id, name) {
-    const newPw = prompt(`"${name}" do'koni uchun YANGI parol kiriting (kamida 6 belgi).\nUni sotuvchiga o'zingiz yetkazasiz:`);
+    const newPw = prompt(`"${name}" do'koni uchun YANGI parol kiriting (kamida 8 belgi, harf va raqam bo'lsin).\nUni sotuvchiga o'zingiz yetkazasiz:`);
     if (newPw === null) return;
-    if (newPw.length < 6) { alert("Parol kamida 6 ta belgi bo'lsin"); return; }
+    if (newPw.length < 8 || !/[A-Za-z]/.test(newPw) || !/\d/.test(newPw)) { alert("Parol kamida 8 ta belgi bo'lsin, harf ham raqam ham bo'lsin"); return; }
     const res = await fetch("/api/sellers", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -1754,6 +1754,8 @@
     const data = await res.json();
     if (!data.ok) { msgEl.innerHTML = `<div class="msg err">${data.error || "Xatolik"}</div>`; return; }
     if (newPw) document.getElementById("profNewPw").value = "";
+    // parol almashganda server yangi token beradi (eski tokenlar yopiladi) — saqlab qo'yamiz
+    if (data.token) { ME.token = data.token; saveAuth(); }
     ME.seller = data.seller;
     // server bo'limlarni normallashtiradi (bo'shlari tushib qoladi, id beriladi) — panelni yangilaymiz
     sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name })) : [];
