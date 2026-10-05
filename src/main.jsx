@@ -231,6 +231,10 @@ const STR = {
     phSupportT: "Qo'llab-quvvatlash", phSupportS: "Savollar uchun adminga yozing", phBack: "Profilga qaytish",
     phNoVouchers: "Hozircha chegirma yo'q \u2014 xarid qilib bonus yig'ing", phOptional: "ixtiyoriy",
     phScript: "Alifbo", phLat: "Lotin", phCyr: "Krill",
+    photoAdd: "Rasm qo'yish", photoChange: "Rasmni almashtirish",
+    badgePick: "Galichka tanlash", badge_blue: "Ko'k galichka", badge_blue_s: "Ommaviy \u2014 hamma uchun",
+    badge_black: "Qora galichka", badge_black_s: "Minimalist uslub", badge_pink: "Pushti galichka", badge_pink_s: "Yorqin uslub",
+    badge_gold: "Oltin galichka", badgeGoldOn: "Sizda faol \u2014 oyiga 10 mln+ xarid", badgeGoldNeed: (a, b) => "Oyiga " + b + " xarid kerak \u2014 hozir " + a,
     phFavsT: "Sevimlilar", phFavsS: "Saqlangan mahsulotlar", phNoFavs: "Hali sevimli mahsulot yo'q \u2014 katalogda \u2665 ni bosing", phFill: (n) => "Profil " + n + "% to'ldirilgan",
     imgOpen: "Kattalashtirish", imgBack: "← Mahsulotga qaytish",
     showItems: (n, q) => "Barcha mahsulotlarni ko'rish (" + n + " xil · " + q + " dona)", hideItems: "Yig'ish", pcs: "dona",
@@ -369,6 +373,10 @@ const STR = {
     phSupportT: "Поддержка", phSupportS: "Напишите админу по вопросам", phBack: "Назад в профиль",
     phNoVouchers: "Скидок пока нет \u2014 покупайте и копите бонусы", phOptional: "необязательно",
     phScript: "Алфавит", phLat: "Латиница", phCyr: "Кириллица",
+    photoAdd: "Добавить фото", photoChange: "Сменить фото",
+    badgePick: "Выбрать галочку", badge_blue: "Синяя галочка", badge_blue_s: "Обычная \u2014 для всех",
+    badge_black: "Чёрная галочка", badge_black_s: "Минимализм", badge_pink: "Розовая галочка", badge_pink_s: "Яркий стиль",
+    badge_gold: "Золотая галочка", badgeGoldOn: "Активна \u2014 покупки 10 млн+ в месяц", badgeGoldNeed: (a, b) => "Нужно " + b + " покупок в месяц \u2014 сейчас " + a,
     phFavsT: "Избранное", phFavsS: "Сохранённые товары", phNoFavs: "Пока нет избранных \u2014 нажмите \u2665 в каталоге", phFill: (n) => "Профиль заполнен на " + n + "%",
     imgOpen: "Увеличить", imgBack: "← Вернуться к товару",
     showItems: (n, q) => "Показать все товары (" + n + " видов · " + q + " шт.)", hideItems: "Свернуть", pcs: "шт.",
@@ -538,57 +546,47 @@ const LANGS = [
   { code: "en", label: "EN", active: false },
 ];
 
-// GALICHKALAR: profil belgisi — 0-tier bepul/oddiy, 1-10 oylik obuna bilan
-// sotib olinadi, narx oshgani sari kurinishi ham boyib boradi (gem soni, rang,
-// nur kuchi). tierForBadge(idx) — BADGES massividan xavfsiz element qaytaradi.
+// GALICHKALAR (2026-09-29, yangi sodda tizim): Instagram uslubidagi tasdiq belgisi.
+//   blue  — ommaviy (standart, hammada)
+//   black / pink — mijoz o'zi tanlaydi (bepul)
+//   gold  — avtomatik: oxirgi 30 kunda 10 mln so'mdan ortiq xarid qilganlar
+const GOLD_MIN_MONTHLY = 10000000;
 const BADGES = [
-  { id: 0, label: "Oddiy",               price: 0,     color: "#8B958E", ring: "#C7D0CA", points: 0,  gems: 0, glow: 0 },
-  { id: 1, label: "Kumush Galichka",     price: 19900, color: "#9AA7B4", ring: "#EEF2F5", points: 8,  gems: 0, glow: 1 },
-  { id: 2, label: "Zumrad Gulchambar",   price: 39900, color: "#1F8E56", ring: "#8FE3B8", points: 9,  gems: 1, glow: 2 },
-  { id: 3, label: "Yoqut Toji",          price: 59900, color: "#A82C48", ring: "#F5A9BB", points: 10, gems: 2, glow: 3 },
-  { id: 4, label: "Olmos Gulchambar",    price: 79900, color: "#1E93B4", ring: "#CFF6FF", points: 11, gems: 3, glow: 4 },
-  { id: 5, label: "Afsonaviy Zetme Toji", price: 99900, color: "#C6941F", ring: "#FFEBA8", points: 12, gems: 4, glow: 5, legendary: true },
+  { id: "blue",  color: "#2B7FD6", ring: "#9CC9F5", glow: "#9CC9F5" },
+  { id: "black", color: "#1B1F22", ring: "#70787E", glow: "#70787E" },
+  { id: "pink",  color: "#E0457B", ring: "#F9B6CC", glow: "#F9B6CC" },
+  { id: "gold",  color: "#C6941F", ring: "#FFEBA8", glow: "#FFD86B", auto: true },
 ];
-function badgeAt(idx) { return BADGES[Math.max(0, Math.min(BADGES.length - 1, idx || 0))]; }
+function badgeById(id) { return BADGES.find((b) => b.id === id) || BADGES[0]; }
+// Oxirgi 30 kundagi xarid (bekor qilinmaganlar)
+function monthlySpend(orders) {
+  const from = Date.now() - 30 * 24 * 3600 * 1000;
+  return (orders || []).filter((o) => (o.status || "yangi") !== "bekor" && Number(o.ts) >= from)
+    .reduce((a, o) => a + Number(o.payTotal || o.total || 0), 0);
+}
 
-/* Galichka — Instagram uslubidagi "tasdiqlangan" nishonga o'xshash, o'yma
-   (scallop) rozetka + o'rtasida check belgisi. Daraja ortgani sari rozetka
-   uchlari, gauhar (gem) nuqtalari va nur (glow) kuchayib boradi. */
-function BadgeIcon({ tier, size = 40 }) {
-  const b = badgeAt(tier);
-  const free = b.id === 0;
-  const pts = free ? 0 : b.points;
+/* Galichka — 8 uchli rozetka + oq check. Oltin bo'lsa yumshoq nur bilan. */
+function BadgeIcon({ id, size = 22 }) {
+  const b = badgeById(id);
+  const pts = 8, ringR = 6.3;
   const scallops = Array.from({ length: pts }, (_, i) => (360 / pts) * i);
-  const ringR = 6.3;
-  const gemAngles = Array.from({ length: b.gems }, (_, i) => (360 / Math.max(1, b.gems)) * i - 90);
+  const gid = `gg-${b.id}`;
   return (
-    <span className={"gali-ic" + (b.legendary ? " gali-legendary" : "")} style={{ width: size, height: size }}>
-      {b.glow > 0 && (
-        <span className="gali-glow" style={{
-          background: `radial-gradient(circle, ${b.ring}${b.glow >= 4 ? "cc" : b.glow >= 2 ? "88" : "55"}, transparent 70%)`,
-          filter: `blur(${2 + b.glow}px)`,
-        }} />
-      )}
+    <span className={"gali-ic" + (b.id === "gold" ? " gali-legendary" : "")} style={{ width: size, height: size }}>
+      {b.id === "gold" && <span className="gali-glow" style={{ background: `radial-gradient(circle, ${b.glow}aa, transparent 70%)`, filter: "blur(4px)" }} />}
       <svg viewBox="0 0 40 40" width={size} height={size} className="gali-svg">
         <defs>
-          <linearGradient id={`gg${tier}`} x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor={b.ring} />
             <stop offset="100%" stopColor={b.color} />
           </linearGradient>
         </defs>
-        {!free && scallops.map((a, i) => {
+        {scallops.map((a, i) => {
           const rad = (a * Math.PI) / 180;
-          return <circle key={i} cx={20 + ringR * Math.cos(rad)} cy={20 + ringR * Math.sin(rad)} r="9.4" fill={`url(#gg${tier})`} />;
+          return <circle key={i} cx={20 + ringR * Math.cos(rad)} cy={20 + ringR * Math.sin(rad)} r="9.4" fill={`url(#${gid})`} />;
         })}
-        <circle cx="20" cy="20" r={free ? 13.5 : 11.5} fill={free ? "none" : `url(#gg${tier})`}
-          stroke={free ? b.color : "none"} strokeWidth={free ? 1.6 : 0} opacity={free ? 0.55 : 1} />
-        <path d="M13.5 20.3l3.8 3.8 8.2-9" fill="none" stroke={free ? b.color : "#fff"}
-          strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" opacity={free ? 0.85 : 1} />
-        {gemAngles.map((a, i) => {
-          const rad = (a * Math.PI) / 180;
-          const r = 15.4;
-          return <circle key={i} cx={20 + r * Math.cos(rad)} cy={20 + r * Math.sin(rad)} r="1.5" fill={b.ring} />;
-        })}
+        <circle cx="20" cy="20" r="11.5" fill={`url(#${gid})`} />
+        <path d="M13.5 20.3l3.8 3.8 8.2-9" fill="none" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </span>
   );
@@ -1193,7 +1191,7 @@ function useCountUp(target, ms = 900) {
   }, [target, ms]);
   return val;
 }
-function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge,
+function ProfileScreen({ onClose, profile, badgeId, generations, onSelectBadge,
   cust, orders, linked, vouchers, onLink, onRegister, onSaveName, onPhoto, onCancelOrder, onReceiveOrder, onPaidOrder,
   onSaveInfo, onLogout, lang, theme, onSwitchLang, onToggleTheme,
   script, onSetScript, favProducts, onToggleFav, onOpenProduct, priceMode, itemImage }) {
@@ -1228,8 +1226,12 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
     if (err) setCancelErr(err);
     else { setPayFormId(null); setPayNote(""); }
   }
-  const tier = badgeAt(badgeTier);
   const photoRef = React.useRef(null);
+  // Galichka: 30 kunlik xarid 10 mln+ bo'lsa oltin avtomatik, aks holda tanlangani
+  const spend30 = monthlySpend(orders);
+  const goldOk = spend30 >= GOLD_MIN_MONTHLY;
+  const activeBadge = goldOk ? "gold" : (badgeId || "blue");
+  const [badgePick, setBadgePick] = useState(false);
 
   const [code, setCode] = useState("");
   const [linkBusy, setLinkBusy] = useState(false);
@@ -1330,7 +1332,7 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
           <div className="ph-top">
             {/* RASM YUKLASH — <label> ichida haqiqiy <input type="file"> (iOS/Telegram uchun) */}
             <label className="prof-avatar ph-avatar" title={tr("photoHint")} style={{ "--fill": fillPct + "%" }}>
-              <input className="prof-fileinput" type="file" accept="image/*,.heic,.heif" onChange={onPhotoFile} />
+              <input ref={photoRef} className="prof-fileinput" type="file" accept="image/*" onChange={onPhotoFile} />
               <span className="ph-avatar-in">
                 {cust && cust.photo
                   ? <img src={cust.photo} alt="" className="prof-photo" />
@@ -1339,11 +1341,16 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
               <span className="prof-cam ph-cam"><Camera size={11} color="#fff" /></span>
               {photoBusy && <span className="prof-photobusy"><span className="pf-spin" /></span>}
             </label>
+            {/* Galichka tanlash tugmasi — hero chetida */}
+            <button type="button" className="ph-badgebtn" onClick={() => setBadgePick(true)} aria-label={tr("badgePick")} title={tr("badgePick")}>
+              <BadgeIcon id={activeBadge} size={20} />
+            </button>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="ph-eyebrow">{tr("phTitle")}</div>
               {!editName ? (
                 <div className="ph-name">
-                  {displayName}
+                  <span className="ph-name-txt">{displayName}</span>
+                  <span className="ph-name-badge"><BadgeIcon id={activeBadge} size={22} /></span>
                   {linked && (
                     <button className="prof-editbtn ph-edit" onClick={() => {
                       setFn((cust && cust.firstName) || ""); setLn((cust && cust.lastName) || ""); setEditName(true);
@@ -1361,8 +1368,10 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
               <div className="ph-phone">
                 {displayPhone ? <>{displayPhone}{linked ? tr("tgLinked") : ""}</> : tr("noPhone")}
               </div>
-              {photoBusy && <div className="ph-phone">{tr("photoLoading")}</div>}
-              {photoErr && <div className="prof-err">{photoErr}</div>}
+              <button type="button" className="ph-photobtn" onClick={() => photoRef.current && photoRef.current.click()} disabled={photoBusy}>
+                <Camera size={12} /> {photoBusy ? tr("photoLoading") : (cust && cust.photo ? tr("photoChange") : tr("photoAdd"))}
+              </button>
+              {photoErr && <div className="prof-err" style={{ marginTop: 6 }}>{photoErr}</div>}
             </div>
           </div>
           <div className="ph-stats">
@@ -1371,6 +1380,35 @@ function ProfileScreen({ onClose, profile, badgeTier, generations, onSelectBadge
             <div className="ph-stat"><b>{Math.round(cVouch)}</b><span>{tr("stVouchers")}</span></div>
           </div>
         </div>
+
+        {badgePick && (
+          <div className="ph-sheetbg" onClick={(e) => e.target === e.currentTarget && setBadgePick(false)}>
+            <div className="ph-sheet">
+              <div className="ph-sheet-h">
+                <b>{tr("badgePick")}</b>
+                <button type="button" className="pm-close" style={{ position: "static" }} onClick={() => setBadgePick(false)}><X size={16} /></button>
+              </div>
+              <div className="ph-badgelist">
+                {BADGES.map((b) => {
+                  const locked = b.auto && !goldOk;
+                  const on = activeBadge === b.id;
+                  return (
+                    <button key={b.id} type="button" className={"ph-badgeopt" + (on ? " on" : "") + (locked ? " locked" : "")}
+                      onClick={() => { if (b.auto) return; onSelectBadge && onSelectBadge(b.id); setBadgePick(false); }}>
+                      <BadgeIcon id={b.id} size={34} />
+                      <span className="ph-badgeopt-t">
+                        <b>{tr("badge_" + b.id)}</b>
+                        <span>{b.auto ? (goldOk ? tr("badgeGoldOn") : tr("badgeGoldNeed", fmtShort(spend30), fmtShort(GOLD_MIN_MONTHLY))) : tr("badge_" + b.id + "_s")}</span>
+                      </span>
+                      {on && <span className="ph-badgeopt-on"><Check size={14} /></span>}
+                      {locked && <span className="ph-badgeopt-lock">🔒</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {sec === "hub" && (
           <>
@@ -2099,7 +2137,7 @@ function App() {
   const [custOrders, setCustOrders] = useState([]);
   const [custVouchers, setCustVouchers] = useState([]); // bekor kompensatsiyasi bonuslari
   const [tokens, setTokens] = useState(2);
-  const [badgeTier, setBadgeTier] = useState(0); // 0=bepul, 1-5=galichka darajalari
+  const [badgeId, setBadgeId] = useState("blue"); // blue | black | pink (gold — avtomatik)
   const [generations, setGenerations] = useState([]);
 
   // pastki navigatsiyada ayni shu paytda qaysi oyna faol ekanini bildiradi
@@ -2118,9 +2156,8 @@ function App() {
     if (c) { try { setProfile(JSON.parse(c)); } catch (e) {} }
     const t = storageGet("zetme_tokens", null);
     if (t != null) setTokens(Number(t));
-    const bt = storageGet("zetme_badge_tier", null);
-    if (bt != null) setBadgeTier(Math.max(0, Math.min(BADGES.length - 1, Number(bt) || 0)));
-    else { const b = storageGet("zetme_badge", null); if (b === "1") setBadgeTier(1); } // eski format bilan moslik
+    const bid = storageGet("zetme_badge_id", null);
+    if (bid && BADGES.some((b) => b.id === bid && !b.auto)) setBadgeId(bid);
     const g = storageGet("zetme_generations", null);
     if (g) { try { setGenerations(JSON.parse(g)); } catch (e) {} }
     const ca = storageGet("zetme_cust_auth", null);
@@ -2509,10 +2546,11 @@ function App() {
     setTokens(newTokens);
     storageSet("zetme_tokens", String(newTokens));
   }
-  function selectBadge(idx) {
-    const i = Math.max(0, Math.min(BADGES.length - 1, idx || 0));
-    setBadgeTier(i);
-    storageSet("zetme_badge_tier", String(i));
+  function selectBadge(id) {
+    const b = BADGES.find((x) => x.id === id && !x.auto);
+    if (!b) return;
+    setBadgeId(b.id);
+    storageSet("zetme_badge_id", b.id);
   }
 
   // MARKETPLACE: savatda BIR NECHTA do'kon mahsulotlari bo'lishi mumkin —
@@ -2637,7 +2675,6 @@ function App() {
   }, [cart, priceMode]);
 
   const checkoutGroup = cartGroups.find((g) => g.sellerId === checkoutSellerId) || null;
-  const tier = badgeAt(badgeTier);
 
   return (
     <div className="root">
@@ -2690,12 +2727,6 @@ function App() {
         <header className="topbar">
           <ZetmeMark size="sm" />
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button className="prof-entry" onClick={() => { setProfileOpen(true); setCartOpen(false); }}>
-              <span className="prof-entry-ring" style={{ borderColor: tier.ring }}>
-                <User size={14} color={tier.color} />
-              </span>
-              {AI_STUDIO_ENABLED && <span className="prof-entry-tok"><Coins size={11} color={C.laiton} /> {tokens}</span>}
-            </button>
             {/* KUN/TUN — gul ochiladi (kun) / g'uncha bo'lib yumiladi (tun) */}
             <button className={"bloom-toggle " + (theme === "day" ? "bt-day" : "bt-night")}
               onClick={toggleTheme} aria-label="Kun/Tun" title={theme === "day" ? tr("toNight") : tr("toDay")}>
@@ -3139,7 +3170,7 @@ function App() {
       )}
       {profileOpen && (
         <ProfileScreen onClose={() => setProfileOpen(false)} profile={profile}
-          badgeTier={badgeTier} generations={generations} onSelectBadge={selectBadge}
+          badgeId={badgeId} generations={generations} onSelectBadge={selectBadge}
           cust={custProfile} orders={custOrders} linked={!!custAuth}
           vouchers={custVouchers.map((v) => ({ ...v, shopName: (shops.find((s) => s.id === v.sellerId) || {}).shopName || "" }))}
           onLink={linkCustomer} onRegister={registerCustomer} onSaveName={saveCustName} onPhoto={setCustPhoto} onCancelOrder={cancelCustOrder}
@@ -3953,7 +3984,7 @@ const buildCSS = () => `
 .ph-leaf1{right:14px;top:10px;font-size:22px;animation-delay:-1s}
 .ph-leaf2{right:52px;bottom:76px;font-size:14px;animation-delay:-3.5s;opacity:.4}
 @keyframes phFloat{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-7px) rotate(8deg)}}
-.ph-avatar::before{content:"";position:absolute;inset:-6px;border-radius:50%;pointer-events:none;
+.ph-avatar::before{content:"";position:absolute;z-index:0;inset:-6px;border-radius:50%;pointer-events:none;
   background:conic-gradient(from 0deg,#E7D3A000,#E7D3A066,#8FE3B844,#E7D3A000);animation:phSpin 5s linear infinite;filter:blur(3px)}
 @keyframes phSpin{to{transform:rotate(360deg)}}
 .ph-stat{animation:phUp .5s ease both}
@@ -3987,6 +4018,33 @@ const buildCSS = () => `
 .ph-nameedit input{background:#ffffff12;border-color:#ffffff22;color:#F1ECDF}
 .ph-nameedit button{background:${C.laiton};color:#0B211B;border:none;border-radius:9px;padding:7px 12px;font-weight:700;font-family:inherit}
 .ph-tier{font-size:11.5px;font-weight:600;color:#E7D3A0;margin-top:3px}
+.ph-name{display:flex;align-items:center;gap:6px;white-space:normal}
+.ph-name-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ph-name-badge{display:inline-flex;flex-shrink:0}
+.ph-badgebtn{position:absolute;top:14px;right:56px;width:36px;height:36px;border-radius:50%;border:1px solid #ffffff2a;background:#ffffff14;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(6px);z-index:2;transition:transform .2s ease}
+.ph-badgebtn:active{transform:scale(.92)}
+.ph-photobtn{display:inline-flex;align-items:center;gap:5px;margin-top:8px;border:1px solid #E7D3A055;background:#ffffff12;color:#F1ECDF;
+  border-radius:20px;padding:6px 11px;font-size:11.5px;font-weight:600;font-family:inherit;cursor:pointer}
+.ph-photobtn:disabled{opacity:.6}
+.ph-sheetbg{position:fixed;inset:0;background:#0B211B88;z-index:60;display:flex;align-items:flex-end;justify-content:center;animation:phFade .2s ease both}
+@keyframes phFade{from{opacity:0}to{opacity:1}}
+.ph-sheet{width:100%;max-width:520px;background:${C.card};border-radius:22px 22px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));
+  animation:phSheet .32s cubic-bezier(.2,.8,.2,1) both;box-shadow:0 -12px 40px #0B211B33}
+@keyframes phSheet{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.ph-sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ph-sheet-h b{font-family:${FONT_DISPLAY};font-size:20px;color:${C.ink}}
+.ph-badgelist{display:flex;flex-direction:column;gap:8px}
+.ph-badgeopt{position:relative;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid ${C.mline};background:${C.paper};
+  border-radius:16px;padding:10px 12px;cursor:pointer;font-family:inherit;color:${C.ink};transition:border-color .15s ease,transform .15s ease}
+.ph-badgeopt:active{transform:scale(.985)}
+.ph-badgeopt.on{border-color:${C.accent};background:${C.accentSoft}}
+.ph-badgeopt.locked{opacity:.65;cursor:default}
+.ph-badgeopt-t{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.ph-badgeopt-t b{font-size:14px}
+.ph-badgeopt-t span{font-size:11.5px;color:${C.inkDim}}
+.ph-badgeopt-on{width:24px;height:24px;border-radius:50%;background:${C.accent};color:${C.card};display:flex;align-items:center;justify-content:center}
+.ph-badgeopt-lock{font-size:15px}
 .ph-phone{font-size:12px;color:#B9C4B6}
 .ph-stats{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
 .ph-stat{background:#ffffff0f;border:1px solid #ffffff1c;border-radius:14px;padding:10px 6px;text-align:center;backdrop-filter:blur(6px)}
