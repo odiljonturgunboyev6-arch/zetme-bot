@@ -9,7 +9,8 @@ export const TOKEN_TTL = 30 * 24 * 3600; // 30 kun (soniya)
 
 export async function issueToken(seller) {
   const token = randomBytes(24).toString("hex");
-  await kv.set(`stoken:${token}`, { login: seller.login, isSuper: !!seller.builtin, ts: Date.now() }, { ex: TOKEN_TTL });
+  // ver — parol o'zgarganda sotuvchining tokVer qiymati oshadi va eski tokenlar yaroqsiz bo'ladi
+  await kv.set(`stoken:${token}`, { login: seller.login, isSuper: !!seller.builtin, ts: Date.now(), ver: Number(seller.tokVer || 0) }, { ex: TOKEN_TTL });
   return token;
 }
 
@@ -28,6 +29,7 @@ export async function sellerFromToken(login, token, sellersList) {
   const sellers = sellersList || (await kv.get("sellers")) || [];
   const seller = sellers.find((s) => s.login === lg);
   if (!seller || seller.status !== "active") return null;
+  if (Number(rec.ver || 0) !== Number(seller.tokVer || 0)) return null;   // parol o'zgargan — eski token o'chadi
   // muddatini uzaytiramiz (faol foydalanuvchi qayta kirmasin)
   try { await kv.expire(`stoken:${tk}`, TOKEN_TTL); } catch (e) {}
   return seller;
@@ -35,4 +37,11 @@ export async function sellerFromToken(login, token, sellersList) {
 
 export async function sellerFromTokenHeaders(req, sellersList) {
   return sellerFromToken(req.headers["x-seller-login"], req.headers["x-seller-token"], sellersList);
+}
+
+// Super-admin (asosiy do'kon egasi) — faqat sessiya tokeni orqali. Eski "x-admin-password"
+// headeri 2026-10-05 da butunlay olib tashlandi (parol har so'rovda aylanib yurmasin).
+export async function adminFromTokenHeaders(req, sellersList) {
+  const s = await sellerFromTokenHeaders(req, sellersList);
+  return s && s.builtin ? s : null;
 }
