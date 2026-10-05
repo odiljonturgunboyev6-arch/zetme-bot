@@ -1192,7 +1192,7 @@ function useCountUp(target, ms = 900) {
   return val;
 }
 function ProfileScreen({ onClose, profile, badgeId, generations, onSelectBadge,
-  cust, orders, linked, vouchers, onLink, onRegister, onSaveName, onPhoto, onCancelOrder, onReceiveOrder, onPaidOrder,
+  cust, orders, linked, vouchers, onLink, onRegister, onSaveName, onPhoto, onCancelOrder, onReceiveOrder,
   onSaveInfo, onLogout, lang, theme, onSwitchLang, onToggleTheme,
   script, onSetScript, favProducts, onToggleFav, onOpenProduct, priceMode, itemImage }) {
   const imgOf = (it) => it.image || (itemImage ? itemImage(it) : "");
@@ -1201,8 +1201,6 @@ function ProfileScreen({ onClose, profile, badgeId, generations, onSelectBadge,
   const [cancelingId, setCancelingId] = useState(null); // "tasdiqlaysizmi?" bosqichi
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelErr, setCancelErr] = useState("");
-  const [payFormId, setPayFormId] = useState(null);     // "To'lov qildim" izoh formasi
-  const [payNote, setPayNote] = useState("");
   const [actBusy, setActBusy] = useState(false);
   const [openOrders, setOpenOrders] = useState({}); // 2026-09-27: qaysi buyurtma to'liq ochilgan
   const toggleOrder = (key) => setOpenOrders((m) => ({ ...m, [key]: !m[key] }));
@@ -1218,13 +1216,6 @@ function ProfileScreen({ onClose, profile, badgeId, generations, onSelectBadge,
     const err = await onReceiveOrder(id);
     setActBusy(false);
     if (err) setCancelErr(err);
-  }
-  async function doPaid(id) {
-    setActBusy(true); setCancelErr("");
-    const err = await onPaidOrder(id, payNote.trim());
-    setActBusy(false);
-    if (err) setCancelErr(err);
-    else { setPayFormId(null); setPayNote(""); }
   }
   const photoRef = React.useRef(null);
   // Galichka: 30 kunlik xarid 10 mln+ bo'lsa oltin avtomatik, aks holda tanlangani
@@ -1653,30 +1644,13 @@ function ProfileScreen({ onClose, profile, badgeId, generations, onSelectBadge,
                       </button>
                     )}
 
-                    {/* To'lov chizig'i: sotuvchi bilan kelishib to'laysiz, keyin belgilaysiz */}
+                    {/* 2026-10-05: mijozning "To'lov qildim" tugmasi olib tashlandi.
+                        Faqat sotuvchi to'lovni tasdiqlasa belgi chiqadi + do'kon telefoni. */}
                     {(o.status || "yangi") !== "bekor" && o.id && o.sellerId && (
                       o.paymentStatus === "tolangan" ? (
                         <div className="po-payrow po-pay-done">{tr("payDone")}</div>
-                      ) : o.paymentStatus === "mijoz_toladi" ? (
-                        <div className="po-payrow po-pay-wait">
-                          {tr("payWait1")}{o.paymentNote ? ` (${o.paymentNote})` : ""}{tr("payWait2")}
-                        </div>
                       ) : (
-                        <div className="po-payrow po-pay-none">
-                          {tr("payAgree")}
-                          {o.shopPhone && <a className="po-shoptel" href={"tel:" + o.shopPhone}>📞 {o.shopPhone}</a>}
-                          <div style={{ marginTop: 7 }}>
-                            {payFormId === o.id ? (
-                              <div className="po-payform">
-                                <input value={payNote} placeholder={tr("payPh")}
-                                  onChange={(e) => setPayNote(e.target.value)} />
-                                <button disabled={actBusy} onClick={() => doPaid(o.id)}>{actBusy ? "…" : tr("send")}</button>
-                              </div>
-                            ) : (
-                              <button className="po-paybtn" onClick={() => { setPayFormId(o.id); setPayNote(""); }}>{tr("paidBtn")}</button>
-                            )}
-                          </div>
-                        </div>
+                        o.shopPhone ? <div className="po-payrow po-pay-none"><a className="po-shoptel" href={"tel:" + o.shopPhone}>📞 {o.shopPhone}</a></div> : null
                       )
                     )}
                   </div>
@@ -1859,7 +1833,7 @@ function Leaderboard() {
                 const r = top3[i];
                 if (!r) return <div key={i} className={"lb-podium-item lb-p" + (i + 1) + " lb-podium-empty"} />;
                 return (
-                  <div key={r.chatId} className={"lb-podium-item lb-p" + (i + 1)}>
+                  <div key={r.rank} className={"lb-podium-item lb-p" + (i + 1)}>
                     <div className="lb-medal">{LB_MEDALS[i]}</div>
                     <div className="lb-avatar">
                       {r.photo ? <img src={r.photo} alt="" /> : <User size={i === 0 ? 24 : 18} color={C.laitonLo} />}
@@ -1874,7 +1848,7 @@ function Leaderboard() {
             {rest.length > 0 && (
               <div className="lb-list">
                 {rest.map((r) => (
-                  <div key={r.chatId} className="lb-row">
+                  <div key={r.rank} className="lb-row">
                     <span className="lb-rank">{r.rank}</span>
                     <div className="lb-row-avatar">
                       {r.photo ? <img src={r.photo} alt="" /> : <User size={15} color={C.laitonLo} />}
@@ -2257,14 +2231,6 @@ function App() {
     setCustOrders(d.orders || []);
     return null;
   }
-  async function paidCustOrder(id, note) {
-    if (!custAuth) return "Hisob topilmadi";
-    const d = await customerApi({ action: "paidOrder", ...custAuth, id, note });
-    if (!d.ok) return d.error || "Xatolik";
-    setCustOrders(d.orders || []);
-    return null;
-  }
-
   // Mijoz buyurtmani bekor qiladi — faqat status "yangi" bo'lganda (server tekshiradi)
   async function cancelCustOrder(id) {
     if (!custAuth) return "Avval Telegram bilan ulang";
@@ -3174,7 +3140,7 @@ function App() {
           cust={custProfile} orders={custOrders} linked={!!custAuth}
           vouchers={custVouchers.map((v) => ({ ...v, shopName: (shops.find((s) => s.id === v.sellerId) || {}).shopName || "" }))}
           onLink={linkCustomer} onRegister={registerCustomer} onSaveName={saveCustName} onPhoto={setCustPhoto} onCancelOrder={cancelCustOrder}
-          onReceiveOrder={receiveCustOrder} onPaidOrder={paidCustOrder}
+          onReceiveOrder={receiveCustOrder}
           onSaveInfo={saveCustInfo} onLogout={logoutCustomer}
           lang={lang} theme={theme} onSwitchLang={switchLang} onToggleTheme={toggleTheme}
           script={script} onSetScript={setScriptMode} priceMode={priceMode}
