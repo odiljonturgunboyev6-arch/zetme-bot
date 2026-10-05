@@ -1,5 +1,5 @@
 // Zetme AI — POST /api/thumbs — eski (kichik nusxasi yo'q) rasmlar uchun
-// thumbnail yasash. Faqat super-admin (x-admin-password). Har chaqiruvda
+// thumbnail yasash. Faqat super-admin (asosiy do'kon sessiya tokeni). Har chaqiruvda
 // ko'pi bilan BATCH ta rasm (Vercel vaqt chegarasi uchun); admin panel
 // `remaining` 0 bo'lguncha qayta chaqiradi.
 // Javob: { ok, done, remaining, total, errors:[...] }
@@ -7,10 +7,10 @@
 import { kv } from "@vercel/kv";
 import { getThumbMap, saveThumbMap, ensureThumbFor } from "./_lib/thumbs.js";
 import { sellerFromTokenHeaders } from "./_lib/auth.js";
+import { applyCors } from "./_lib/security.js";
 
 export const maxDuration = 60;
 const BATCH = 8;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 function collectUrls(products, sellers) {
   const set = new Set();
@@ -26,19 +26,12 @@ function collectUrls(products, sellers) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-token");
+  applyCors(req, res, "POST, GET, OPTIONS", "Content-Type, x-seller-login, x-seller-token");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // super-admin: x-admin-password YOKI builtin (zetme) sotuvchi tokeni
-  const admin = req.headers["x-admin-password"];
-  let ok = !!(admin && ADMIN_PASSWORD && admin === ADMIN_PASSWORD);
-  if (!ok) {
-    const s = await sellerFromTokenHeaders(req);
-    ok = !!(s && s.builtin);
-  }
-  if (!ok) return res.status(401).json({ ok: false, error: "Ruxsat yo'q" });
+  // super-admin: faqat builtin (zetme) sotuvchi tokeni
+  const actor = await sellerFromTokenHeaders(req);
+  if (!(actor && actor.builtin)) return res.status(401).json({ ok: false, error: "Ruxsat yo'q" });
 
   try {
     const [products, sellers, map] = await Promise.all([

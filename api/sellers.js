@@ -34,8 +34,11 @@
 
 import { kv } from "@vercel/kv";
 import { getThumbMap } from "./_lib/thumbs.js";
-import { createHash, randomBytes } from "crypto";
-import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG } from "./_lib/security.js";
+import {
+  isBlocked, recordFailure, clearFailures, TOO_MANY_MSG,
+  safeEqual, applyCors, rateLimit, RATE_MSG, makePasswordRecord, checkPassword, passwordProblem,
+  isBlockedKey, recordFailureKey, clearFailuresKey, withLock,
+} from "./_lib/security.js";
 import { issueToken, revokeToken, sellerFromToken, sellerFromTokenHeaders } from "./_lib/auth.js";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
@@ -46,19 +49,21 @@ const AUTH_SCOPE = "auth";
 const AUTH_LIMIT = 8;
 const AUTH_WINDOW = 900;
 
-function isAdminPw(req) {
-  const auth = req.headers["x-admin-password"];
-  return auth && ADMIN_PASSWORD && auth === ADMIN_PASSWORD;
-}
-// super-admin: parol headeri YOKI builtin (zetme) sotuvchining sessiya tokeni
+// super-admin: faqat builtin (zetme) sotuvchining sessiya tokeni.
+// 2026-10-05: eski "x-admin-password" headeri olib tashlandi.
 async function isAdmin(req, list) {
-  if (isAdminPw(req)) return true;
   const s = await sellerFromTokenHeaders(req, list);
   return !!(s && s.builtin);
 }
-
-function hashPassword(password, salt) {
-  return createHash("sha256").update(salt + ":" + String(password)).digest("hex");
+// Telegram chat ID — faqat raqam (manfiy ham bo'lishi mumkin: guruhlar)
+function cleanChatId(v) {
+  const t = String(v == null ? "" : v).trim();
+  return /^-?\d{5,16}$/.test(t) ? t : "";
+}
+// Rasm manzili — faqat https
+function cleanUrl(v) {
+  const t = String(v == null ? "" : v).trim().slice(0, 600);
+  return /^https:\/\/[^\s"'<>]+$/i.test(t) ? t : "";
 }
 
 async function loadSellers() {
@@ -152,21 +157,29 @@ function normalizeSections(arr) {
   return out;
 }
 function adminSeller(s) {
-  const { salt, passwordHash, ...rest } = s;
+  const { salt, passwordHash, tokVer, ...rest } = s;
   return rest;
 }
+function clientIpOf(req) {
+  const fwd = req.headers["x-forwarded-for"];
+  return (Array.isArray(fwd) ? fwd[0] : String(fwd || "")).split(",")[0].trim() || "unknown";
+}
+// ro'yxatdan o'tishda matn uzunligi cheklovi (juda uzun qiymatlar bilan to'ldirmasin)
+function shopNameLenCheck(shopName, ownerName, phone) {
+  if (shopName.length > 40 || ownerName.length > 60 || phone.length > 25) {
+    const e = new Error("Matn juda uzun"); e.code = "TOOLONG"; throw e;
+  }
+}
 
+// -> { ok, needsUpgrade }  (eski sha256 xesh muvaffaqiyatli kirishda scrypt'ga yangilanadi)
 function verifySellerCredentials(seller, password) {
-  if (!seller) return false;
-  if (seller.builtin) return ADMIN_PASSWORD && password === ADMIN_PASSWORD;
-  if (!seller.salt || !seller.passwordHash) return false;
-  return hashPassword(password, seller.salt) === seller.passwordHash;
+  if (!seller) return { ok: false, needsUpgrade: false };
+  if (seller.builtin) return { ok: !!ADMIN_PASSWORD && safeEqual(password, ADMIN_PASSWORD), needsUpgrade: false };
+  return checkPassword(password, seller);
 }
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-token");
+  applyCors(req, res, "GET, POST, OPTIONS", "Content-Type, x-seller-login, x-seller-token");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
@@ -196,6 +209,12 @@ export default async function handler(req, res) {
 
     /* ---------------- ochiq: ro'yxatdan o'tish ---------------- */
     if (action === "register") {
+      // spam ro'yxatdan o'tishdan himoya (200 ta joyni band qilib qo'yishmasin)
+      const rl = await rateLimit("sreg", clientIpOf(req), 3, 3600);
+      if (!rl.ok) return res.status(429).json({ ok: false, error: RATE_MSG });
+      if (list.filter((s) => s.status === "pending").length >= 40) {
+        return res.status(400).json({ ok: false, error: "Hozir arizalar ko'p — birozdan keyin urinib ko'ring" });
+      }
       const shopName = String(body.shopName || "").trim();
       const ownerName = String(body.ownerName || "").trim();
       const phone = String(body.phone || "").trim();
@@ -206,18 +225,20 @@ export default async function handler(req, res) {
       if (!ownerName) return res.status(400).json({ ok: false, error: "Ismingizni kiriting" });
       if (!phone) return res.status(400).json({ ok: false, error: "Telefon raqamingizni kiriting" });
       if (!/^[a-z0-9_]{3,20}$/.test(login)) return res.status(400).json({ ok: false, error: "Login 3-20 ta lotin harf/raqam bo'lsin (masalan: gulmarkaz)" });
-      if (password.length < 6) return res.status(400).json({ ok: false, error: "Parol kamida 6 ta belgi bo'lsin" });
+      const pwProblem = passwordProblem(password);
+      if (pwProblem) return res.status(400).json({ ok: false, error: pwProblem });
+      shopNameLenCheck(shopName, ownerName, phone);
       if (list.find((s) => s.login === login)) return res.status(400).json({ ok: false, error: "Bu login band — boshqasini tanlang" });
       if (list.find((s) => s.shopName.toLowerCase() === shopName.toLowerCase())) {
         return res.status(400).json({ ok: false, error: "Bu do'kon nomi band — boshqasini tanlang" });
       }
       if (list.length >= 200) return res.status(400).json({ ok: false, error: "Hozircha yangi ro'yxatdan o'tish to'xtatilgan" });
 
-      const salt = randomBytes(8).toString("hex");
       const seller = {
         id: `s${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
         shopName, ownerName, phone, login,
-        salt, passwordHash: hashPassword(password, salt),
+        ...makePasswordRecord(password),
+        tokVer: 0,
         status: "pending",
         bonusEnabled: false,
         telegramChatId: "",
@@ -232,11 +253,23 @@ export default async function handler(req, res) {
     if (action === "login") {
       const login = String(body.login || "").trim().toLowerCase();
       const seller = list.find((s) => s.login === login);
-      if (!seller || !verifySellerCredentials(seller, String(body.password || ""))) {
+      // bitta login'ga turli IP'lardan hujum qilinsa ham to'xtatamiz (15 daqiqada 20 xato)
+      const loginKey = `login:${login.slice(0, 30)}`;
+      if (await isBlockedKey(loginKey, 20)) return res.status(429).json({ ok: false, error: TOO_MANY_MSG });
+      const cred = verifySellerCredentials(seller, String(body.password || "").slice(0, 200));
+      if (!seller || !cred.ok) {
         await recordFailure(AUTH_SCOPE, req, AUTH_WINDOW);
+        await recordFailureKey(loginKey, AUTH_WINDOW);
         return res.status(401).json({ ok: false, error: "Login yoki parol noto'g'ri" });
       }
       await clearFailures(AUTH_SCOPE, req);
+      await clearFailuresKey(loginKey);
+      if (cred.needsUpgrade) {   // eski sha256 -> scrypt
+        try {
+          const li = list.findIndex((s) => s.id === seller.id);
+          if (li !== -1) { Object.assign(list[li], makePasswordRecord(String(body.password))); await kv.set(KEY, list); }
+        } catch (e) { console.error("pw upgrade:", e); }
+      }
       if (seller.status === "pending") return res.status(403).json({ ok: false, error: "Arizangiz hali tasdiqlanmagan — administrator ko'rib chiqmoqda" });
       if (seller.status !== "active") return res.status(403).json({ ok: false, error: "Bu do'kon bloklangan" });
       const token = await issueToken(seller);
@@ -261,7 +294,7 @@ export default async function handler(req, res) {
       const idx = list.findIndex((s) => s.login === login);
       const seller = list[idx];
       const byToken = body.token ? await sellerFromToken(login, body.token, list) : null;
-      if (!seller || (!byToken && !verifySellerCredentials(seller, String(body.password || "")))) {
+      if (!seller || (!byToken && !verifySellerCredentials(seller, String(body.password || "").slice(0, 200)).ok)) {
         await recordFailure(AUTH_SCOPE, req, AUTH_WINDOW);
         return res.status(401).json({ ok: false, error: "Login yoki parol noto'g'ri" });
       }
@@ -269,10 +302,11 @@ export default async function handler(req, res) {
       if (seller.status !== "active") return res.status(403).json({ ok: false, error: "Do'kon faol emas" });
 
       const updated = { ...seller };
+      let newPwChanged = false;
 
       // Do'kon nomi/rasmi haftada faqat 1 marta o'zgaradi (super-admin zetme cheklovsiz).
       const newNameVal = body.shopName !== undefined ? String(body.shopName).trim() : null;
-      const newLogoVal = body.shopLogo !== undefined ? String(body.shopLogo).trim().slice(0, 600) : null;
+      const newLogoVal = body.shopLogo !== undefined ? cleanUrl(body.shopLogo) : null;
       const brandChanging =
         (newNameVal !== null && newNameVal !== seller.shopName) ||
         (newLogoVal !== null && newLogoVal !== (seller.shopLogo || ""));
@@ -286,11 +320,17 @@ export default async function handler(req, res) {
         updated.brandChangedAt = Date.now();
       }
 
-      if (body.telegramChatId !== undefined) updated.telegramChatId = String(body.telegramChatId).trim();
+      if (body.telegramChatId !== undefined) {
+        const cid = cleanChatId(body.telegramChatId);
+        if (String(body.telegramChatId).trim() && !cid) {
+          return res.status(400).json({ ok: false, error: "Telegram Chat ID faqat raqamlardan iborat bo'lsin (botda /myid deb yozing)" });
+        }
+        updated.telegramChatId = cid;
+      }
       if (body.region !== undefined) updated.region = String(body.region).trim().slice(0, 40); // viloyat / shahar
       if (body.bonusEnabled !== undefined) updated.bonusEnabled = !!body.bonusEnabled;
       if (body.phone !== undefined && String(body.phone).trim()) updated.phone = String(body.phone).trim();
-      if (body.shopLogo !== undefined) updated.shopLogo = String(body.shopLogo).trim().slice(0, 600);
+      if (body.shopLogo !== undefined) updated.shopLogo = cleanUrl(body.shopLogo);
       if (body.sections !== undefined) updated.sections = normalizeSections(body.sections);
       if (body.categoryIds !== undefined) updated.categoryIds = cleanCategoryIds(body.categoryIds, await loadCategories());
       if (body.shopName !== undefined) {
@@ -302,13 +342,17 @@ export default async function handler(req, res) {
       }
       if (body.newPassword) {
         if (seller.builtin) return res.status(400).json({ ok: false, error: "Asosiy do'kon paroli Vercel'dagi ADMIN_PASSWORD orqali o'zgartiriladi" });
-        if (String(body.newPassword).length < 6) return res.status(400).json({ ok: false, error: "Yangi parol kamida 6 ta belgi bo'lsin" });
-        updated.salt = randomBytes(8).toString("hex");
-        updated.passwordHash = hashPassword(String(body.newPassword), updated.salt);
+        const pwProblem = passwordProblem(body.newPassword);
+        if (pwProblem) return res.status(400).json({ ok: false, error: pwProblem });
+        Object.assign(updated, makePasswordRecord(String(body.newPassword)));
+        updated.tokVer = Number(seller.tokVer || 0) + 1;   // boshqa qurilmalardagi eski sessiyalar yopiladi
+        newPwChanged = true;
       }
       list[idx] = updated;
       await kv.set(KEY, list);
-      return res.status(200).json({ ok: true, seller: adminSeller(updated) });
+      // parol almashganda joriy qurilma uchun yangi token beramiz (chiqib ketmasin)
+      const freshToken = newPwChanged ? await issueToken(updated) : undefined;
+      return res.status(200).json({ ok: true, seller: adminSeller(updated), ...(freshToken ? { token: freshToken } : {}) });
     }
 
     /* ---------------- super-admin amallari ---------------- */
@@ -348,15 +392,15 @@ export default async function handler(req, res) {
     if (action === "resetPassword") {
       // super-admin sotuvchiga yangi parol o'rnatadi (parolni unutgan holatlar uchun)
       const newPassword = String(body.newPassword || "");
-      if (newPassword.length < 6) {
-        return res.status(400).json({ ok: false, error: "Yangi parol kamida 6 ta belgi bo'lsin" });
-      }
-      list[idx].salt = randomBytes(8).toString("hex");
-      list[idx].passwordHash = hashPassword(newPassword, list[idx].salt);
+      const pwProblem = passwordProblem(newPassword);
+      if (pwProblem) return res.status(400).json({ ok: false, error: pwProblem });
+      Object.assign(list[idx], makePasswordRecord(newPassword));
+      list[idx].tokVer = Number(list[idx].tokVer || 0) + 1;   // eski sessiyalar yopiladi
     } else if (action === "approve") {
       list[idx].status = "active";
     } else if (action === "block") {
       list[idx].status = "blocked";
+      list[idx].tokVer = Number(list[idx].tokVer || 0) + 1;
     } else if (action === "unblock") {
       list[idx].status = "active";
     } else if (action === "allowBrandChange") {
@@ -369,8 +413,10 @@ export default async function handler(req, res) {
       const removedId = list[idx].id;
       list.splice(idx, 1);
       // sotuvchining mahsulotlarini ham olib tashlaymiz
-      const products = (await kv.get("products")) || [];
-      await kv.set("products", products.filter((p) => (p.sellerId || MAIN_SELLER_ID) !== removedId));
+      await withLock("products", async () => {
+        const products = (await kv.get("products")) || [];
+        await kv.set("products", products.filter((p) => (p.sellerId || MAIN_SELLER_ID) !== removedId));
+      });
     } else {
       return res.status(400).json({ ok: false, error: "Noma'lum amal" });
     }
@@ -378,6 +424,8 @@ export default async function handler(req, res) {
     await kv.set(KEY, list);
     return res.status(200).json({ ok: true, sellers: list.map(adminSeller) });
   } catch (err) {
+    if (err && err.code === "TOOLONG") return res.status(400).json({ ok: false, error: "Do'kon nomi, ism yoki telefon juda uzun" });
+    if (err && err.code === "BUSY") return res.status(503).json({ ok: false, error: "Server band — qayta urinib ko'ring" });
     console.error(err);
     return res.status(500).json({ ok: false, error: "Server xatosi" });
   }

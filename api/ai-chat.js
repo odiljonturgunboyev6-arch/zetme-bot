@@ -22,18 +22,20 @@
 
 import { kv } from "@vercel/kv";
 import { createHash } from "crypto";
-import { clientIp } from "./_lib/security.js";
+import { clientIp, applyCors } from "./_lib/security.js";
 import { sellerFromTokenHeaders } from "./_lib/auth.js";
 
 export const config = { maxDuration: 30 };
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const PROVIDER = (process.env.AI_PROVIDER || "anthropic").toLowerCase();
 const MODEL = process.env.AI_MODEL || (PROVIDER === "gemini" ? "gemini-3.6-flash" : "claude-haiku-4-5");
 
 const RULES_KEY = "ai:rules";
 const USER_DAILY_LIMIT = 20;
 const IP_DAILY_LIMIT = 60;
+// Hamma foydalanuvchilar uchun umumiy kunlik chegara — kalit puli/limiti tugab qolmasin
+// (ko'p IP'dan hujum bo'lsa ham). Vercel ENV: AI_GLOBAL_DAILY (default 1500).
+const GLOBAL_DAILY_LIMIT = Number(process.env.AI_GLOBAL_DAILY || 1500);
 const FAQ_TTL = 6 * 3600;
 const MAX_HISTORY = 8;          // AI'ga yuboriladigan oxirgi xabarlar soni
 const MAX_MSG_CHARS = 600;
@@ -68,11 +70,8 @@ async function stat(field, by = 1) {
   try { await kv.hincrby(`ai:stats:${today()}`, field, by); } catch (e) {}
 }
 
-// Super-admin: admin panel token (x-seller-login + x-seller-token, builtin do'kon)
-// yoki ehtiyot uchun x-admin-password.
+// Super-admin: admin panel tokeni (x-seller-login + x-seller-token, builtin do'kon).
 async function isAdmin(req) {
-  const a = req.headers["x-admin-password"];
-  if (a && ADMIN_PASSWORD && a === ADMIN_PASSWORD) return true;
   try { const s = await sellerFromTokenHeaders(req); return !!(s && s.builtin); } catch (e) { return false; }
 }
 
@@ -246,9 +245,7 @@ async function askGemini(system, messages) {
 
 /* ---------------- handler ---------------- */
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-token");
+  applyCors(req, res, "GET, POST, PUT, OPTIONS", "Content-Type, x-seller-login, x-seller-token");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
@@ -293,7 +290,8 @@ export default async function handler(req, res) {
     const d = today();
     const nUser = await incrDaily(`ai:lim:u:${d}:${uid}`);
     const nIp = await incrDaily(`ai:lim:ip:${d}:${clientIp(req)}`);
-    if (nUser > USER_DAILY_LIMIT || nIp > IP_DAILY_LIMIT) {
+    const nAll = await incrDaily(`ai:lim:all:${d}`);
+    if (nUser > USER_DAILY_LIMIT || nIp > IP_DAILY_LIMIT || nAll > GLOBAL_DAILY_LIMIT) {
       await stat("limited");
       return res.status(429).json({
         ok: false, limited: true,
@@ -333,11 +331,11 @@ export default async function handler(req, res) {
   } catch (e) {
     console.error("ai-chat:", e);
     await stat("error");
-    // detail: provayder xatosining qisqa matni (kalit/sir bo'lmaydi) — admin tekshiruvi uchun
+    // Provayder xatosi matni FAQAT serverda logga yoziladi — mijozga qaytarilmaydi
     const detail = String(e && e.message ? e.message : e).replace(/AIza[0-9A-Za-z_-]+/g, "***").slice(0, 200);
     const busy = /429|quota|RESOURCE_EXHAUSTED|rate/i.test(detail);
     return res.status(busy ? 503 : 500).json({
-      ok: false, detail,
+      ok: false,
       error: busy
         ? "AI operator hozir band (limit). 1 daqiqadan keyin qayta urinib ko'ring."
         : "AI operator hozir javob bera olmadi. Birozdan keyin urinib ko'ring.",

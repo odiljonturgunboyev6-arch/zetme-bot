@@ -1,5 +1,5 @@
 // Zetme AI — Telegram bot "Menu" tugmasini saytga bog'lash (bir martalik sozlash)
-// POST /api/bot-menu-button   Kirish: super-admin (x-admin-password)
+// POST /api/bot-menu-button   Kirish: super-admin (sessiya tokeni)
 // Nima qiladi: Telegram Bot API'ning setChatMenuButton metodi orqali botning
 // standart menyu tugmasini "Web App" turiga o'rnatadi — shundan keyin
 // @zetmeai_bot chatidagi xabar yozish maydoni yonida doimiy tugma chiqadi,
@@ -8,26 +8,22 @@
 // bo'lsa, shu tugma orqali doim to'g'ridan-to'g'ri kiraveradi.
 
 const BOT_TOKEN = (process.env.BOT_TOKEN || "").trim();
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const SITE_URL = "https://zetme-bot.vercel.app";
 
 import { sellerFromTokenHeaders } from "./_lib/auth.js";
+import { applyCors } from "./_lib/security.js";
 async function isAdmin(req) {
-  const auth = req.headers["x-admin-password"];
-  if (auth && ADMIN_PASSWORD && auth === ADMIN_PASSWORD) return true;
   const s = await sellerFromTokenHeaders(req);
   return !!(s && s.builtin);
 }
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-token");
+  applyCors(req, res, "POST, OPTIONS", "Content-Type, x-seller-login, x-seller-token");
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
 
   try {
-    if (!(await isAdmin(req))) return res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+    if (!(await isAdmin(req))) return res.status(401).json({ ok: false, error: "Ruxsat yo'q" });
     if (!BOT_TOKEN) return res.status(400).json({ ok: false, error: "BOT_TOKEN sozlanmagan" });
 
     const tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setChatMenuButton`, {

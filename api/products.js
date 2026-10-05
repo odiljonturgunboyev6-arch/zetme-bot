@@ -6,17 +6,16 @@
 // PATCH  /api/products        -> {id, paused:true|false} — muzlatish / yoqish (o'chirmasdan yashirish)
 //
 // KIRISH HUQUQI (POST/PUT/DELETE):
-//   - Super-admin: "x-admin-password" header (ADMIN_PASSWORD) -> istalgan mahsulot
-//   - Sotuvchi:    "x-seller-login" + "x-seller-password" headerlar -> FAQAT o'z mahsulotlari
+//   - Super-admin: asosiy do'kon ("zetme") sessiya tokeni -> istalgan mahsulot
+//   - Sotuvchi:    "x-seller-login" + "x-seller-token" headerlar -> FAQAT o'z mahsulotlari
+//   (2026-10-05: parol headerlari olib tashlandi — faqat sessiya tokeni)
 // Eski (sellerId'siz) mahsulotlar avtomatik "zetme" (asosiy do'kon)ga tegishli hisoblanadi.
 
 import { kv } from "@vercel/kv";
 import { getThumbMap } from "./_lib/thumbs.js";
-import { createHash } from "crypto";
-import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG } from "./_lib/security.js";
+import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG, applyCors, withLock } from "./_lib/security.js";
 import { sellerFromTokenHeaders } from "./_lib/auth.js";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const KEY = "products";
 const MAIN_SELLER_ID = "zetme";
 const AUTH_SCOPE = "auth";
@@ -48,40 +47,18 @@ async function authOrBlock(req, res) {
   const actor = await resolveActor(req);
   if (!actor) {
     await recordFailure(AUTH_SCOPE, req, AUTH_WINDOW);
-    res.status(401).json({ ok: false, error: "Noto'g'ri parol" });
+    res.status(401).json({ ok: false, error: "Sessiya eskirgan — qayta kiring" });
     return null;
   }
   await clearFailures(AUTH_SCOPE, req);
   return actor;
 }
 
-function isAdmin(req) {
-  const auth = req.headers["x-admin-password"];
-  return auth && ADMIN_PASSWORD && auth === ADMIN_PASSWORD;
-}
-
-function hashPassword(password, salt) {
-  return createHash("sha256").update(salt + ":" + String(password)).digest("hex");
-}
-
-// Sotuvchini headerlar orqali aniqlaydi. Muvaffaqiyatda seller obyektini,
-// aks holda null qaytaradi. Super-admin bo'lsa {id:"*"} qaytadi.
+// Sotuvchini sessiya tokeni orqali aniqlaydi. Super-admin bo'lsa {id:"*", super:true}.
 async function resolveActor(req) {
-  if (isAdmin(req)) return { id: "*", super: true };
-  // sessiya tokeni (brauzer parolni saqlamaydi)
   const tokSeller = await sellerFromTokenHeaders(req);
-  if (tokSeller) return tokSeller.builtin ? { id: "*", super: true } : tokSeller;
-  const login = String(req.headers["x-seller-login"] || "").trim().toLowerCase();
-  const password = String(req.headers["x-seller-password"] || "");
-  if (!login || !password) return null;
-  const sellers = (await kv.get("sellers")) || [];
-  const seller = sellers.find((s) => s.login === login);
-  if (!seller || seller.status !== "active") return null;
-  if (seller.builtin) {
-    return ADMIN_PASSWORD && password === ADMIN_PASSWORD ? seller : null;
-  }
-  if (!seller.salt || !seller.passwordHash) return null;
-  return hashPassword(password, seller.salt) === seller.passwordHash ? seller : null;
+  if (!tokSeller) return null;
+  return tokSeller.builtin ? { id: "*", super: true } : tokSeller;
 }
 
 // Mahsulot o'lchov birligi — sotuvchi tanlaydi. Variantdagi qiymat (v.litr)
@@ -183,9 +160,7 @@ function normalizeVariants(variants) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-password, x-seller-login, x-seller-password, x-seller-token");
+  applyCors(req, res, "GET, POST, PUT, PATCH, DELETE, OPTIONS", "Content-Type, x-seller-login, x-seller-token");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
@@ -251,11 +226,12 @@ export default async function handler(req, res) {
       // Agar birorta variantda ham rang bo'lmasa — eski uslubdagi body.colors'ga tayanamiz.
       const unionColors = [...new Set(normVariants.flatMap((v) => v.colors || []))].slice(0, 8);
       const colorList = unionColors.length ? unionColors : sanitizeColors(colors);
+      return await withLock(KEY, async () => {
       const list = (await kv.get(KEY)) || [];
       const product = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         sellerId,
-        name: String(name),
+        name: String(name).trim().slice(0, 120),
         category: category === "gul" ? "gul" : "tuvak",
         unit,
         sectionId: await resolveSection(sellerId, body.sectionId),
@@ -269,6 +245,7 @@ export default async function handler(req, res) {
       list.unshift(product);
       await kv.set(KEY, list);
       return res.status(200).json({ ok: true, product });
+      });
     }
 
     if (req.method === "PUT") {
@@ -285,6 +262,7 @@ export default async function handler(req, res) {
       const vErr = validateVariants(variants, unit);
       if (vErr) return res.status(400).json({ ok: false, error: vErr });
 
+      return await withLock(KEY, async () => {
       const list = (await kv.get(KEY)) || [];
       const idx = list.findIndex((p) => p.id === id);
       if (idx === -1) return res.status(404).json({ ok: false, error: "Mahsulot topilmadi" });
@@ -300,7 +278,7 @@ export default async function handler(req, res) {
       const updated = {
         ...list[idx],
         sellerId: ownerId,
-        name: String(name),
+        name: String(name).trim().slice(0, 120),
         category: category === "gul" ? "gul" : "tuvak",
         unit,
         sectionId: await resolveSection(ownerId, body.sectionId),
@@ -314,6 +292,7 @@ export default async function handler(req, res) {
       list[idx] = updated;
       await kv.set(KEY, list);
       return res.status(200).json({ ok: true, product: updated });
+      });
     }
 
     // Muzlatish / yoqish — mahsulot o'chirilmaydi, faqat mijozlarga
@@ -328,6 +307,7 @@ export default async function handler(req, res) {
       if (typeof body.paused !== "boolean") {
         return res.status(400).json({ ok: false, error: "paused true yoki false bo'lishi kerak" });
       }
+      return await withLock(KEY, async () => {
       const list = (await kv.get(KEY)) || [];
       const idx = list.findIndex((p) => p.id === id);
       if (idx === -1) return res.status(404).json({ ok: false, error: "Mahsulot topilmadi" });
@@ -338,12 +318,14 @@ export default async function handler(req, res) {
       list[idx] = { ...list[idx], paused: body.paused, updatedAt: Date.now() };
       await kv.set(KEY, list);
       return res.status(200).json({ ok: true, product: list[idx] });
+      });
     }
 
     if (req.method === "DELETE") {
       const actor = await authOrBlock(req, res);
       if (!actor) return;
-      const id = req.query.id;
+      const id = String(req.query.id || "");
+      return await withLock(KEY, async () => {
       const list = (await kv.get(KEY)) || [];
       const target = list.find((p) => p.id === id);
       if (target) {
@@ -354,10 +336,12 @@ export default async function handler(req, res) {
       }
       await kv.set(KEY, list.filter((p) => p.id !== id));
       return res.status(200).json({ ok: true });
+      });
     }
 
     res.status(405).json({ ok: false, error: "Method not allowed" });
   } catch (err) {
+    if (err && err.code === "BUSY") return res.status(503).json({ ok: false, error: "Server band — qayta urinib ko'ring" });
     console.error(err);
     res.status(500).json({ ok: false, error: "Server xatosi" });
   }

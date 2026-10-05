@@ -17,6 +17,7 @@
 
 import { kv } from "@vercel/kv";
 import { randomBytes } from "crypto";
+import { applyCors, rateLimit, RATE_MSG, safeEqual, withLock, clientIp } from "./_lib/security.js";
 
 const MIN_ORDER = 200000;       // chakana
 const OPT_MIN_ORDER = 5000000;  // optom
@@ -39,11 +40,9 @@ function bonusFor(total) {
 function fmt(n) {
   return Math.round(n).toLocaleString("uz-UZ").replace(/,/g, " ") + " so'm";
 }
+// 2026-10-05: tasodifiy (kriptografik) buyurtma raqami — oldindan taxmin qilib bo'lmaydi
 function genOrderId() {
-  return (
-    Math.random().toString(36).slice(2, 6).toUpperCase() +
-    Date.now().toString(36).slice(-4).toUpperCase()
-  );
+  return randomBytes(4).toString("hex").toUpperCase();
 }
 // 2026-09-29: buyurtma bilan birga mahsulot rasmlari ham (10 tagacha, takrorlanmasdan)
 async function tgPhotos(chatId, items, caption) {
@@ -76,13 +75,17 @@ async function tgSend(chatId, text) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  applyCors(req, res, "POST, OPTIONS", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
 
   try {
+    // SPAM himoyasi: bitta IP 10 daqiqada 6 ta, kuniga 40 ta buyurtma bera oladi
+    const ip = clientIp(req);
+    const rl1 = await rateLimit("co10", ip, 6, 600);
+    const rl2 = await rateLimit("coday", ip, 40, 86400);
+    if (!rl1.ok || !rl2.ok) return res.status(429).json({ ok: false, error: RATE_MSG });
+
     const body = req.body || {};
     const items = body.items;
     const priceMode = body.priceMode === "optom" ? "optom" : "chakana";
@@ -105,6 +108,9 @@ export default async function handler(req, res) {
     if (cName.length < 2) return res.status(400).json({ ok: false, error: "Ismingizni kiriting" });
     if (cPhone.replace(/\D/g, "").length < 7) return res.status(400).json({ ok: false, error: "Telefon raqamingizni to'g'ri kiriting" });
     if (!cRegion) return res.status(400).json({ ok: false, error: "Viloyatingizni tanlang" });
+    // bitta telefon raqamidan kuniga 10 tadan ko'p buyurtma emas
+    const rl3 = await rateLimit("cophone", cPhone.replace(/\D/g, "").slice(-12), 10, 86400);
+    if (!rl3.ok) return res.status(429).json({ ok: false, error: RATE_MSG });
 
     // --- mahsulotlar va narxlar (server hisoblaydi) ---
     const products = (await kv.get("products")) || [];
@@ -200,7 +206,7 @@ export default async function handler(req, res) {
     const auth = body.auth || {};
     if (auth.chatId && auth.token) {
       const saved = await kv.get(`ctoken:${auth.chatId}`);
-      if (saved && saved === auth.token) { custId = String(auth.chatId); custToken = String(auth.token); }
+      if (saved && safeEqual(saved, auth.token)) { custId = String(auth.chatId); custToken = String(auth.token); }
     }
     if (!custId) {
       custId = "w" + Date.now().toString(36) + randomBytes(4).toString("hex");
@@ -221,39 +227,58 @@ export default async function handler(req, res) {
     // --- bekor kompensatsiyasi vaucheri (bo'lsa avtomatik) ---
     let vDisc = 0, vPct = 0;
     try {
-      const vkey = `vouchers:${custId}`;
-      const vlist = (await kv.get(vkey)) || [];
-      const vidx = vlist.findIndex((v) => !v.used && v.sellerId === orderSellerId);
-      if (vidx !== -1) {
-        vPct = Number(vlist[vidx].percent) || 5;
-        vDisc = Math.round((vPct / 100) * Math.min(total, VOUCHER_CAP));
-        vlist[vidx].used = true;
-        vlist[vidx].usedTs = Date.now();
-        await kv.set(vkey, vlist);
-        payTotal = Math.max(0, payTotal - vDisc);
-      }
-    } catch (e) { console.error("voucher:", e); }
+      // bir vaqtda ikkita buyurtma bitta vaucherni ikki marta ishlatib yubormasin (qulf)
+      await withLock(`vouchers:${custId}`, async () => {
+        const vkey = `vouchers:${custId}`;
+        const vlist = (await kv.get(vkey)) || [];
+        const vidx = vlist.findIndex((v) => !v.used && v.sellerId === orderSellerId);
+        if (vidx !== -1) {
+          vPct = Number(vlist[vidx].percent) || 5;
+          vDisc = Math.round((vPct / 100) * Math.min(total, VOUCHER_CAP));
+          vlist[vidx].used = true;
+          vlist[vidx].usedTs = Date.now();
+          await kv.set(vkey, vlist);
+          payTotal = Math.max(0, payTotal - vDisc);
+        }
+      });
+    } catch (e) { if (e && e.code === "BUSY") throw e; console.error("voucher:", e); }
 
     // --- ostatkani yakuniy tekshirish + avtomatik kamaytirish ---
     // Eng yangi products bilan qayta o'qiymiz (poyga holati — ikki mijoz bir
     // vaqtda oxirgi donani sotib olishi ehtimolini kamaytirish uchun).
     if (stockOps.length) {
-      const freshProducts = (await kv.get("products")) || [];
-      const freshById = Object.fromEntries(freshProducts.map((p) => [p.id, p]));
-      let stockChanged = false;
-      for (const op of stockOps) {
-        const fam2 = freshById[op.famId];
-        const variant2 = fam2 && (fam2.variants || []).find((v) => v.id === op.variantId);
-        if (!variant2 || !variant2.stock || typeof variant2.stock !== "object") continue;
-        const have = variant2.stock[op.colorKey];
-        if (typeof have !== "number") continue; // kuzatilmaydi — cheksiz
-        if (have < op.qty) {
-          return res.status(400).json({ ok: false, error: `"${op.label}" endi omborda yetarli emas (${have} dona qoldi). Savatni yangilang.` });
+      const stockErr = await withLock("products", async () => {
+        const freshProducts = (await kv.get("products")) || [];
+        const freshById = Object.fromEntries(freshProducts.map((p) => [p.id, p]));
+        let stockChanged = false;
+        for (const op of stockOps) {
+          const fam2 = freshById[op.famId];
+          const variant2 = fam2 && (fam2.variants || []).find((v) => v.id === op.variantId);
+          if (!variant2 || !variant2.stock || typeof variant2.stock !== "object") continue;
+          const have = variant2.stock[op.colorKey];
+          if (typeof have !== "number") continue; // kuzatilmaydi — cheksiz
+          if (have < op.qty) {
+            return `"${op.label}" endi omborda yetarli emas (${have} dona qoldi). Savatni yangilang.`;
+          }
+          variant2.stock[op.colorKey] = have - op.qty;
+          stockChanged = true;
         }
-        variant2.stock[op.colorKey] = have - op.qty;
-        stockChanged = true;
+        if (stockChanged) await kv.set("products", freshProducts);
+        return "";
+      });
+      if (stockErr) {
+        // vaucher allaqachon "ishlatilgan" deb belgilangan bo'lsa — qaytaramiz
+        if (vDisc) {
+          try {
+            await withLock(`vouchers:${custId}`, async () => {
+              const vlist = (await kv.get(`vouchers:${custId}`)) || [];
+              const vi = vlist.findIndex((v) => v.used && v.usedTs && v.sellerId === orderSellerId && v.percent === vPct);
+              if (vi !== -1) { vlist[vi].used = false; delete vlist[vi].usedTs; await kv.set(`vouchers:${custId}`, vlist); }
+            });
+          } catch (e) { console.error("voucher rollback:", e); }
+        }
+        return res.status(400).json({ ok: false, error: stockErr });
       }
-      if (stockChanged) await kv.set("products", freshProducts);
     }
 
     // --- buyurtmani yozamiz (status: yangi) ---
@@ -272,16 +297,20 @@ export default async function handler(req, res) {
     };
 
     const okey = `orders:${orderSellerId}`;
-    const arr = (await kv.get(okey)) || [];
-    arr.unshift({ ...base, customer: { chatId: custId, name: cName, phone: cPhone, region: cRegion, address: cAddress, note: cNote } });
-    if (arr.length > 500) arr.length = 500;
-    await kv.set(okey, arr);
+    await withLock(okey, async () => {
+      const arr = (await kv.get(okey)) || [];
+      arr.unshift({ ...base, customer: { chatId: custId, name: cName, phone: cPhone, region: cRegion, address: cAddress, note: cNote } });
+      if (arr.length > 500) arr.length = 500;
+      await kv.set(okey, arr);
+    });
 
     const mkey = `myorders:${custId}`;
-    const mine = (await kv.get(mkey)) || [];
-    mine.unshift({ ...base, sellerId: orderSellerId, shopName, shopPhone });
-    if (mine.length > 100) mine.length = 100;
-    await kv.set(mkey, mine);
+    await withLock(mkey, async () => {
+      const mine = (await kv.get(mkey)) || [];
+      mine.unshift({ ...base, sellerId: orderSellerId, shopName, shopPhone });
+      if (mine.length > 100) mine.length = 100;
+      await kv.set(mkey, mine);
+    });
 
     // --- sotuvchiga xabar (bot endi faqat xabarchi) ---
     const lines = resolved.map((i) => `• ${i.name} — ${i.qty} dona × ${fmt(i.price)}`).join("\n");
@@ -314,6 +343,7 @@ export default async function handler(req, res) {
       auth: { chatId: custId, token: custToken },
     });
   } catch (err) {
+    if (err && err.code === "BUSY") return res.status(503).json({ ok: false, error: "Server band — bir necha soniyadan keyin qayta urinib ko'ring" });
     console.error(err);
     return res.status(500).json({ ok: false, error: "Server xatosi" });
   }
