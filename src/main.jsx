@@ -2042,6 +2042,17 @@ function AiChat({ lang, onOpenProducts }) {
 }
 
 function App() {
+  // 2026-10-07: tashrif hisobi — har qurilma kuniga 1 marta (admin "Foydalanuvchilar" kartasi, bot /stat)
+  useEffect(() => {
+    try {
+      const d = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
+      if (storageGet("zetme_ping_day", "") === d) return;
+      fetch(`${API_BASE}/api/ai-chat`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ping: 1, uid: aiUid() }),
+      }).then((r) => { if (r.ok) storageSet("zetme_ping_day", d); }).catch(() => {});
+    } catch (e) {}
+  }, []);
   const [flower, setFlower] = useState(null);
   const [pot, setPot] = useState(null);
   const [lang, setLang] = useState(LANG);
