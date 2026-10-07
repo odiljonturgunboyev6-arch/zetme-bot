@@ -1,5 +1,6 @@
 // Zetme AI — Telegram bot "Menu" tugmasini saytga bog'lash (bir martalik sozlash)
 // POST /api/bot-menu-button   Kirish: super-admin (sessiya tokeni)
+// 2026-10-07: shu tugma webhook'ni ham TG_WEBHOOK_SECRET bilan qayta o'rnatadi.
 // Nima qiladi: Telegram Bot API'ning setChatMenuButton metodi orqali botning
 // standart menyu tugmasini "Web App" turiga o'rnatadi — shundan keyin
 // @zetmeai_bot chatidagi xabar yozish maydoni yonida doimiy tugma chiqadi,
@@ -41,7 +42,22 @@ export default async function handler(req, res) {
     if (!tgData.ok) {
       return res.status(400).json({ ok: false, error: "Telegram: " + (tgData.description || "xatolik") });
     }
-    return res.status(200).json({ ok: true, result: tgData.result });
+
+    // 2026-10-07: webhook'ni maxfiy kalit (TG_WEBHOOK_SECRET) bilan qayta ro'yxatdan o'tkazamiz.
+    // api/bot.js 2026-10-05 dan beri kalitsiz so'rovlarni rad etadi — webhook eski (kalitsiz)
+    // ro'yxatda qolgani uchun bot /start ga javob bermay qolgan edi.
+    const SECRET = (process.env.TG_WEBHOOK_SECRET || "").trim();
+    if (!SECRET) return res.status(400).json({ ok: false, error: "TG_WEBHOOK_SECRET sozlanmagan (Vercel ENV)" });
+    const whRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: `${SITE_URL}/api/bot`, secret_token: SECRET, allowed_updates: ["message"] }),
+    });
+    const whData = await whRes.json();
+    if (!whData.ok) {
+      return res.status(400).json({ ok: false, error: "Webhook: " + (whData.description || "xatolik") });
+    }
+    return res.status(200).json({ ok: true, result: tgData.result, webhook: true });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, error: "Server xatosi" });
