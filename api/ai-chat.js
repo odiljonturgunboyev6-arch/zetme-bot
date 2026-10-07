@@ -22,8 +22,9 @@
 
 import { kv } from "@vercel/kv";
 import { createHash } from "crypto";
-import { clientIp, applyCors } from "./_lib/security.js";
+import { clientIp, applyCors, rateLimit } from "./_lib/security.js";
 import { sellerFromTokenHeaders } from "./_lib/auth.js";
+import { trackSite, getTraffic } from "./_lib/traffic.js";
 
 export const config = { maxDuration: 30 };
 
@@ -259,13 +260,21 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, rules });
       }
       const rules = (await kv.get(RULES_KEY)) ?? "";
-      const [t1, t2] = await Promise.all([kv.hgetall(`ai:stats:${today()}`), kv.hgetall(`ai:stats:${yesterday()}`)]);
-      return res.status(200).json({ ok: true, rules, defaultRules: DEFAULT_RULES, provider: PROVIDER, model: MODEL, stats: { today: t1 || {}, yesterday: t2 || {} } });
+      const [t1, t2, traffic] = await Promise.all([kv.hgetall(`ai:stats:${today()}`), kv.hgetall(`ai:stats:${yesterday()}`), getTraffic().catch(() => null)]);
+      return res.status(200).json({ ok: true, rules, defaultRules: DEFAULT_RULES, provider: PROVIDER, model: MODEL, stats: { today: t1 || {}, yesterday: t2 || {} }, traffic });
     }
 
     if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
 
     const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+
+    // 2026-10-07: sayt tashrifi hisobi — har qurilma kuniga 1 marta "ping" yuboradi
+    if (body.ping) {
+      const vid = String(body.uid || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
+      const rl = await rateLimit("ping", clientIp(req), 30, 3600);
+      if (vid && rl.ok) await trackSite(vid);
+      return res.status(200).json({ ok: true });
+    }
     const lang = body.lang === "ru" ? "ru" : "uz";
     const uid = String(body.uid || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40) || "anon";
 

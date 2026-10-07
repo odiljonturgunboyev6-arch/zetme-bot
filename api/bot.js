@@ -10,6 +10,7 @@
 import { kv } from "@vercel/kv";
 import { randomInt } from "crypto";
 import { safeEqual, rateLimit } from "./_lib/security.js";
+import { trackBot, getTraffic } from "./_lib/traffic.js";
 
 // .trim() — Vercel ENV maydoniga nusxa olishda ba'zan ko'rinmas bo'shliq/newline
 // qo'shilib qolishi mumkin (BOT_TOKEN'da aynan shu muammo aniqlangan edi —
@@ -68,6 +69,9 @@ export default async function handler(req, res) {
     // "/kod@zetmeai_bot" ko'rinishidagi guruh buyruqlarini ham tanib olamiz.
     const cmd = text.toLowerCase().split(/[\s@]/)[0];
 
+    // 2026-10-07: obunachilar hisobi — shaxsiy chatda yozgan har bir odam (jami + kunlik)
+    if (isPrivate) await trackBot(chatId);
+
     // --- /kod: saytdagi profilni Telegram hisobiga ulash uchun 6 xonali kod ---
     // Sayt api/customer.js action:"link" bilan shu kodni chatId ga aylantiradi.
     // Faqat shaxsiy chatda (guruhda kod berilsa, guruhdagi hamma profilni egallab olardi).
@@ -124,9 +128,15 @@ export default async function handler(req, res) {
           const paid = act.filter((o) => o.paymentStatus === "tolangan").length;
           lines.push(`• ${escapeMd(s.shopName)}: ${act.length} ta · ${fmt(sm)}${paid ? ` · to'langan: ${paid}` : ""}${arr.length - act.length ? ` · bekor: ${arr.length - act.length}` : ""}`);
         }
+        let tr = "";
+        try {
+          const t = await getTraffic();
+          tr = `\n\n👥 *Foydalanuvchilar*\n🤖 Bot: jami ${t.bot.total} · bugun ${t.bot.today} · kecha ${t.bot.yesterday} · 7 kun ${t.bot.week}` +
+            `\n🌐 Sayt: jami ${t.site.total} · bugun ${t.site.today} · kecha ${t.site.yesterday} · 7 kun ${t.site.week}`;
+        } catch (e) { console.error("traffic:", e); }
         await sendMessage(
           chatId,
-          `📊 *Zetme AI statistikasi*\n\nJami: ${tOrders} ta buyurtma · ${fmt(tSum)}\nOxirgi 7 kun: ${w7} ta · ${fmt(s7)}\n\n${lines.join("\n") || "Hali buyurtma yo'q"}`
+          `📊 *Zetme AI statistikasi*\n\nJami: ${tOrders} ta buyurtma · ${fmt(tSum)}\nOxirgi 7 kun: ${w7} ta · ${fmt(s7)}\n\n${lines.join("\n") || "Hali buyurtma yo'q"}${tr}`
         );
         return res.status(200).send("ok");
       }
