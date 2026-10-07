@@ -338,6 +338,14 @@
       <div id="catMsg"></div>
     </div>
 
+    <!-- SUPER-ADMIN: foydalanuvchilar statistikasi — bot obunachilari + sayt tashriflari (2026-10-07) -->
+    <div class="card hidden" data-pane="profil" id="trafficCard">
+      <h3>👥 Foydalanuvchilar
+        <button type="button" class="ord-refresh" onclick="loadAi()" title="Yangilash">⟳ Yangilash</button></h3>
+      <div id="trafficBody"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
+      <div class="hint" style="margin-top:8px;">Hisob 7-oktabr 2026 dan boshlangan. Bot — botga shaxsiy yozgan odamlar; sayt — har bir qurilma kuniga 1 marta sanaladi.</div>
+    </div>
+
     <!-- SUPER-ADMIN: AI operator (sayt chati) qoidalari + statistika (2026-09-23) -->
     <div class="card hidden" data-pane="profil" id="aiCard">
       <h3>AI operator <span class="badge" id="aiBadge"></span></h3>
@@ -513,9 +521,33 @@
       const y = d.stats && d.stats.yesterday ? d.stats.yesterday : {};
       const line = (n, o) => `${n}: ${o.req || 0} savol (AI: ${o.ai || 0}, keshdan: ${o.cached || 0}, limit: ${o.limited || 0}, xato: ${o.error || 0}) · tokenlar ${o.in_tokens || 0} / ${o.out_tokens || 0}`;
       st.innerHTML = escHtml(line("Bugun", t)) + "<br>" + escHtml(line("Kecha", y));
+      renderTraffic(d.traffic);
     } catch (e) {
       st.textContent = "Statistika yuklanmadi: " + e.message;
     }
+  }
+  function renderTraffic(tr) {
+    const el = document.getElementById("trafficBody");
+    if (!el) return;
+    if (!tr) { el.innerHTML = '<p style="color:var(--inkDim); font-size:13px;">Statistika yuklanmadi</p>'; return; }
+    const box = (icon, title, o) => {
+      const max = Math.max(1, ...o.days.map((x) => x.n));
+      const bars = o.days.slice().reverse().map((x) =>
+        `<div style="flex:1;text-align:center;font-size:10.5px;color:var(--inkDim)">
+           <div style="height:44px;display:flex;align-items:flex-end;justify-content:center">
+             <div style="width:70%;background:var(--accent);border-radius:4px 4px 0 0;height:${Math.max(2, Math.round(x.n / max * 44))}px"></div></div>
+           <div style="font-weight:700;color:var(--ink)">${x.n}</div><div>${escHtml(x.day.slice(8))}</div></div>`).join("");
+      return `<div style="border:1px solid var(--mline);border-radius:12px;padding:10px 12px;margin-bottom:10px">
+        <div style="font-weight:700;margin-bottom:6px">${icon} ${title}</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;margin-bottom:8px">
+          <div><div style="font-size:20px;font-weight:800">${o.total}</div><div style="font-size:11px;color:var(--inkDim)">Jami</div></div>
+          <div><div style="font-size:20px;font-weight:800">${o.today}</div><div style="font-size:11px;color:var(--inkDim)">Bugun</div></div>
+          <div><div style="font-size:20px;font-weight:800">${o.yesterday}</div><div style="font-size:11px;color:var(--inkDim)">Kecha</div></div>
+          <div><div style="font-size:20px;font-weight:800">${o.week}</div><div style="font-size:11px;color:var(--inkDim)">7 kun</div></div>
+        </div>
+        <div style="display:flex;gap:2px">${bars}</div></div>`;
+    };
+    el.innerHTML = box("🤖", "Bot obunachilari", tr.bot) + box("🌐", "Sayt foydalanuvchilari", tr.site);
   }
   async function saveAiRules() {
     const msg = document.getElementById("aiMsg");
@@ -739,6 +771,7 @@
       document.getElementById("catCard").classList.remove("hidden");
       document.getElementById("botMenuCard").classList.remove("hidden");
       document.getElementById("aiCard").classList.remove("hidden");
+      document.getElementById("trafficCard").classList.remove("hidden");
       loadAi();
       loadSellers();   // adminList — categories ham qaytaradi
     } else {
