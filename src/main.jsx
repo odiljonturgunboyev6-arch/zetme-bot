@@ -187,6 +187,7 @@ const STR = {
     osTitle: "Buyurtma qabul qilindi!", shopSuffix: " do'koni",
     osVoucher: (p, s) => "🎁 " + p + "% chegirma bonusingiz qo'llandi: −" + s,
     osInfo: "Sotuvchi tez orada siz bilan bog'lanadi. Buyurtma holatini (tayyorlanmoqda, yuborildi) Profil bo'limida kuzatib borasiz.",
+    osTg: "Telegramda yuborish", osTgHint: "Buyurtma matni tayyor — Telegramda faqat «Yuborish»ni bosing.",
     osTrack: "Profilda kuzatish", close: "Yopish", cancel: "Bekor qilish",
     stYangi: "🆕 Yangi", stTayyor: "📦 Tayyorlanmoqda", stYubor: "🚚 Yuborildi", stYetk: "✅ Yetkazildi", stQabul: "✅ Qabul qilindi", stBekor: "❌ Bekor",
     guest: "Mehmon", edit: "✎ tahrirlash", fName: "Ism", lName: "Familiya", save: "Saqlash",
@@ -326,6 +327,7 @@ const STR = {
     osTitle: "Заказ принят!", shopSuffix: "",
     osVoucher: (p, s) => "🎁 Применён ваш бонус " + p + "%: −" + s,
     osInfo: "Продавец скоро свяжется с вами. Статус заказа (готовится, отправлен) отслеживайте в разделе Профиль.",
+    osTg: "Отправить в Telegram", osTgHint: "Текст заказа готов — в Telegram просто нажмите «Отправить».",
     osTrack: "Отслеживать в профиле", close: "Закрыть",
     confT: "В корзине товар другого магазина",
     confB1: "Сейчас в корзине товары магазина", confB2: ". В одном заказе — только один магазин: сначала завершите текущий заказ, либо очистите корзину и начните с магазина", confB3: ".",
@@ -1155,7 +1157,7 @@ function CheckoutForm({ initial, itemCount, payTotal, shopName, busy, error, onS
   );
 }
 
-function OrderSuccess({ orderId, payTotal, shopName, voucherDiscount, voucherPercent, onClose, onOpenProfile }) {
+function OrderSuccess({ orderId, tgUrl, payTotal, shopName, voucherDiscount, voucherPercent, onClose, onOpenProfile }) {
   return (
     <div className="ov">
       <div className="checkout" style={{ textAlign: "center" }}>
@@ -1173,6 +1175,15 @@ function OrderSuccess({ orderId, payTotal, shopName, voucherDiscount, voucherPer
         <p style={{ color: C.inkDim, fontSize: 12.5, lineHeight: 1.6, margin: "8px 0 16px" }}>
           {tr("osInfo")}
         </p>
+        {tgUrl && (
+          <React.Fragment>
+            <a className="pm-add" href={tgUrl} target="_blank" rel="noreferrer"
+              style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 6 }}>
+              <Send size={15} /> {tr("osTg")}
+            </a>
+            <p style={{ color: C.inkDim, fontSize: 11.5, lineHeight: 1.5, margin: "0 0 12px" }}>{tr("osTgHint")}</p>
+          </React.Fragment>
+        )}
         <button className="pm-add" onClick={onOpenProfile}><User size={15} /> {tr("osTrack")}</button>
         <button className="conflict-cancel" onClick={onClose}>{tr("close")}</button>
       </div>
@@ -2602,7 +2613,24 @@ function App() {
       // forma ma'lumotlarini eslab qolamiz
       setProfile({ name: customerData.name, phone: customerData.phone, region: customerData.region });
       storageSet("zetme_customer", JSON.stringify({ name: customerData.name, phone: customerData.phone, region: customerData.region }));
+      // 2026-10-07: buyurtma matni @gultuvak_admin lichkasiga tayyor holda ochiladi —
+      // mijoz faqat "Yuborish"ni bosadi. Bot orqali rasmli nusxa ham avvalgidek keladi.
+      const tgLines = [
+        `🛒 Yangi buyurtma #${data.orderId}`,
+        data.shopName ? `🏪 ${data.shopName}` : null,
+        "",
+        ...sellerItems.map((i, n) => `${n + 1}. ${i.name}${i.litr ? " " + i.litr + " " + (i.unit || "litr") : ""}${i.color ? " (" + i.color + ")" : ""} — ${i.qty} ta × ${fmt(priceOf(i, priceMode))}`),
+        "",
+        `💰 Jami: ${fmt(data.payTotal)}`,
+        `👤 ${customerData.name}`,
+        `📞 ${customerData.phone}`,
+        customerData.region ? `📍 ${customerData.region}` : null,
+        customerData.note ? `📝 ${customerData.note}` : null,
+      ].filter((l) => l !== null);
+      const tgUrl = `https://t.me/${SUPPORT_TG}?text=${encodeURIComponent(tgLines.join("\n"))}`;
+      try { window.open(tgUrl, "_blank"); } catch (e) { /* bloklansa — oynadagi tugma bor */ }
       setOrder({
+        tgUrl,
         orderId: data.orderId, payTotal: data.payTotal, shopName: data.shopName,
         voucherDiscount: data.voucherDiscount || 0, voucherPercent: data.voucherPercent || 0,
       });
@@ -3126,6 +3154,7 @@ function App() {
       {order && (
         <OrderSuccess
           orderId={order.orderId}
+          tgUrl={order.tgUrl}
           payTotal={order.payTotal}
           shopName={order.shopName}
           voucherDiscount={order.voucherDiscount}
