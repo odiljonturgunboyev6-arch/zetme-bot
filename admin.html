@@ -890,6 +890,20 @@
   const ST_LABEL = { yangi: "🆕 Yangi", tayyorlanmoqda: "📦 Tayyorlanmoqda", yuborildi: "🚚 Yuborildi", yetkazildi: "✅ Yetkazildi (eski)", qabul: "✅ Qabul qilindi", bekor: "❌ Bekor" };
   const stOf = o => o.status || "yangi";
   function setOrdFilter(f) { ordFilter = f; renderOrders(); }
+  // 2026-10-11: buyurtmalarni do'kon bo'limi bo'yicha ajratish (masalan 🌸 Tuvaklar | 🏠 Uy-ro'zg'or)
+  let ordSec = "all";
+  function setOrdSec(id) { ordSec = id; renderOrders(); }
+  function itemSecId(i) {
+    if (i.sectionId) return i.sectionId;
+    let p = i.pid ? productsCache.find(x => x.id === i.pid) : null;
+    if (!p) {
+      const nm = String(i.name || "");
+      p = productsCache.find(x => nm.startsWith(x.name + " —") ||
+        (Array.isArray(x.variants) && x.variants.some(v => v.name && nm.startsWith(v.name + " —"))));
+    }
+    return (p && p.sectionId) || "";
+  }
+  function orderSecIds(o) { return (o.items || []).map(itemSecId); }
   function ordDate(ts) {
     const d = new Date(ts); const p = n => String(n).padStart(2, "0");
     return `${p(d.getDate())}.${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
@@ -918,7 +932,18 @@
       ["faol", "Faol"], ["yangi", "Yangi"], ["yakun", "Yakunlangan"], ["bekor", "Bekor"], ["all", "Hammasi"],
     ].map(([f, l]) => `<button class="ordfilter${ordFilter === f ? " active" : ""}" onclick="setOrdFilter('${f}')">${l} (${counts[f]})</button>`).join("");
 
-    const list = ordersCache.filter(o => {
+    const ordSecs = sections.filter(x => String(x.name || "").trim());
+    if (ordSecs.length < 2 || (ordSec !== "all" && !ordSecs.some(x => x.id === ordSec))) ordSec = "all";
+    const inSec = o => ordSec === "all" || orderSecIds(o).includes(ordSec);
+    if (ordSecs.length >= 2) {
+      const secCount = id => ordersCache.filter(o => FAOL(o) && (id === "all" || orderSecIds(o).includes(id))).length;
+      document.getElementById("ordFilters").innerHTML =
+        `<div style="display:flex;gap:6px;flex-wrap:wrap;width:100%;margin-bottom:6px;">` +
+        [["all", "🗂 Hamma bo'limlar"]].concat(ordSecs.map(x => [x.id, x.name])).map(([id, l]) =>
+          `<button class="ordfilter${ordSec === id ? " active" : ""}" onclick="setOrdSec('${escAttr(id)}')">${escHtml(l)} (${secCount(id)})</button>`).join("") +
+        `</div>` + document.getElementById("ordFilters").innerHTML;
+    }
+    const list = ordersCache.filter(inSec).filter(o => {
       if (ordFilter === "all") return true;
       if (ordFilter === "faol") return FAOL(o);
       if (ordFilter === "yakun") return YAKUN(o);
