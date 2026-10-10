@@ -2100,6 +2100,7 @@ function App() {
   const [productsError, setProductsError] = useState(null);
   const [shops, setShops] = useState([]);              // studiyadagi do'konlar devori
   const [shopsLoading, setShopsLoading] = useState(true);
+  const [shopsFresh, setShopsFresh] = useState(false);   // tarmoqdan yangi ro'yxat keldi (kesh emas)
   const [categories, setCategories] = useState([]);      // marketplace bo'limlari: [{id,name,nameRu,emoji}] (super-admin yaratadi)
   const [catFilter, setCatFilter] = useState(null);      // null = Barchasi | category id
   const [priceMode, setPriceMode] = useState("chakana"); // "chakana" | "optom"
@@ -2395,7 +2396,7 @@ function App() {
         }
       })
       .catch(() => {})
-      .finally(() => setShopsLoading(false));
+      .finally(() => { setShopsLoading(false); setShopsFresh(true); });
   }, []);
 
   // Har do'kon uchun: rasm (sotuvchi yuklagan logotip, bo'lmasa birinchi mahsulot rasmi)
@@ -2470,7 +2471,7 @@ function App() {
   // do'konlar ichidan nomida "ro'zg'or" bo'lgan bo'limni topib, shu do'kon + shu bo'lim ochiladi.
   const deepCatDone = React.useRef(false);
   useEffect(() => {
-    if (deepCatDone.current || shopsLoading || productsLoading || !shops.length) return;
+    if (deepCatDone.current || !shopsFresh || productsLoading || !shops.length) return;
     deepCatDone.current = true;
     let want = "";
     try {
@@ -2496,7 +2497,12 @@ function App() {
     // zaxira: marketplace bo'limi (kategoriya) nomida "ro'zg'or" bo'lsa
     const cat = categories.find((c) => c && (isUy(c.name) || isUy(c.nameRu)));
     if (cat) { setCatFilter(cat.id); setShopFilter(null); setMainTab("products"); }
-  }, [shops, categories, shopWall, shopsLoading, productsLoading]);
+  }, [shops, categories, shopWall, shopsFresh, productsLoading]);
+
+  // tanlangan marketplace bo'limi o'chirib yuborilgan bo'lsa — "Barchasi"ga qaytamiz
+  useEffect(() => {
+    if (catFilter && shopsFresh && !categories.some((c) => c && c.id === catFilter)) setCatFilter(null);
+  }, [catFilter, categories, shopsFresh]);
 
   // Filtrlash: narx rejimi (optom narxi yo'q variantlar yashirinadi) +
   // kategoriya (Barchasi/Tuvaklar/Gullar) + do'kon sahifasi (shopFilter)
