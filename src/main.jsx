@@ -2113,7 +2113,7 @@ function App() {
   // FULLSCREEN OYNALAR: Studiya/Mahsulotlar — asosiy "sahifa" almashinuvi (bittasi to'liq
   // ko'rinadi, ikkinchisi butunlay yashiriladi — orqa fonda hech narsa qolmaydi).
   // Savat/Profil esa modallar (pastda), lekin ular ham endi to'liq fullscreen bo'ladi.
-  const [mainTab, setMainTab] = useState("studio"); // "studio" | "products"
+  const [mainTab, setMainTab] = useState("products"); // 2026-10-11: sayt/bot doim Mahsulotlar bo'limidan ochiladi; // "studio" | "products"
   useEffect(() => { window.scrollTo(0, 0); }, [mainTab]);
 
   const [activeProduct, setActiveProduct] = useState(null);
@@ -2457,6 +2457,47 @@ function App() {
     setMainTab("products");
   }
 
+  // 2026-10-11: do'kon ichida bo'limlar TAB sifatida (masalan 🌸 Tuvaklar | 🏠 Uy-ro'zg'or).
+  // secTab = tanlangan bo'lim id (null = birinchi bo'lim). Do'kon almashganda qayta boshlanadi.
+  const [secTab, setSecTab] = useState(null);
+  const pendingSecRef = React.useRef(null);
+  useEffect(() => {
+    setSecTab(pendingSecRef.current);
+    pendingSecRef.current = null;
+  }, [shopFilter && shopFilter.id]);
+
+  // Botdagi "🏠 Uy-ro'zg'or buyumlari" tugmasi saytni "?bo=uy" bilan ochadi —
+  // do'konlar ichidan nomida "ro'zg'or" bo'lgan bo'limni topib, shu do'kon + shu bo'lim ochiladi.
+  const deepCatDone = React.useRef(false);
+  useEffect(() => {
+    if (deepCatDone.current || shopsLoading || productsLoading || !shops.length) return;
+    deepCatDone.current = true;
+    let want = "";
+    try {
+      want = new URLSearchParams(window.location.search).get("bo") || "";
+      const tgp = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.start_param;
+      if (!want && tgp) want = String(tgp);
+    } catch (e) {}
+    want = String(want || "").trim().toLowerCase();
+    if (want !== "uy") return;
+    const norm = (x) => String(x || "").toLowerCase().replace(/[ʻʼ'`‘’]/g, "");
+    const UY = ["rozgor", "розгор", "рўзғор", "xozmak", "хозмак", "xojalik", "хўжалик", "household", "хозтовар", "uy-"];
+    const isUy = (t) => UY.some((k) => norm(t).includes(k));
+    for (const sh of shops) {
+      const sec = (sh.sections || []).find((x) => x && isUy(x.name));
+      const tile = sec && shopWall.find((w) => w.id === sh.id);
+      if (tile) {
+        pendingSecRef.current = sec.id;
+        setCatFilter(null);
+        openShopById(tile);
+        return;
+      }
+    }
+    // zaxira: marketplace bo'limi (kategoriya) nomida "ro'zg'or" bo'lsa
+    const cat = categories.find((c) => c && (isUy(c.name) || isUy(c.nameRu)));
+    if (cat) { setCatFilter(cat.id); setShopFilter(null); setMainTab("products"); }
+  }, [shops, categories, shopWall, shopsLoading, productsLoading]);
+
   // Filtrlash: narx rejimi (optom narxi yo'q variantlar yashirinadi) +
   // kategoriya (Barchasi/Tuvaklar/Gullar) + do'kon sahifasi (shopFilter)
   const visibleProducts = useMemo(() => {
@@ -2499,6 +2540,12 @@ function App() {
     if (other.items.length) out.push(other);
     return out;
   }, [shopFilter, shops, visibleProducts]);
+
+  // Bo'limlar 2 va undan ko'p bo'lsa — faqat tanlangan bo'lim ko'rsatiladi (tab)
+  const activeSecId = shopGroups.length > 1
+    ? ((shopGroups.find((g) => g.id === secTab) || shopGroups[0]).id)
+    : null;
+  const shownGroups = activeSecId ? shopGroups.filter((g) => g.id === activeSecId) : shopGroups;
 
   const currentShopTile = shopFilter ? shopWall.find((s) => s.id === shopFilter.id) : null;
 
@@ -3050,7 +3097,7 @@ function App() {
             {shopGroups.length > 1 && (
               <div className="secchips">
                 {shopGroups.map((g) => (
-                  <button key={g.id} className="secchip" onClick={() => scrollToSection(g.id)}>
+                  <button key={g.id} className={"secchip" + (g.id === activeSecId ? " active" : "")} onClick={() => { setSecTab(g.id); try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) {} }}>
                     {g.name} <span>{g.items.length}</span>
                   </button>
                 ))}
@@ -3068,9 +3115,9 @@ function App() {
               </div>
             )}
 
-            {shopGroups.map((g) => (
+            {shownGroups.map((g) => (
               <div key={g.id} className="secblock" id={"sec-" + g.id}>
-                {shopGroups.length > 1 && (
+                {false && (
                   <h3 className="sec-title">{g.name} <span className="sec-count">{g.items.length}</span></h3>
                 )}
                 <div className="grid">
@@ -3565,6 +3612,8 @@ const buildCSS = () => `
 .secchip{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;border:1px solid ${C.mline};background:${C.card};
   color:${C.ink};border-radius:20px;padding:7px 13px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer}
 .secchip:hover{border-color:${C.laiton}}
+.secchip.active{background:${C.laiton};border-color:${C.laiton};color:#fff}
+.secchip.active span{color:#fff}
 .secchip span{font-size:10.5px;color:${C.laitonLo};font-weight:700}
 .secblock{scroll-margin-top:52px}
 .sec-title{display:flex;align-items:baseline;gap:7px;font-family:${FONT_DISPLAY};font-size:20px;font-weight:600;
