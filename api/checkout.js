@@ -172,6 +172,9 @@ export default async function handler(req, res) {
         color,
         // 2026-09-27: mijoz profilida buyurtma ochilganda rasm ko'rinishi uchun
         image: variant.thumb || variant.image || (Array.isArray(variant.images) && variant.images[0]) || "",
+        // 2026-10-11: admin buyurtmalarni do'kon bo'limi bo'yicha ajratadi (Tuvaklar / Uy-ro'zg'or)
+        pid: fam.id,
+        sectionId: fam.sectionId || "",
       });
       stockOps.push({ famId: fam.id, variantId: variant.id, colorKey, qty, label: `${variant.name || fam.name}${color ? " — " + color : ""}` });
     }

@@ -142,11 +142,23 @@ export default async function handler(req, res) {
       }
 
       // --- /start va boshqa hamma narsa ---
+      // 2026-10-11: ikki alohida bo'lim tugmasi — 🌸 Tuvaklar va 🏠 Uy-ro'zg'or buyumlari
+      // (saytni "?bo=uy" bilan ochadi — sayt shu bo'limni/do'konni darhol ko'rsatadi).
+      // /uy buyrug'i faqat uy-ro'zg'or tugmasini beradi.
+      const SITE = "https://zetme-bot.vercel.app";
+      const btnPots = { text: "🌸 Gul tuvaklar", web_app: { url: SITE + "/" } };
+      const btnUy = { text: "🏠 Uy-ro'zg'or buyumlari", web_app: { url: SITE + "/?bo=uy" } };
+      const kb = isPrivate
+        ? { reply_markup: { inline_keyboard: cmd === "/uy" ? [[btnUy]] : [[btnPots], [btnUy]] } }
+        : {};
       await sendMessage(
         chatId,
         cmd === "/start"
-          ? "Assalomu alaykum! 👋 Zetme AI botiga xush kelibsiz.\n\nBuyurtma berish uchun saytimizdan mahsulot tanlab, savatga qo'shing. Saytdagi profilni ulash uchun /kod deb yozing."
-          : "Buyurtma berish uchun saytimizdan mahsulot tanlang. Profilni ulash uchun /kod deb yozing."
+          ? "Assalomu alaykum! 👋 Zetme AI botiga xush kelibsiz.\n\nBo'limni tanlang:\n🌸 *Gul tuvaklar*\n🏠 *Uy-ro'zg'or buyumlari*\n\nSaytdagi profilni ulash uchun /kod deb yozing."
+          : cmd === "/uy"
+          ? "🏠 *Uy-ro'zg'or buyumlari* do'koni — pastdagi tugmani bosing."
+          : "Bo'limni tanlang 👇 Profilni ulash uchun /kod deb yozing.",
+        kb
       );
     return res.status(200).send("ok");
   } catch (err) {
