@@ -3117,7 +3117,7 @@ function App() {
 
             {shownGroups.map((g) => (
               <div key={g.id} className="secblock" id={"sec-" + g.id}>
-                {false && (
+                {false /* bo'lim nomi endi tab tugmada ko'rinadi */ && (
                   <h3 className="sec-title">{g.name} <span className="sec-count">{g.items.length}</span></h3>
                 )}
                 <div className="grid">
