@@ -16,6 +16,7 @@
 // Javob: { ok, orderId, total, payTotal, voucherDiscount, voucherPercent, bonus, shopName, auth }
 
 import { kv } from "@vercel/kv";
+import { subShopOf } from "./_lib/subshops.js";
 import { randomBytes } from "crypto";
 import { applyCors, rateLimit, RATE_MSG, safeEqual, withLock, clientIp } from "./_lib/security.js";
 
@@ -185,7 +186,13 @@ export default async function handler(req, res) {
     if (seller && seller.status !== "active") {
       return res.status(400).json({ ok: false, error: "Bu do'kon hozircha faol emas" });
     }
-    const shopName = (seller && seller.shopName) || "Tuvaklar";
+    let shopName = (seller && seller.shopName) || "Tuvaklar";
+    // 2026-10-14: hamma mahsulot "alohida do'kon" bo'limidan bo'lsa — o'sha do'kon nomi
+    {
+      const secIds = [...new Set(items.map((it) => (byId[it && it.id] || {}).sectionId || ""))];
+      const sub = secIds.length === 1 ? subShopOf(seller, secIds[0]) : null;
+      if (sub) shopName = sub.shop.name;
+    }
     const shopPhone = (seller && seller.phone) || "";
     const bonusEnabled = seller ? !!seller.bonusEnabled : true;
     const sellerChatId = (seller && String(seller.telegramChatId || "").trim()) || "";

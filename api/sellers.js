@@ -34,6 +34,7 @@
 
 import { kv } from "@vercel/kv";
 import { getThumbMap } from "./_lib/thumbs.js";
+import { expandSellers } from "./_lib/subshops.js";
 import {
   isBlocked, recordFailure, clearFailures, TOO_MANY_MSG,
   safeEqual, applyCors, rateLimit, RATE_MSG, makePasswordRecord, checkPassword, passwordProblem,
@@ -151,7 +152,19 @@ function normalizeSections(arr) {
     const name = String((s && s.name) || "").trim().slice(0, 24);
     if (!name) continue;
     if (out.some((x) => x.name.toLowerCase() === name.toLowerCase())) continue;
-    out.push({ id: String((s && s.id) || `sec${Date.now()}${out.length}${Math.random().toString(36).slice(2, 5)}`), name });
+    const item = { id: String((s && s.id) || `sec${Date.now()}${out.length}${Math.random().toString(36).slice(2, 5)}`).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40), name };
+    // 2026-10-14: bo'lim saytda ALOHIDA DO'KON bo'lib ko'rinishi mumkin (o'z nomi, rasmi, viloyati)
+    const sh = s && s.shop;
+    const shName = sh ? String(sh.name || "").trim().slice(0, 40) : "";
+    if (shName.length >= 2) {
+      item.shop = {
+        name: shName,
+        region: String(sh.region || "").trim().slice(0, 40),
+        logo: cleanUrl(sh.logo),
+        categoryIds: Array.isArray(sh.categoryIds) ? sh.categoryIds.map((c) => String(c || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32)).filter(Boolean).slice(0, 10) : [],
+      };
+    }
+    out.push(item);
     if (out.length >= MAX_SECTIONS) break;
   }
   return out;
@@ -185,7 +198,7 @@ export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const [list, categories, thumbs] = await Promise.all([loadSellers(), loadCategories(), getThumbMap()]);
-      const active = list.filter((s) => s.status === "active").map(publicSeller).map((s) => ({
+      const active = expandSellers(list.filter((s) => s.status === "active").map(publicSeller)).map((s) => ({
         ...s,
         shopLogoThumb: (s.shopLogo && thumbs[s.shopLogo] && thumbs[s.shopLogo] !== s.shopLogo) ? thumbs[s.shopLogo] : "",
       }));

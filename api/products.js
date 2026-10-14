@@ -13,6 +13,7 @@
 
 import { kv } from "@vercel/kv";
 import { getThumbMap } from "./_lib/thumbs.js";
+import { subShopOf } from "./_lib/subshops.js";
 import { isBlocked, recordFailure, clearFailures, TOO_MANY_MSG, applyCors, withLock } from "./_lib/security.js";
 import { sellerFromTokenHeaders } from "./_lib/auth.js";
 
@@ -175,6 +176,7 @@ export default async function handler(req, res) {
       res.setHeader("Cache-Control", "public, s-maxage=20, stale-while-revalidate=120");
       const withThumb = (v) => ({ ...v, thumb: (v.image && thumbs[v.image] && thumbs[v.image] !== v.image) ? thumbs[v.image] : "" });
       const byId = Object.fromEntries(sellers.map((s) => [s.id, s]));
+      const raw = String((req.query && req.query.raw) || "") === "1";
       const out = list
         .map((p) => ({ ...p, sellerId: p.sellerId || MAIN_SELLER_ID }))
         .filter((p) => {
@@ -187,6 +189,23 @@ export default async function handler(req, res) {
           const s = byId[p.sellerId];
           const secs = (s && Array.isArray(s.sections)) ? s.sections : [];
           const sec = secs.find((x) => x.id === p.sectionId);
+          // alohida do'kon bo'limi — saytda boshqa do'kon bo'lib ko'rinadi (admin ?raw=1 bilan asl holini oladi)
+          const sub = !raw && subShopOf(s, p.sectionId);
+          if (sub) {
+            return {
+              ...p,
+              variants: Array.isArray(p.variants) ? p.variants.map(withThumb) : [],
+              unit: p.unit || "litr",
+              sellerId: sub.id,
+              parentSellerId: p.sellerId,
+              sectionId: "",
+              sectionName: "",
+              shopName: sub.shop.name,
+              shopRegion: sub.shop.region || "",
+              bonusEnabled: s ? !!s.bonusEnabled : true,
+              paused: !!p.paused,
+            };
+          }
           return {
             ...p,
             variants: Array.isArray(p.variants) ? p.variants.map(withThumb) : [],
