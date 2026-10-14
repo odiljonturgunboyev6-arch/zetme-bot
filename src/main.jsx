@@ -31,6 +31,13 @@ const ChevronDown = (p) => <Ic {...p}><path d="M6 9l6 6 6-6" /></Ic>;
 const ChevronLeft = (p) => <Ic {...p}><path d="M15 6l-6 6 6 6" /></Ic>;
 const ChevronUp = (p) => <Ic {...p}><path d="M6 15l6-6 6 6" /></Ic>;
 const HeartIc = (p) => <Ic {...p} kind={p.filled ? "fill" : "stroke"}><path d="M12 21s-7-4.6-9.3-8.6C.7 9 2.6 5 6.5 5c2 0 3.4 1.1 4.2 2.3L12 9l1.3-1.7C14.1 6.1 15.5 5 17.5 5c3.9 0 5.8 4 3.8 7.4C19 16.4 12 21 12 21z" /></Ic>;
+// 2026-10-14: marketplace bo'limi ↔ do'kon ichidagi bo'lim nomlarini solishtirish uchun
+const secNorm = (x) => String(x || "").toLowerCase().replace(/[ʻʼ'`‘’"]/g, "").replace(/\s+/g, " ").trim();
+const SEC_KEYWORDS = [
+  ["tuvak", "тувак", "горш", "gorsh", "кашпо", "kashpo"],
+  ["rozgor", "розгор", "рўзғор", "рузгор", "xozmak", "хозмак", "xojalik", "хўжалик", "household", "хозтовар", "быт", "для дома", "uy-", "уй-", "uy buyum", "уй буюм"],
+  ["gul", "гул", "цвет", "flower"],
+];
 const PlayIc = (p) => <Ic {...p} kind="fill"><path d="M8 5v14l11-7z" /></Ic>;
 const VolOn = (p) => <Ic {...p}><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M19 5a9 9 0 0 1 0 14" /></Ic>;
 const VolOff = (p) => <Ic {...p}><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M23 9l-6 6" /><path d="M17 9l6 6" /></Ic>;
@@ -2402,10 +2409,14 @@ function App() {
   // Har do'kon uchun: rasm (sotuvchi yuklagan logotip, bo'lmasa birinchi mahsulot rasmi)
   // + mahsulotlar soni. Mahsuloti yo'q do'konlar ko'rsatilmaydi (bo'sh do'kon sahifasi ochilmasin).
   const shopWall = useMemo(() => {
-    const count = {}, firstImg = {};
+    const count = {}, firstImg = {}, secCount = {};
     products.forEach((p) => {
       const sid = p.sellerId || "zetme";
       count[sid] = (count[sid] || 0) + 1;
+      if (p.sectionId) {
+        secCount[sid] = secCount[sid] || {};
+        secCount[sid][p.sectionId] = (secCount[sid][p.sectionId] || 0) + 1;
+      }
       if (!firstImg[sid]) {
         const im = thumbUrl(p);
         if (im) firstImg[sid] = im;
@@ -2420,10 +2431,34 @@ function App() {
         bonus: !!s.bonusEnabled,
         region: s.region || "",
         categoryIds: Array.isArray(s.categoryIds) ? s.categoryIds : [],
+        sections: Array.isArray(s.sections) ? s.sections : [],
+        secCount: secCount[s.id] || {},
       }))
       .filter((s) => s.count > 0)
       .sort((a, b) => b.count - a.count);
   }, [shops, products]);
+
+  // 2026-10-14: marketplace bo'limi (masalan "Туваклар" / "Уй-рўзғор буюмлари") do'kon ichidagi
+  // bo'limga nomi bo'yicha ulanadi. Bo'lim tanlanib do'kon ochilsa — faqat SHU bo'lim mahsulotlari
+  // alohida ko'rinadi (tuvaklar bo'limida faqat tuvaklar, uy-ro'zg'orda faqat uy-ro'zg'or).
+  const catById = useMemo(() => Object.fromEntries(categories.filter((c) => c && c.id).map((c) => [c.id, c])), [categories]);
+  function secForCat(shopTile, catId) {
+    const cat = catById[catId];
+    if (!cat || !shopTile) return null;
+    const secs = (shopTile.sections || []).filter((x) => x && x.id && String(x.name || "").trim());
+    const cn = [cat.name, cat.nameRu].map(secNorm).filter(Boolean);
+    const exact = secs.find((x) => cn.includes(secNorm(x.name)));
+    if (exact) return exact;
+    const grp = SEC_KEYWORDS.find((g) => cn.some((t) => g.some((k) => t.includes(k))));
+    if (!grp) return null;
+    return secs.find((x) => grp.some((k) => secNorm(x.name).includes(k))) || null;
+  }
+  // Do'kon shu marketplace bo'limida ko'rinadimi: qo'lda biriktirilgan YOKI ichida mos bo'lim bor
+  function shopInCat(s, catId) {
+    if (s.categoryIds.includes(catId)) return true;
+    const sec = secForCat(s, catId);
+    return !!(sec && (s.secCount[sec.id] || 0) > 0);
+  }
 
   // Marketplace bo'limi tanlangan bo'lsa — faqat shu bo'limga biriktirilgan do'konlar.
   // Faqat mahsuloti bor do'konlari bor bo'limlar chip sifatida ko'rsatiladi + "Barchasi".
@@ -2432,13 +2467,26 @@ function App() {
     return valid.map((c) => ({
       ...c,
       label: (LANG === "ru" && c.nameRu) ? c.nameRu : c.name,
-      count: shopWall.filter((s) => s.categoryIds.includes(c.id)).length,
+      count: shopWall.filter((s) => shopInCat(s, c.id)).length,
     }));
   }, [categories, shopWall, lang]);
   const wallShown = useMemo(
-    () => (catFilter ? shopWall.filter((s) => s.categoryIds.includes(catFilter)) : shopWall),
-    [shopWall, catFilter]
+    () => {
+      if (!catFilter) return shopWall;
+      return shopWall.filter((s) => shopInCat(s, catFilter)).map((s) => {
+        const sec = secForCat(s, catFilter);
+        return sec ? { ...s, count: s.secCount[sec.id] || 0 } : s;
+      });
+    },
+    [shopWall, catFilter, catById]
   );
+  // do'kon marketplace bo'limi orqali ochilgan bo'lsa — qulflangan ichki bo'lim
+  const lockedSecId = useMemo(() => {
+    if (!catFilter || !shopFilter) return null;
+    const tile = shopWall.find((s) => s.id === shopFilter.id);
+    const sec = secForCat(tile, catFilter);
+    return sec ? sec.id : null;
+  }, [catFilter, shopFilter, shopWall, catById]);
 
   // STUDIYA devori uchun: MAHSULOTGA OID HECH NARSA KO'RSATILMAYDI —
   // faqat sotuvchi o'zi yuklagan do'kon rasmi (bo'lmasa nomining bosh harfi) va nomi.
@@ -2544,8 +2592,9 @@ function App() {
     });
     const out = groups.filter((g) => g.items.length > 0);
     if (other.items.length) out.push(other);
+    if (lockedSecId) return out.filter((g) => g.id === lockedSecId);
     return out;
-  }, [shopFilter, shops, visibleProducts]);
+  }, [shopFilter, shops, visibleProducts, lockedSecId]);
 
   // Bo'limlar 2 va undan ko'p bo'lsa — faqat tanlangan bo'lim ko'rsatiladi (tab)
   const activeSecId = shopGroups.length > 1
@@ -3071,7 +3120,8 @@ function App() {
                   <div className="shop-region shop-region-lg"><MapPin size={12} /> {currentShopTile.region}</div>
                 )}
                 <div className="shophead-meta">
-                  {tr("productN", visibleProducts.length)}
+                  {lockedSecId && shopGroups[0] ? <b>{shopGroups[0].name} · </b> : null}
+                  {tr("productN", lockedSecId ? shopGroups.reduce((n, g) => n + g.items.length, 0) : visibleProducts.length)}
                   {currentShopTile && currentShopTile.bonus ? tr("bonusGifts") : ""}
                 </div>
               </div>
