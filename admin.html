@@ -200,6 +200,21 @@
   .plist { display:flex; flex-direction:column; gap:10px; }
   .prow { display:flex; gap:12px; align-items:center; background:#fff; border:1px solid var(--mline); border-radius:12px; padding:10px; flex-wrap:wrap; }
   .prow.out { opacity:.6; }
+  /* 2026-10-14: mahsulotlar do'kon bo'limlari bo'yicha */
+  .psecbar { display:flex; gap:8px; overflow-x:auto; padding:2px 0 12px; margin-bottom:4px; scrollbar-width:none; }
+  .psecbar::-webkit-scrollbar { display:none; }
+  .psec { flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:99px; border:1px solid var(--mline); background:#fff; color:var(--ink); font:600 13px/1 inherit; cursor:pointer; white-space:nowrap; }
+  .psec b { font-size:11px; padding:2px 7px; border-radius:99px; background:rgba(0,0,0,.06); }
+  .psec.active { background:#0f2a22; border-color:#0f2a22; color:#fff; }
+  .psec.active b { background:rgba(255,255,255,.2); }
+  .psec.add { border-style:dashed; color:#1f5c45; background:#eef6f1; }
+  .psecHead { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:16px 2px 8px; font-weight:800; font-size:14.5px; color:var(--ink); }
+  .psecHead:first-child { margin-top:2px; }
+  .psecHead span { font-weight:600; font-size:12px; color:var(--inkDim); }
+  .psecHead .psecTools { display:flex; gap:6px; }
+  .psecHead .psecTools button { border:1px solid var(--mline); background:#fff; border-radius:8px; padding:4px 9px; font:600 12px inherit; cursor:pointer; color:var(--inkDim); }
+  .secMove { margin-top:6px; display:flex; align-items:center; gap:6px; font-size:12px; color:var(--inkDim); }
+  .secMove select { padding:4px 8px; border-radius:8px; border:1px solid var(--mline); font:600 12px inherit; background:#fff; color:var(--ink); max-width:190px; }
   .prow img { width:52px; height:52px; border-radius:8px; object-fit:cover; background:var(--paper); }
   .prow .info { flex:1; min-width:0; }
   .prow .name { font-weight:600; font-size:13.5px; }
@@ -415,6 +430,7 @@
     <!-- Mahsulotlar ro'yxati -->
     <div class="card" data-pane="mahsulot">
       <h3><span id="plistTitle">Mahsulotlarim</span></h3>
+      <div class="psecbar" id="psecbar"></div>
       <div class="plist" id="plist"><p style="color:var(--inkDim); font-size:13px;">Yuklanmoqda...</p></div>
     </div>
 
@@ -493,6 +509,11 @@
   }
   function openNewProduct() {
     resetForm();
+    // bo'lim tanlangan bo'lsa — yangi mahsulot shu bo'limga tushadi
+    try {
+      const g = prodSecFilter && prodSecFilter.split("|");
+      if (g && g[0] === (ME.seller && ME.seller.id) && g[1] && sections.some(x => x.id === g[1])) document.getElementById("fSection").value = g[1];
+    } catch (e) {}
     document.getElementById("cancelBtn").classList.remove("hidden");   // formani yopish uchun
     document.getElementById("formCard").classList.remove("hidden");
     document.getElementById("newProdBtn").classList.add("hidden");
@@ -2072,7 +2093,7 @@
     if (!p || !quickStockDraft[id]) return;
     const payload = {
       id: p.id, name: p.name, category: p.category, unit: p.unit || "litr",
-      sectionId: p.sectionId || "", variants: quickStockDraft[id],
+      sectionId: p.sectionId || "", variants: quickStockDraft[id], video: p.video || "",
     };
     const res = await fetch("/api/products", {
       method: "PUT",
@@ -2101,7 +2122,50 @@
       list.innerHTML = '<p style="color:var(--inkDim); font-size:13px;">Hali mahsulot yo\'q. Yuqoridagi forma orqali birinchi mahsulotingizni qo\'shing.</p>';
       return;
     }
-    list.innerHTML = items.map(p => {
+    // ---- bo'limlar bo'yicha guruhlash (2026-10-14) ----
+    const myId = ME.seller && ME.seller.id;
+    const gkey = p => (p.sellerId || "zetme") + "|" + (p.sectionId || "");
+    const groups = [];
+    const byKey = {};
+    const addGroup = (key, name, shop, own, secId) => { if (!byKey[key]) { byKey[key] = { key, name, shop, own, secId, items: [] }; groups.push(byKey[key]); } return byKey[key]; };
+    // o'z do'konimizning bo'limlari — bo'sh bo'lsa ham ko'rinadi (mahsulot qo'shish uchun)
+    sections.filter(x => String(x.name || "").trim()).forEach(x => addGroup(myId + "|" + x.id, x.name, "", true, x.id));
+    items.forEach(p => {
+      const own = (p.sellerId || "zetme") === myId;
+      const name = (own ? (sections.find(x => x.id === p.sectionId) || {}).name : p.sectionName) || "Boshqalar";
+      addGroup(gkey(p), name, own ? "" : (p.shopName || ""), own, p.sectionId || "").items.push(p);
+    });
+    // "Boshqalar" oxirida
+    groups.sort((a, b) => (a.secId ? 0 : 1) - (b.secId ? 0 : 1));
+    if (prodSecFilter !== "all" && !byKey[prodSecFilter]) prodSecFilter = "all";
+
+    const emo = n => /tuvak|тувак|горш/i.test(n) ? "🪴 " : /ro.?z.?g.?or|рўзғор|розгор|рузгор|быт/i.test(String(n).toLowerCase()) ? "🏠 " : n === "Boshqalar" ? "📦 " : "🗂 ";
+    document.getElementById("psecbar").innerHTML =
+      `<button class="psec${prodSecFilter === "all" ? " active" : ""}" onclick="setProdSec('all')">Hammasi <b>${items.length}</b></button>` +
+      groups.map(g => `<button class="psec${prodSecFilter === g.key ? " active" : ""}" onclick="setProdSec('${escAttr(g.key)}')">${emo(g.name)}${escHtml(g.name)}${g.shop ? " · " + escHtml(g.shop) : ""} <b>${g.items.length}</b></button>`).join("") +
+      (sections.length < 5 ? `<button class="psec add" onclick="quickAddSection()">＋ Bo'lim qo'shish</button>` : "");
+
+    const shownGroups = prodSecFilter === "all" ? groups : groups.filter(g => g.key === prodSecFilter);
+    const named = sections.filter(x => String(x.name || "").trim());
+    const secSelect = p => ((p.sellerId || "zetme") !== myId || !named.length) ? "" : `
+          <label class="secMove">Bo'lim:
+            <select onchange="moveToSection('${p.id}', this.value)">
+              <option value=""${p.sectionId ? "" : " selected"}>Boshqalar</option>
+              ${named.map(x => `<option value="${escAttr(x.id)}"${x.id === p.sectionId ? " selected" : ""}>${escHtml(x.name)}</option>`).join("")}
+            </select>
+          </label>`;
+
+    list.innerHTML = shownGroups.map(g => `
+      <div class="psecHead">
+        <div>${emo(g.name)}${escHtml(g.name)}${g.shop ? " · " + escHtml(g.shop) : ""} <span>· ${g.items.length} ta</span></div>
+        ${g.own && g.secId ? `<div class="psecTools"><button onclick="renameSection('${escAttr(g.secId)}')">✏️ Nomi</button></div>` : ""}
+      </div>` +
+      (g.items.length ? "" : `<p style="color:var(--inkDim);font-size:12.5px;margin:0 2px 6px;">Bu bo'limda hali mahsulot yo'q — "＋ Yangi mahsulot qo'shish" yoki boshqa mahsulotdagi "Bo'lim" tanlovi orqali qo'shing.</p>`) +
+      g.items.map(p => renderProdRow(p, secSelect)).join("")).join("");
+  }
+
+  function renderProdRow(p, secSelect) {
+    {
       const st = stockSummary(p);
       const isOut = st.tracked && st.sum <= 0;
       const paused = !!p.paused;
@@ -2116,6 +2180,7 @@
           ${optPriceRangeText(p) ? `<div class="meta opt">Optom: ${optPriceRangeText(p)}</div>` : ''}
           ${st.tracked ? `<div class="meta stock${st.sum <= 0 ? ' zero' : ''}">${st.sum <= 0 ? '⛔ Tugadi' : '📦 ' + st.sum + ' dona qoldi'}</div>` : ''}
           ${paused ? `<div class="meta paused">⏸ Muzlatilgan — mijozlarga "Vaqtincha tugagan" ko'rinadi</div>` : ''}
+          ${secSelect(p)}
         </div>
         <div class="btns">
           <button class="editBtn" onclick="editProduct('${p.id}')">Tahrirlash</button>
@@ -2126,7 +2191,57 @@
         <div class="quickStock hidden" id="qs-${p.id}"></div>
       </div>
     `;
-    }).join("");
+    }
+  }
+
+  let prodSecFilter = "all";
+  function setProdSec(k) { prodSecFilter = k; loadProducts(); }
+
+  // Faqat bo'limlarni saqlaydi (do'kon sozlamalaridagi boshqa maydonlarga tegmaydi)
+  async function saveSectionsOnly(next) {
+    const res = await fetch("/api/sellers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "updateProfile", login: ME.login, token: ME.token,
+        sections: next.filter(s => String(s.name).trim()).map(s => ({ id: s.id, name: String(s.name).trim().slice(0, 24) })),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok) { alert(data.error || "Xatolik"); return false; }
+    ME.seller = data.seller;
+    sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name })) : [];
+    renderSections();
+    renderSectionSelect();
+    return true;
+  }
+  async function quickAddSection() {
+    if (sections.length >= 5) { alert("Ko'pi bilan 5 ta bo'lim bo'ladi"); return; }
+    const name = (prompt("Yangi bo'lim nomi (masalan: Sun'iy gullar):", "") || "").trim();
+    if (!name) return;
+    if (sections.some(x => String(x.name).trim().toLowerCase() === name.toLowerCase())) { alert("Bunday bo'lim bor"); return; }
+    const ok = await saveSectionsOnly(sections.concat([{ id: "sec" + uid(), name }]));
+    if (!ok) return;
+    const added = sections.find(x => x.name === name.slice(0, 24));
+    if (added) prodSecFilter = ME.seller.id + "|" + added.id;
+    loadProducts();
+  }
+  async function renameSection(id) {
+    const cur = sections.find(x => x.id === id);
+    if (!cur) return;
+    const name = (prompt("Bo'lim nomi:", cur.name) || "").trim();
+    if (!name || name === cur.name) return;
+    if (await saveSectionsOnly(sections.map(x => x.id === id ? { ...x, name } : x))) loadProducts();
+  }
+  async function moveToSection(id, sectionId) {
+    const res = await fetch("/api/products", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ id, sectionId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok) { alert(data.error || "Xatolik"); }
+    loadProducts();
   }
 
   // Muzlatish / yoqish — mahsulot o'chirilmaydi, barcha ma'lumot saqlanadi.
