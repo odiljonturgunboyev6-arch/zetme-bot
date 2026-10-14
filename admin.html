@@ -213,6 +213,16 @@
   .psecHead span { font-weight:600; font-size:12px; color:var(--inkDim); }
   .psecHead .psecTools { display:flex; gap:6px; }
   .psecHead .psecTools button { border:1px solid var(--mline); background:#fff; border-radius:8px; padding:4px 9px; font:600 12px inherit; cursor:pointer; color:var(--inkDim); }
+  .subShopBadge { display:flex; align-items:center; gap:10px; margin:0 2px 10px; padding:8px 10px; border-radius:10px; background:#eef6f1; border:1px solid #cfe5d8; font-size:12.5px; color:#1f5c45; }
+  .subShopBadge img { width:34px; height:34px; border-radius:8px; object-fit:cover; }
+  .subShopForm { border:1px dashed #9cc8b1; border-radius:12px; padding:12px; margin:0 2px 12px; background:#fbfdfc; }
+  .subShopForm label { display:block; font-size:12.5px; font-weight:700; margin:10px 0 4px; }
+  .subShopForm input[type=text], .subShopForm select { width:100%; padding:9px 10px; border-radius:9px; border:1px solid var(--mline); font:inherit; box-sizing:border-box; }
+  .ssLogo { display:flex; align-items:center; gap:10px; }
+  .ssLogo img { width:56px; height:56px; border-radius:10px; object-fit:cover; }
+  .ssLogo span { font-size:12px; color:var(--inkDim); }
+  .ssCats { display:flex; flex-wrap:wrap; gap:6px; }
+  .subShopForm .ssCat { display:inline-flex; align-items:center; gap:6px; margin:0; padding:6px 10px; border:1px solid var(--mline); border-radius:99px; font-weight:600; background:#fff; }
   .secMove { margin-top:6px; display:flex; align-items:center; gap:6px; font-size:12px; color:var(--inkDim); }
   .secMove select { padding:4px 8px; border-radius:8px; border:1px solid var(--mline); font:600 12px inherit; background:#fff; color:var(--ink); max-width:190px; }
   .prow img { width:52px; height:52px; border-radius:8px; object-fit:cover; background:var(--paper); }
@@ -779,7 +789,7 @@
     document.getElementById("profChatId").value = ME.seller.telegramChatId || "";
     document.getElementById("profRegion").value = ME.seller.region || "";
     document.getElementById("profBonus").checked = !!ME.seller.bonusEnabled;
-    sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name })) : [];
+    sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name, shop: s.shop })) : [];
     renderSections();
     renderSectionSelect();
     if (ME.seller.builtin) {
@@ -1817,7 +1827,7 @@
       token: ME.token,
       shopName,
       shopLogo: shopLogo.url || "",
-      sections: sections.filter(s => String(s.name).trim()).map(s => ({ id: s.id, name: String(s.name).trim() })),
+      sections: sections.filter(s => String(s.name).trim()).map(s => ({ id: s.id, name: String(s.name).trim(), shop: s.shop })),
       categoryIds: myCategoryIds,
       telegramChatId: document.getElementById("profChatId").value.trim(),
       region: document.getElementById("profRegion").value,
@@ -1837,7 +1847,7 @@
     if (data.token) { ME.token = data.token; saveAuth(); }
     ME.seller = data.seller;
     // server bo'limlarni normallashtiradi (bo'shlari tushib qoladi, id beriladi) — panelni yangilaymiz
-    sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name })) : [];
+    sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name, shop: s.shop })) : [];
     renderSections();
     renderSectionSelect();
     myCategoryIds = Array.isArray(ME.seller.categoryIds) ? ME.seller.categoryIds.slice() : [];
@@ -2107,7 +2117,7 @@
   }
 
   async function loadProducts() {
-    const res = await fetch("/api/products");
+    const res = await fetch("/api/products?raw=1&t=" + Date.now());
     const data = await res.json();
     const list = document.getElementById("plist");
     if (!data.ok) { list.innerHTML = '<p style="color:var(--sale); font-size:13px;">Yuklashda xatolik</p>'; return; }
@@ -2158,8 +2168,9 @@
     list.innerHTML = shownGroups.map(g => `
       <div class="psecHead">
         <div>${emo(g.name)}${escHtml(g.name)}${g.shop ? " · " + escHtml(g.shop) : ""} <span>· ${g.items.length} ta</span></div>
-        ${g.own && g.secId ? `<div class="psecTools"><button onclick="renameSection('${escAttr(g.secId)}')">✏️ Nomi</button></div>` : ""}
+        ${g.own && g.secId ? `<div class="psecTools"><button onclick="toggleSubShop('${escAttr(g.secId)}')">🏪 Alohida do'kon</button><button onclick="renameSection('${escAttr(g.secId)}')">✏️ Nomi</button></div>` : ""}
       </div>` +
+      (g.own && g.secId ? subShopBadge(g.secId) + `<div class="subShopForm hidden" id="ssf-${escAttr(g.secId)}"></div>` : "") +
       (g.items.length ? "" : `<p style="color:var(--inkDim);font-size:12.5px;margin:0 2px 6px;">Bu bo'limda hali mahsulot yo'q — "＋ Yangi mahsulot qo'shish" yoki boshqa mahsulotdagi "Bo'lim" tanlovi orqali qo'shing.</p>`) +
       g.items.map(p => renderProdRow(p, secSelect)).join("")).join("");
   }
@@ -2195,6 +2206,84 @@
   }
 
   let prodSecFilter = "all";
+
+  // ===================== bo'lim → ALOHIDA DO'KON (2026-10-14) =====================
+  // Bo'lim saytda boshqa do'kon bo'lib ko'rinadi: o'z nomi, rasmi, viloyati, marketplace bo'limi.
+  // Mahsulotlar, buyurtmalar, ostatka shu panelda qoladi.
+  let subShopDraft = {};
+  function subShopBadge(secId) {
+    const sec = sections.find(x => x.id === secId);
+    const sh = sec && sec.shop;
+    if (!sh || !sh.name) return "";
+    return `<div class="subShopBadge">${sh.logo ? `<img src="${escAttr(sh.logo)}" />` : "🏪"}<div>Saytda alohida do'kon: <b>${escHtml(sh.name)}</b>${sh.region ? " · 📍 " + escHtml(sh.region) : ""}</div></div>`;
+  }
+  function toggleSubShop(secId) {
+    const el = document.getElementById("ssf-" + secId);
+    if (!el) return;
+    if (!el.classList.contains("hidden")) { el.classList.add("hidden"); return; }
+    const sec = sections.find(x => x.id === secId) || {};
+    const sh = sec.shop || {};
+    subShopDraft[secId] = { name: sh.name || "", region: sh.region || "", logo: sh.logo || "", newLogo: null, categoryIds: (sh.categoryIds || []).slice() };
+    renderSubShop(secId);
+    el.classList.remove("hidden");
+  }
+  function renderSubShop(secId) {
+    const d = subShopDraft[secId]; const el = document.getElementById("ssf-" + secId);
+    if (!d || !el) return;
+    const regionOpts = document.getElementById("profRegion") ? document.getElementById("profRegion").innerHTML : "";
+    const logoSrc = d.newLogo ? d.newLogo.dataUrl : d.logo;
+    const cats = (categories || []).filter(c => c && c.id && c.name);
+    el.innerHTML = `
+      <div class="hint" style="margin:0 0 8px;">Bu bo'lim mijozlarga <b>boshqa do'kon</b> bo'lib ko'rinadi. Buyurtmalar baribir sizga keladi.</div>
+      <label>Do'kon nomi</label>
+      <input type="text" maxlength="40" value="${escAttr(d.name)}" placeholder="Masalan: Texno innovator" oninput="subShopDraft['${secId}'].name=this.value" />
+      <label>Viloyat / shahar</label>
+      <select id="ssr-${secId}" onchange="subShopDraft['${secId}'].region=this.value">${regionOpts}</select>
+      <label>Do'kon rasmi</label>
+      <div class="ssLogo">
+        ${logoSrc ? `<img src="${escAttr(logoSrc)}" />` : `<span>Rasm yo'q</span>`}
+        <button type="button" class="addVariantBtn" onclick="document.getElementById('ssl-${secId}').click()">📷 Rasm tanlash</button>
+        <input type="file" id="ssl-${secId}" accept="image/*" style="display:none" onchange="onSubShopLogo('${secId}', event)" />
+      </div>
+      ${cats.length ? `<label>Saytdagi marketplace bo'limi</label><div class="ssCats">${cats.map(c => `<label class="ssCat"><input type="checkbox" ${d.categoryIds.includes(c.id) ? "checked" : ""} onchange="subShopCat('${secId}','${escAttr(c.id)}',this.checked)" /> ${escHtml(catTitle(c))}</label>`).join("")}</div>` : ""}
+      <button class="submitbtn" style="margin-top:12px;" onclick="saveSubShop('${secId}')">Saqlash</button>
+      ${(sections.find(x => x.id === secId) || {}).shop ? `<button class="cancelbtn" onclick="removeSubShop('${secId}')">Alohida do'kon emas — oddiy bo'limga qaytarish</button>` : ""}
+      <div id="ssm-${secId}"></div>`;
+    const sel = document.getElementById("ssr-" + secId);
+    if (sel) {
+      if (d.region && ![...sel.options].some(o => o.value === d.region)) sel.insertAdjacentHTML("beforeend", `<option value="${escAttr(d.region)}">${escHtml(d.region)}</option>`);
+      sel.value = d.region || "";
+      if (!d.region) d.region = sel.value;
+    }
+  }
+  function subShopCat(secId, id, on) {
+    const d = subShopDraft[secId]; if (!d) return;
+    d.categoryIds = d.categoryIds.filter(x => x !== id);
+    if (on) d.categoryIds.push(id);
+  }
+  async function onSubShopLogo(secId, e) {
+    const f = (e.target.files || [])[0]; e.target.value = "";
+    if (!f) return;
+    try { subShopDraft[secId].newLogo = await compressImage(f); renderSubShop(secId); }
+    catch (err) { document.getElementById("ssm-" + secId).innerHTML = `<div class="msg err">${escHtml(err.message)}</div>`; }
+  }
+  async function saveSubShop(secId) {
+    const d = subShopDraft[secId]; const msg = document.getElementById("ssm-" + secId);
+    if (!d) return;
+    if (String(d.name).trim().length < 2) { msg.innerHTML = '<div class="msg err">Do\'kon nomini kiriting</div>'; return; }
+    try {
+      if (d.newLogo) {
+        msg.innerHTML = '<div class="msg ok">Rasm yuklanmoqda…</div>';
+        d.logo = await uploadImage({ dataUrl: d.newLogo.dataUrl, name: d.newLogo.name || "logo.jpg", type: d.newLogo.type || "image/jpeg" });
+        d.newLogo = null;
+      }
+    } catch (err) { msg.innerHTML = `<div class="msg err">${escHtml(err.message)}</div>`; return; }
+    const shop = { name: String(d.name).trim(), region: d.region || "", logo: d.logo || "", categoryIds: d.categoryIds };
+    if (await saveSectionsOnly(sections.map(x => x.id === secId ? { ...x, shop } : x))) loadProducts();
+  }
+  async function removeSubShop(secId) {
+    if (await saveSectionsOnly(sections.map(x => x.id === secId ? { id: x.id, name: x.name } : x))) loadProducts();
+  }
   function setProdSec(k) { prodSecFilter = k; loadProducts(); }
 
   // Faqat bo'limlarni saqlaydi (do'kon sozlamalaridagi boshqa maydonlarga tegmaydi)
@@ -2204,13 +2293,13 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "updateProfile", login: ME.login, token: ME.token,
-        sections: next.filter(s => String(s.name).trim()).map(s => ({ id: s.id, name: String(s.name).trim().slice(0, 24) })),
+        sections: next.filter(s => String(s.name).trim()).map(s => ({ id: s.id, name: String(s.name).trim().slice(0, 24), shop: s.shop })),
       }),
     });
     const data = await res.json().catch(() => ({}));
     if (!data.ok) { alert(data.error || "Xatolik"); return false; }
     ME.seller = data.seller;
-    sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name })) : [];
+    sections = Array.isArray(ME.seller.sections) ? ME.seller.sections.map(s => ({ id: s.id, name: s.name, shop: s.shop })) : [];
     renderSections();
     renderSectionSelect();
     return true;
