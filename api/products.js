@@ -298,26 +298,43 @@ export default async function handler(req, res) {
     // Muzlatish / yoqish — mahsulot o'chirilmaydi, faqat mijozlarga
     // "Vaqtincha tugagan" bo'lib ko'rinadi. Ostatka 0 ga tushsa sayt buni
     // o'zi ko'rsatadi; bu tugma sotuvchi qo'lda yashirishi uchun.
+    // PATCH: { id | ids[], paused?: bool, sectionId?: string }
+    //  - paused: muzlatish / yoqish (mahsulot o'chirilmaydi)
+    //  - sectionId: do'kon ichidagi bo'limga ko'chirish ("" = Boshqalar). 2026-10-14
     if (req.method === "PATCH") {
       const actor = await authOrBlock(req, res);
       if (!actor) return;
       const body = req.body || {};
-      const { id } = body;
-      if (!id) return res.status(400).json({ ok: false, error: "Mahsulot ID si yo'q" });
-      if (typeof body.paused !== "boolean") {
-        return res.status(400).json({ ok: false, error: "paused true yoki false bo'lishi kerak" });
+      const ids = Array.isArray(body.ids) ? body.ids.map(String).slice(0, 200) : (body.id ? [String(body.id)] : []);
+      if (!ids.length) return res.status(400).json({ ok: false, error: "Mahsulot ID si yo'q" });
+      const hasPaused = typeof body.paused === "boolean";
+      const hasSection = typeof body.sectionId === "string";
+      if (!hasPaused && !hasSection) {
+        return res.status(400).json({ ok: false, error: "paused yoki sectionId berilishi kerak" });
       }
       return await withLock(KEY, async () => {
       const list = (await kv.get(KEY)) || [];
-      const idx = list.findIndex((p) => p.id === id);
-      if (idx === -1) return res.status(404).json({ ok: false, error: "Mahsulot topilmadi" });
-      const ownerId = list[idx].sellerId || MAIN_SELLER_ID;
-      if (!actor.super && ownerId !== actor.id) {
-        return res.status(403).json({ ok: false, error: "Bu mahsulot sizning do'koningizga tegishli emas" });
+      const idxs = ids.map((id) => list.findIndex((p) => p.id === id));
+      if (idxs.some((i) => i === -1)) return res.status(404).json({ ok: false, error: "Mahsulot topilmadi" });
+      for (const i of idxs) {
+        const ownerId = list[i].sellerId || MAIN_SELLER_ID;
+        if (!actor.super && ownerId !== actor.id) {
+          return res.status(403).json({ ok: false, error: "Bu mahsulot sizning do'koningizga tegishli emas" });
+        }
       }
-      list[idx] = { ...list[idx], paused: body.paused, updatedAt: Date.now() };
+      for (const i of idxs) {
+        const ownerId = list[i].sellerId || MAIN_SELLER_ID;
+        const patch = { updatedAt: Date.now() };
+        if (hasPaused) patch.paused = body.paused;
+        if (hasSection) {
+          const sid = await resolveSection(ownerId, body.sectionId);
+          if (body.sectionId && !sid) return res.status(400).json({ ok: false, error: "Bunday bo'lim topilmadi" });
+          patch.sectionId = sid;
+        }
+        list[i] = { ...list[i], ...patch };
+      }
       await kv.set(KEY, list);
-      return res.status(200).json({ ok: true, product: list[idx] });
+      return res.status(200).json({ ok: true, product: list[idxs[0]], count: idxs.length });
       });
     }
 
