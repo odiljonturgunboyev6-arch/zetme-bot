@@ -194,7 +194,7 @@ const STR = {
     osTitle: "Buyurtma qabul qilindi!", shopSuffix: " do'koni",
     osVoucher: (p, s) => "🎁 " + p + "% chegirma bonusingiz qo'llandi: −" + s,
     osInfo: "Sotuvchi tez orada siz bilan bog'lanadi. Buyurtma holatini (tayyorlanmoqda, yuborildi) Profil bo'limida kuzatib borasiz.",
-    osTg: "Telegramda yuborish", osTgHint: "Buyurtma matni tayyor — Telegramda faqat «Yuborish»ni bosing.",
+    osTg: "Sotuvchiga yuborish", osTgHint: "Buyurtma matni tayyor — Telegramda faqat «Yuborish»ni bosing.", osLast: "Oxirgi qadam!", osStep1: "Pastdagi yashil tugmani bosing", osStep2: "Telegramda «Yuborish» ni bosing — tamom!",
     osTrack: "Profilda kuzatish", close: "Yopish", cancel: "Bekor qilish",
     stYangi: "🆕 Yangi", stTayyor: "📦 Tayyorlanmoqda", stYubor: "🚚 Yuborildi", stYetk: "✅ Yetkazildi", stQabul: "✅ Qabul qilindi", stBekor: "❌ Bekor",
     guest: "Mehmon", edit: "✎ tahrirlash", fName: "Ism", lName: "Familiya", save: "Saqlash",
@@ -334,7 +334,7 @@ const STR = {
     osTitle: "Заказ принят!", shopSuffix: "",
     osVoucher: (p, s) => "🎁 Применён ваш бонус " + p + "%: −" + s,
     osInfo: "Продавец скоро свяжется с вами. Статус заказа (готовится, отправлен) отслеживайте в разделе Профиль.",
-    osTg: "Отправить в Telegram", osTgHint: "Текст заказа готов — в Telegram просто нажмите «Отправить».",
+    osTg: "Отправить продавцу", osTgHint: "Текст заказа готов — в Telegram просто нажмите «Отправить».", osLast: "Последний шаг!", osStep1: "Нажмите зелёную кнопку ниже", osStep2: "В Telegram нажмите «Отправить» — готово!",
     osTrack: "Отслеживать в профиле", close: "Закрыть",
     confT: "В корзине товар другого магазина",
     confB1: "Сейчас в корзине товары магазина", confB2: ". В одном заказе — только один магазин: сначала завершите текущий заказ, либо очистите корзину и начните с магазина", confB3: ".",
@@ -1164,35 +1164,58 @@ function CheckoutForm({ initial, itemCount, payTotal, shopName, busy, error, onS
   );
 }
 
+function openTg(url) {
+  // Telegram ichida (bot orqali ochilgan sayt) — chat Telegramning o'zida ochiladi,
+  // oddiy brauzerda — yangi oynada. 2026-10-16
+  try {
+    const wa = window.Telegram && window.Telegram.WebApp;
+    if (wa && wa.initData && wa.openTelegramLink) { wa.openTelegramLink(url); return; }
+  } catch (e) { /* oddiy havola bilan davom etamiz */ }
+  window.open(url, "_blank");
+}
+
 function OrderSuccess({ orderId, tgUrl, payTotal, shopName, voucherDiscount, voucherPercent, onClose, onOpenProfile }) {
+  // 2026-10-16: soddalashtirildi — bitta katta yashil tugma + 2 ta qadam
+  const step = (n, t) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left", margin: "0 0 8px" }}>
+      <span style={{ flex: "0 0 26px", height: 26, borderRadius: 13, background: "#22a55b", color: "#fff",
+        fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>{n}</span>
+      <span style={{ fontSize: 14.5, fontWeight: 600 }}>{t}</span>
+    </div>
+  );
   return (
     <div className="ov">
       <div className="checkout" style={{ textAlign: "center" }}>
         <div className="os-ic"><Check size={26} color="#fff" /></div>
-        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 23, margin: "12px 0 4px" }}>{tr("osTitle")}</h3>
+        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 23, margin: "12px 0 4px" }}>{tgUrl ? tr("osLast") : tr("osTitle")}</h3>
         <p style={{ color: C.inkDim, fontSize: 13.5, margin: "0 0 6px" }}>
-          #{orderId}{shopName ? " · " + shopName + tr("shopSuffix") : ""}
+          #{orderId}{shopName ? " · " + shopName + tr("shopSuffix") : ""} · <b>{fmt(payTotal)}</b>
         </p>
-        <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 4px" }}>{fmt(payTotal)}</p>
         {voucherDiscount > 0 && (
           <p style={{ color: C.laitonLo, fontSize: 12.5, margin: "0 0 8px" }}>
             {tr("osVoucher", voucherPercent, fmt(voucherDiscount))}
           </p>
         )}
-        <p style={{ color: C.inkDim, fontSize: 12.5, lineHeight: 1.6, margin: "8px 0 16px" }}>
-          {tr("osInfo")}
-        </p>
-        {tgUrl && (
+        {tgUrl ? (
           <React.Fragment>
-            <a className="pm-add" href={tgUrl} target="_blank" rel="noreferrer"
-              style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 6 }}>
-              <Send size={15} /> {tr("osTg")}
-            </a>
-            <p style={{ color: C.inkDim, fontSize: 11.5, lineHeight: 1.5, margin: "0 0 12px" }}>{tr("osTgHint")}</p>
+            <div style={{ margin: "14px 0 14px" }}>
+              {step(1, tr("osStep1"))}
+              {step(2, tr("osStep2"))}
+            </div>
+            <button onClick={() => openTg(tgUrl)}
+              style={{ width: "100%", border: 0, borderRadius: 16, padding: "17px 14px", background: "#22a55b", color: "#fff",
+                fontSize: 17, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                boxShadow: "0 8px 22px rgba(34,165,91,.35)", cursor: "pointer", marginBottom: 14 }}>
+              <Send size={19} /> {tr("osTg")}
+            </button>
           </React.Fragment>
+        ) : (
+          <p style={{ color: C.inkDim, fontSize: 12.5, lineHeight: 1.6, margin: "8px 0 16px" }}>{tr("osInfo")}</p>
         )}
-        <button className="pm-add" onClick={onOpenProfile}><User size={15} /> {tr("osTrack")}</button>
-        <button className="conflict-cancel" onClick={onClose}>{tr("close")}</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="conflict-cancel" style={{ flex: 1 }} onClick={onOpenProfile}>{tr("osTrack")}</button>
+          <button className="conflict-cancel" style={{ flex: 1 }} onClick={onClose}>{tr("close")}</button>
+        </div>
       </div>
     </div>
   );
@@ -2741,7 +2764,6 @@ function App() {
         customerData.note ? `📝 ${customerData.note}` : null,
       ].filter((l) => l !== null);
       const tgUrl = `https://t.me/${SUPPORT_TG}?text=${encodeURIComponent(tgLines.join("\n"))}`;
-      try { window.open(tgUrl, "_blank"); } catch (e) { /* bloklansa — oynadagi tugma bor */ }
       setOrder({
         tgUrl,
         orderId: data.orderId, payTotal: data.payTotal, shopName: data.shopName,
