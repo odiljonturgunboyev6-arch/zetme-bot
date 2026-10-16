@@ -33,7 +33,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         menu_button: {
           type: "web_app",
-          text: "Zetme",
+          text: "🛒 Buyurtma berish",
           web_app: { url: SITE_URL },
         },
       }),
@@ -42,6 +42,22 @@ export default async function handler(req, res) {
     if (!tgData.ok) {
       return res.status(400).json({ ok: false, error: "Telegram: " + (tgData.description || "xatolik") });
     }
+
+    // 2026-10-16: bot tavsifi (/start dan OLDIN ko'rinadigan "Bu bot nima qila oladi?" oynasi)
+    // mijozga aniq qadamlarni ko'rsatadi — o'zbekcha (standart) va ruscha.
+    const DESC_UZ = "🛒 Gul tuvak va uy-ro'zg'or buyumlari do'koni\n\nQanday buyurtma beriladi:\n1️⃣ Pastdagi «BOSHLASH» tugmasini bosing\n2️⃣ «🛒 Buyurtma berish» tugmasini bosing\n3️⃣ Mahsulotni tanlab, savatga qo'shing\n4️⃣ Ismingiz va raqamingizni yozing — tamom!\n\nSavol bo'lsa: @gultuvak_admin";
+    const DESC_RU = "🛒 Магазин цветочных горшков и товаров для дома\n\nКак заказать:\n1️⃣ Нажмите «СТАРТ» внизу\n2️⃣ Нажмите кнопку «🛒 Buyurtma berish»\n3️⃣ Выберите товар и добавьте в корзину\n4️⃣ Укажите имя и телефон — готово!\n\nВопросы: @gultuvak_admin";
+    const SHORT_UZ = "Gul tuvak va uy-ro'zg'or buyumlari — «🛒 Buyurtma berish» tugmasini bosing";
+    const SHORT_RU = "Цветочные горшки и товары для дома — нажмите «🛒 Buyurtma berish»";
+    const tgCall = (m, body) => fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${m}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    }).then((r) => r.json()).catch(() => ({ ok: false }));
+    await Promise.all([
+      tgCall("setMyDescription", { description: DESC_UZ }),
+      tgCall("setMyDescription", { description: DESC_RU, language_code: "ru" }),
+      tgCall("setMyShortDescription", { short_description: SHORT_UZ }),
+      tgCall("setMyShortDescription", { short_description: SHORT_RU, language_code: "ru" }),
+    ]);
 
     // 2026-10-07: webhook'ni maxfiy kalit (TG_WEBHOOK_SECRET) bilan qayta ro'yxatdan o'tkazamiz.
     // api/bot.js 2026-10-05 dan beri kalitsiz so'rovlarni rad etadi — webhook eski (kalitsiz)
