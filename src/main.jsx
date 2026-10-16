@@ -4053,6 +4053,8 @@ const buildCSS = () => `
 .pf-f>span{display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:${C.inkDim};letter-spacing:.2px}
 .pf-f input,.pf-f select{width:100%;padding:9px 11px;border:1px solid ${C.mline};border-radius:10px;font-size:13px;
   font-family:inherit;background:${C.card};color:${C.ink}}
+select option,select optgroup{color:#1b1b1b !important;background:#ffffff !important;font-weight:600}
+select option:disabled{color:#8a8a8a !important}
 .pf-f input:focus,.pf-f select:focus{outline:none;border-color:${C.accent};box-shadow:0 0 0 2px ${C.accent}22}
 .pf-lock{display:flex;align-items:flex-start;gap:6px;margin-top:12px;font-size:11px;line-height:1.5;color:${C.laitonLo};
   background:#FBF3E2;border-radius:10px;padding:9px 11px}
