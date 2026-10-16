@@ -3982,7 +3982,8 @@ const buildCSS = () => `
 .po-yuborildi{background:#EEE9FB;color:#6B4FBB}
 .po-qabul{background:#EAF3EC;color:${C.accent}}
 .co-label{display:block;font-size:11.5px;font-weight:600;color:${C.inkDim};margin:10px 0 4px;text-align:left}
-.co-input{width:100%;padding:11px 13px;border:1px solid ${C.mline};border-radius:11px;font-size:14.5px;font-family:${FONT_BODY};background:#fff;color:${C.ink}}
+.co-input{width:100%;padding:11px 13px;border:1px solid ${C.mline};border-radius:11px;font-size:14.5px;font-family:${FONT_BODY};background:#fff;color:#1b1b1b !important;-webkit-text-fill-color:#1b1b1b;caret-color:#1b1b1b}
+.co-input::placeholder{color:#8f9692 !important;-webkit-text-fill-color:#8f9692;opacity:1}
 .co-note{resize:vertical;min-height:72px;line-height:1.45;font-size:13.5px}
 .os-ic{width:54px;height:54px;border-radius:50%;background:${C.accent};display:flex;align-items:center;justify-content:center;margin:6px auto 0}
 .po-payrow{margin-top:8px;padding:9px 11px;border-radius:10px;font-size:12px;line-height:1.55}
