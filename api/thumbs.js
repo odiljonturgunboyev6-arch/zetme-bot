@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       kv.get("products"), kv.get("sellers"), getThumbMap(),
     ]);
     const urls = collectUrls(products || [], sellers || []);
-    const missing = urls.filter((u) => !map[u]);
+    const missing = urls.filter((u) => !map[u] || map[u] === u); // 2026-10-16: avval xato bo'lganlar ham qayta urinadi
 
     if (req.method === "GET") {
       return res.status(200).json({ ok: true, total: urls.length, remaining: missing.length });
