@@ -1134,6 +1134,17 @@ function CheckoutForm({ initial, itemCount, payTotal, shopName, busy, error, onS
   const address = initial.address || "";
   // 2026-09-29: sotuvchi uchun izoh — mijoz nima xohlashini shu yerda yozadi
   const [note, setNote] = useState("");
+  // 2026-10-16: forma ochiqligida orqa fondagi animatsiya va videolar to'xtatiladi —
+  // telefonda (ayniqsa Telegram ichida) yozish qotib qolmasligi uchun
+  useEffect(() => {
+    document.body.classList.add("co-open");
+    const vids = Array.from(document.querySelectorAll("video"));
+    vids.forEach((v) => { try { v.pause(); } catch (e) {} });
+    return () => {
+      document.body.classList.remove("co-open");
+      vids.forEach((v) => { try { if (v.autoplay) { const p = v.play(); if (p && p.catch) p.catch(() => {}); } } catch (e) {} });
+    };
+  }, []);
   return (
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="checkout">
@@ -3941,7 +3952,12 @@ const buildCSS = () => `
 
 /* checkout */
 .checkout{position:relative;background:${C.card};width:100%;max-width:480px;border-radius:20px 20px 0 0;
-  padding:22px 20px 26px;animation:slideup .3s ease both;text-align:left}
+  padding:22px 20px 26px;animation:slideup .3s ease both;text-align:left;
+  max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+body.co-open{overflow:hidden}
+body.co-open *{animation-play-state:paused !important;transition:none !important}
+body.co-open .checkout{animation:none !important}
+body.co-open video{visibility:hidden}
 .tg-badge{display:inline-block;background:#E7F3FE;color:#2B7FD6;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px}
 .co-hint{font-size:11px;color:${C.inkDim};margin-top:12px;line-height:1.5}
 
@@ -3982,7 +3998,7 @@ const buildCSS = () => `
 .po-yuborildi{background:#EEE9FB;color:#6B4FBB}
 .po-qabul{background:#EAF3EC;color:${C.accent}}
 .co-label{display:block;font-size:11.5px;font-weight:600;color:${C.inkDim};margin:10px 0 4px;text-align:left}
-.co-input{width:100%;padding:11px 13px;border:1px solid ${C.mline};border-radius:11px;font-size:14.5px;font-family:${FONT_BODY};background:#fff;color:#1b1b1b !important;-webkit-text-fill-color:#1b1b1b;caret-color:#1b1b1b}
+.co-input{width:100%;padding:11px 13px;border:1px solid ${C.mline};border-radius:11px;font-size:16px;font-family:${FONT_BODY};background:#fff;color:#1b1b1b !important;-webkit-text-fill-color:#1b1b1b;caret-color:#1b1b1b}
 .co-input::placeholder{color:#8f9692 !important;-webkit-text-fill-color:#8f9692;opacity:1}
 .co-note{resize:vertical;min-height:72px;line-height:1.45;font-size:13.5px}
 .os-ic{width:54px;height:54px;border-radius:50%;background:${C.accent};display:flex;align-items:center;justify-content:center;margin:6px auto 0}
