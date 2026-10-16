@@ -395,6 +395,13 @@
       </div>
       <button type="button" class="addVariantBtn" id="botMenuBtn" onclick="setupBotMenuButton()">🤖 Bot tugmasini yoqish</button>
       <div id="botMenuMsg" style="margin-top:8px; font-size:13px;"></div>
+      <h3 style="margin-top:18px;">Saytni tezlashtirish</h3>
+      <div class="hint" style="margin-bottom:10px;">
+        Mahsulot rasmlarining kichik (480px) nusxasini yasaydi — sayt va bot telefonda tez ochiladi.
+        Yangi mahsulot qo'shganingizdan keyin ham bir marta bosib qo'ying.
+      </div>
+      <button type="button" class="addVariantBtn" id="thumbsBtn" onclick="runThumbs()">⚡ Rasmlarni yengillashtirish</button>
+      <div id="thumbsMsg" style="margin-top:8px; font-size:13px;"></div>
     </div>
 
     <!-- MAHSULOTLAR: yangi mahsulot tugmasi -->
@@ -612,6 +619,34 @@
       if (!data.ok) throw new Error(data.error || "Xatolik");
       msg.style.color = "var(--accent)";
       msg.textContent = "✅ Tayyor! Endi @zetmeai_bot chatida tugma chiqadi.";
+    } catch (e) {
+      msg.style.color = "var(--sale)";
+      msg.textContent = "❌ " + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // 2026-10-16: barcha rasmlar uchun kichik nusxa — /api/thumbs ni qolgani 0 bo'lguncha chaqiradi
+  async function runThumbs() {
+    const btn = document.getElementById("thumbsBtn");
+    const msg = document.getElementById("thumbsMsg");
+    btn.disabled = true;
+    msg.style.color = "var(--inkDim)";
+    let doneAll = 0, errs = 0, guard = 0;
+    try {
+      while (guard++ < 80) {
+        msg.textContent = "Ishlanmoqda... " + doneAll + " ta tayyor";
+        const res = await fetch("/api/thumbs", { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() } });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "Xatolik");
+        doneAll += data.done || 0;
+        errs += (data.errors || []).length;
+        if (!data.remaining) break;
+        if (!data.done && (data.errors || []).length) break;
+      }
+      msg.style.color = errs ? "var(--sale)" : "var(--accent)";
+      msg.textContent = (errs ? "⚠️ " : "✅ ") + doneAll + " ta rasm yengillashtirildi" + (errs ? (", " + errs + " ta xato") : "") + ".";
     } catch (e) {
       msg.style.color = "var(--sale)";
       msg.textContent = "❌ " + e.message;
