@@ -51,7 +51,8 @@ export async function uploadThumb(buffer, baseName) {
 
 // Internetdagi (Blob) asl rasmdan kichik nusxa yasab, xaritaga yozadi
 export async function ensureThumbFor(url, map) {
-  if (!url || map[url]) return map[url] || "";
+  if (!url) return "";
+  if (map[url] && map[url] !== url) return map[url];
   const r = await fetch(url);
   if (!r.ok) throw new Error("Rasmni olib bo'lmadi: " + r.status);
   const buf = Buffer.from(await r.arrayBuffer());
