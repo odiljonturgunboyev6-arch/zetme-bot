@@ -80,7 +80,7 @@ const C = {
   paper: "#F5F6F3", card: "#FFFFFF", ink: "#16211B", inkDim: "#69756D",
   mline: "#E4E7E1", accent: "#2F6B4F", price: "#16211B", sale: "#C6472E",
 };
-const SUPPORT_TG = "gultuvak_admin";
+const SUPPORT_TG = "zetplast_admin";
 const SUPPORT_PHONE = "+998770412611";
 const SUPPORT_PHONE_FMT = "+998 77 041 26 11";
 const FONT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
@@ -1520,7 +1520,7 @@ function ProfileScreen({ onClose, profile, badgeId, generations, onSelectBadge,
               </div>
             </div>
 
-            {/* Qo'llab-quvvatlash: Telegram @gultuvak_admin + telefon (2026-09-29) */}
+            {/* Qo'llab-quvvatlash: Telegram @zetplast_admin + telefon (2026-09-29) */}
             <div className="ph-support">
               <a className="ph-sup-main" href={`https://t.me/${SUPPORT_TG}`} target="_blank" rel="noreferrer">
                 <span className="ph-sup-ic"><HeadsetIc size={22} /></span>
@@ -2760,7 +2760,7 @@ function App() {
       // forma ma'lumotlarini eslab qolamiz
       setProfile({ name: customerData.name, phone: customerData.phone, region: customerData.region });
       storageSet("zetme_customer", JSON.stringify({ name: customerData.name, phone: customerData.phone, region: customerData.region }));
-      // 2026-10-07: buyurtma matni @gultuvak_admin lichkasiga tayyor holda ochiladi —
+      // 2026-10-07: buyurtma matni @zetplast_admin lichkasiga tayyor holda ochiladi —
       // mijoz faqat "Yuborish"ni bosadi. Bot orqali rasmli nusxa ham avvalgidek keladi.
       const tgLines = [
         `🛒 Yangi buyurtma #${data.orderId}`,
