@@ -45,10 +45,10 @@ export default async function handler(req, res) {
 
     // 2026-10-16: bot tavsifi (/start dan OLDIN ko'rinadigan "Bu bot nima qila oladi?" oynasi)
     // mijozga aniq qadamlarni ko'rsatadi — o'zbekcha (standart) va ruscha.
-    const DESC_UZ = "🛒 Gul tuvak va uy-ro'zg'or buyumlari do'koni\n\nQanday buyurtma beriladi:\n1️⃣ Pastdagi «BOSHLASH» tugmasini bosing\n2️⃣ «🛒 Buyurtma berish» tugmasini bosing\n3️⃣ Mahsulotni tanlab, savatga qo'shing\n4️⃣ Ismingiz va raqamingizni yozing — tamom!\n\nSavol bo'lsa: @zetplast_admin";
-    const DESC_RU = "🛒 Магазин цветочных горшков и товаров для дома\n\nКак заказать:\n1️⃣ Нажмите «СТАРТ» внизу\n2️⃣ Нажмите кнопку «🛒 Buyurtma berish»\n3️⃣ Выберите товар и добавьте в корзину\n4️⃣ Укажите имя и телефон — готово!\n\nВопросы: @zetplast_admin";
-    const SHORT_UZ = "Gul tuvak va uy-ro'zg'or buyumlari — «🛒 Buyurtma berish» tugmasini bosing";
-    const SHORT_RU = "Цветочные горшки и товары для дома — нажмите «🛒 Buyurtma berish»";
+    const DESC_UZ = "🪴 ZETME — gul tuvaklar va uy-ro'zg'or buyumlari\n🏭 To'g'ridan-to'g'ri zavoddan · 100+ model\n💰 Zavod narxida · dona va optom\n🚚 O'zbekiston bo'ylab tez yetkazib berish\n\n🛒 Qanday buyurtma beriladi:\n1️⃣ «BOSHLASH» tugmasini bosing\n2️⃣ «🛒 Buyurtma berish»ni bosing\n3️⃣ Tuvakni tanlab, savatga qo'shing\n4️⃣ Ism va raqamingizni yozing — tamom!\n\n📞 +998 90 149 06 08\n📞 +998 77 041 26 11\n📩 @zetplast_admin";
+    const DESC_RU = "🪴 ZETME — цветочные горшки и товары для дома\n🏭 Напрямую с завода · 100+ моделей\n💰 Заводские цены · розница и опт\n🚚 Быстрая доставка по Узбекистану\n\n🛒 Как заказать:\n1️⃣ Нажмите «СТАРТ»\n2️⃣ Нажмите «🛒 Buyurtma berish»\n3️⃣ Выберите горшок и добавьте в корзину\n4️⃣ Укажите имя и телефон — готово!\n\n📞 +998 90 149 06 08\n📞 +998 77 041 26 11\n📩 @zetplast_admin";
+    const SHORT_UZ = "🪴 Gul tuvaklar zavod narxida · Tez yetkazib berish · 📞 +998 90 149 06 08";
+    const SHORT_RU = "🪴 Цветочные горшки по заводским ценам · Быстрая доставка · 📞 +998 90 149 06 08";
     const tgCall = (m, body) => fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${m}`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     }).then((r) => r.json()).catch(() => ({ ok: false }));
