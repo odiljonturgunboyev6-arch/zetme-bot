@@ -151,6 +151,16 @@ export default async function handler(req, res) {
       const kb = isPrivate
         ? { reply_markup: { inline_keyboard: cmd === "/uy" ? [[btnUy]] : [[btnPots], [btnUy]] } }
         : {};
+      // 2026-11-27: /start (va /yordam) da avval rasmli "Qanday buyurtma beriladi" qo'llanmasi
+      const GUIDE_IMG = "https://n0nsadsd96zhoqip.public.blob.vercel-storage.com/products/1795763758028-zetme_buyurtma_qollanma-O4pbpNa9kWJNdgzg7uqYNSgwaibopc.jpg";
+      if (isPrivate && (cmd === "/start" || cmd === "/yordam")) {
+        await tg("sendPhoto", {
+          chat_id: chatId,
+          photo: GUIDE_IMG,
+          caption: "🛒 *Qanday buyurtma beriladi?* — rasmda 4 ta oson qadam.\n\nSavol bo'lsa: @zetplast\\_admin · +998 90 149 06 08",
+          parse_mode: "Markdown",
+        });
+      }
       await sendMessage(
         chatId,
         cmd === "/start"
